@@ -1,0 +1,107 @@
+import { Card, LiveFilter, TimeDiff, http, IconHeader, useTitle } from './util'
+import { useState } from 'react';
+
+export default function Proxies() {
+  useTitle("Proxies")
+  const [pool, setPool] = useState(null);
+  const key = (e) => `${e.Proxy.Proto}:${e.Proxy.IP}:${e.Proxy.Port}:${e.FirstSeen}`
+  return <div>
+    {pool != null && <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3">
+      {pool.Cards.map(card => 
+        <Card key={card.Name} label={card.Name} value={card.Value} /> )}
+    </div>}
+    <LiveFilter endpoint="/pool" onUpdate={setPool} minDelay={2000} />
+    {pool != null && <div className="card table-responsive">
+      <table className="table text-start caption-top">
+        <thead>
+          <tr className="text-uppercase text-muted">
+            <th>Proxy</th>
+            <IconHeader icon='speedometer2' title='Speed' />
+            <IconHeader icon='check2-circle' title='Ok' />
+            <IconHeader icon='activity' title='Rate' />
+            <th>Offered</th>
+            <th>Succeed</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+        {pool.Entries.map(proxy => 
+          <Entry key={key(proxy)} {...proxy} />)}
+        </tbody>
+      </table>
+    </div>}
+  </div>
+}
+
+function timeTook(duration) {
+  let ms = duration / 1000000
+  if (ms < 1000) {
+    return `${ms.toFixed()}ms`
+  }
+  return `${(ms/1000).toFixed(2)}s`
+}
+
+function Entry(props) {
+  let {IP, Port, Proto} = props.Proxy
+  let {FirstSeen, LastSeen, Timeouts, Ok, ReanimateAfter, Speed} = props
+  let removeProxy = e => {
+    http.delete(`/probe/${protos[Proto]}:${IP}:${Port}`)
+    return false
+  }
+  return <tr className='list-group-item-action'>
+    <td>
+      <a className='link-primary app-link' 
+        href={`/history?filter=Proxy:"${protos[Proto]}://${IP}:${Port}"`} 
+        rel="noreferrer" 
+        target="_blank">
+        <span className='text-muted'>{protos[Proto]}://</span>{IP}:{Port}
+      </a> <TimeDiff ts={FirstSeen*1000} title='First seen' />
+    </td>
+    <td>{timeTook(Speed)}</td>
+    <td>
+      {Ok && <i className='link-success bi bi-check2-circle' />}
+      {!Ok && <span>
+        <i className="link-warning bi bi-alarm" /> <TimeDiff ts={ReanimateAfter} title='Reanimate after' />
+      </span>}
+    </td>
+    <td>
+      <HourSuccessRate {...props} />
+    </td>
+    <td>{props.Offered} {Timeouts > 0 && 
+      <sup className='text-muted'><i className='bi bi-hourglass' />{Timeouts}</sup>}</td>
+    <td>{props.Succeed} <TimeDiff ts={LastSeen*1000} title='Last seen' /></td>
+    <td>
+      <a href='#remove' onClick={removeProxy}>x</a>
+    </td>
+  </tr>
+}
+
+// from pmux/proxy.go
+const protos = ["http", "https", "socks4", "socks5"]
+
+function HourSuccessRate({HourSucceed, HourOffered}) {
+  // https://stackoverflow.com/questions/45514676/react-check-if-element-is-visible-in-dom
+  const rate = HourSucceed.map((s, i) => s === 0 ? 0 : 100 * s / HourOffered[i])
+  const x = r => {
+    let l = r
+    let e = 100 - l
+    let t = {
+      width: '2px',
+      height: '20px',
+      float: 'left',
+      border: '0',
+    }
+    if (r > 0) {
+      t.backgroundColor = 'green'
+      t.backgroundImage = `linear-gradient(0deg, #080 ${l}%, #fff ${e}%)`
+    }
+    return t
+  }
+  // debugger
+  let s = {'height': '100%'}
+  return <div style={s}>
+    {rate.map((r, i) => 
+      <div key={i} style={x(r)} />
+    )}
+  </div>
+} 

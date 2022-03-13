@@ -1,0 +1,10 @@
+vendor
+main
+
+*.tgz
+*.zip
+
+node_modules
+build
+
+config.yml

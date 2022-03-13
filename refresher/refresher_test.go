@@ -1,0 +1,44 @@
+package refresher
+
+import (
+	"testing"
+	"time"
+
+	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestBasic(t *testing.T) {
+	ref, run, stop := start()
+	defer stop()
+	run["stats"].Spin()
+	run["pool"].Spin()
+
+	<-run["refresher"].Wait
+	log.Trace().Msg("wait: refresher: checkSources complete")
+
+	// finished probe
+	<-run["probe"].Wait
+	log.Trace().Msg("wait: probe: updated")
+
+	<-run["refresher"].Wait
+	log.Trace().Msg("wait: refresher: finished: failing")
+
+	<-run["refresher"].Wait
+	log.Trace().Msg("wait: refresher: finished: single")
+
+	<-run["refresher"].Wait
+	log.Trace().Msg("wait: refresher: tick")
+
+	upcoming := ref.upcoming()
+	stats := ref.stats.Snapshot()
+	assert.Equal(t, 3, len(stats))
+	for _, v := range upcoming {
+		log.Trace().
+			Int("source", v.Source).
+			Stringer("in", v.Delay).
+			Stringer("freq", v.Frequency).
+			Msg("will refresh")
+	}
+	assert.True(t, upcoming[0].Delay < 5*time.Second)
+}

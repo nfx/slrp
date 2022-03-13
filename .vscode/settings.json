@@ -1,0 +1,7 @@
+{
+    "editor.tabSize": 2,
+    "editor.tabCompletion": "on",
+    "editor.codeActionsOnSave": [
+        "editor.action.organizeImports",
+    ],
+}

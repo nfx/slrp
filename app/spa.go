@@ -6,12 +6,16 @@ import (
 	"net/http"
 	"os"
 	"path"
+
+	"github.com/gorilla/mux"
 )
 
 func MountSpaUI(fs fs.FS) func(*mainServer) spaFS {
 	return func(server *mainServer) spaFS {
 		spa := spaFS{fs}
-		server.router.PathPrefix("/").Handler(spa)
+		server.OnInit(func(router *mux.Router) {
+			router.PathPrefix("/").Handler(spa)
+		})
 		return spa
 	}
 }

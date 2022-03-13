@@ -95,6 +95,7 @@ type mainServer struct {
 	fabric         *Fabric
 	router         *mux.Router
 	enableProfiler bool
+	onInit         []func(router *mux.Router)
 }
 
 func newServer(fabric *Fabric) *mainServer {
@@ -179,4 +180,11 @@ func (s *mainServer) initRestAPI() {
 		rw.WriteHeader(200)
 		rw.Write(body)
 	})
+	for _, cb := range s.onInit {
+		cb(s.router)
+	}
+}
+
+func (s *mainServer) OnInit(cb func(router *mux.Router)) {
+	s.onInit = append(s.onInit, cb)
 }

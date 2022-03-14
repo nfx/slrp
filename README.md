@@ -37,6 +37,28 @@ SLRP - rotating open proxy multiplexer
 
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+# API
+
+## GET `/api`
+
+Retrieve last sync status for all components
+
+## GET `/api/dashboard`
+
+Get information about refresh status for all sources
+
+## GET `/api/pool`
+
+Get 20 last used proxies
+
+## GET `/api/history`
+
+Get 100 last forwarding attempts
+
+## GET `/api/history/:id`
+
+Get sanitized HTTP response from forwarding attempt
+
 # References
 
 * [ProxyBroker](https://github.com/constverum/ProxyBroker) is pretty similar project in nature. Requires couple of Python module dependencies and had the last commit in March 2019. 

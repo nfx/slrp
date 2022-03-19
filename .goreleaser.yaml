@@ -1,0 +1,25 @@
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - goos:
+      - linux
+      # - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+archives:
+  - format: zip
+    name_template: '{{ .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Os }}_{{ .Arch }}'
+
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

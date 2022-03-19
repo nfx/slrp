@@ -89,6 +89,7 @@ type History struct {
 	record         chan Request
 	requests       []Request
 	appears        map[uint32]int
+	limit          int
 }
 
 func NewHistory() *History {
@@ -98,6 +99,11 @@ func NewHistory() *History {
 		record:         make(chan Request, 128),
 		appears:        map[uint32]int{},
 	}
+}
+
+func (h *History) Configure(c app.Config) error {
+	h.limit = c.IntOr("limit", 1000)
+	return nil
 }
 
 func (h *History) Start(ctx app.Context) {
@@ -155,6 +161,9 @@ func (h *History) main(ctx app.Context) {
 			i := r.Proxy.Uint32()
 			h.appears[i] += 1
 			r.Appeared = h.appears[i]
+			if len(h.requests) == h.limit {
+				h.requests = h.requests[1:]
+			}
 			h.requests = append(h.requests, r)
 			ctx.Heartbeat()
 		case r := <-h.requestRequest:

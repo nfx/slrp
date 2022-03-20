@@ -9,15 +9,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Unshallow
-        run: git fetch --prune --unshallow
-      - name: Set up Go
-        uses: actions/setup-go@v1
-      - name: Set up NodeJS
-        uses: actions/setup-node@v2
-      - name: Pull all dependencies and build UI
-        run: make build
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v1
+      - uses: actions/checkout@v2
+      - run: git fetch --prune --unshallow
+      - uses: actions/setup-go@v1
+      - uses: actions/setup-node@v2
+      - run: npm --prefix ui install
+      - run: make build
+      - uses: goreleaser/goreleaser-action@v1

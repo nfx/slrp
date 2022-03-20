@@ -46,6 +46,8 @@ func (e *entry) MarkSuccess() {
 	}
 	e.Ok = true
 	e.LastSeen = now.Unix()
+	// TODO: verify if prev request success will improve hitrate
+	e.ReanimateAfter = time.Time{}
 }
 
 func (e *entry) MarkFailure(err error) {
@@ -53,12 +55,15 @@ func (e *entry) MarkFailure(err error) {
 		Timeout() bool
 	})
 	e.Ok = false
-	e.ReanimateAfter = now().Add(5 * time.Minute)
+	// TODO: mark configurable
+	e.ReanimateAfter = now().Add(1 * time.Minute)
 	if ok && t.Timeout() {
 		e.Timeouts++
 	}
 }
 
+// TODO: bug in offering: plenty of 551 errors, even though they should have been limited.
+// perhaps we can do LastOffered and check it to be more than 3s (checker.Timeout) ago.
 func (e *entry) ConsiderSkip(ctx context.Context) bool {
 	now := now()
 	log := app.Log.From(ctx).
@@ -82,24 +87,24 @@ func (e *entry) ConsiderSkip(ctx context.Context) bool {
 		log.Trace().Str("until", e.DeadUntil()).Msg("not ok")
 		return true
 	}
-	if e.HourOffered[now.Hour()] > 3 && e.HourSucceed[now.Hour()] == 0 {
-		e.Ok = false
-		e.ReanimateAfter = time.Date(
-			now.Year(), now.Month(), now.Day(),
-			now.Hour()+1, 5, 0, 0, now.Location())
-		log.Trace().
-			Str("until", e.DeadUntil()).
-			Int("hour", now.Hour()).
-			Int("offered", e.HourOffered[now.Hour()]).
-			Int("succeeded", e.HourSucceed[now.Hour()]).
-			Msg("skipping for an hour")
-		return true
-	}
-	if e.Timeouts > 12 && e.Succeed == 0 {
-		e.Ok = false // TODO: outer process
-		log.Trace().Int("timeouts", e.Timeouts).Msg("to be blacklisted")
-		return true
-	}
+	// if e.HourOffered[now.Hour()] > 3 && e.HourSucceed[now.Hour()] == 0 {
+	// 	e.Ok = false
+	// 	e.ReanimateAfter = time.Date(
+	// 		now.Year(), now.Month(), now.Day(),
+	// 		now.Hour()+1, 5, 0, 0, now.Location())
+	// 	log.Trace().
+	// 		Str("until", e.DeadUntil()).
+	// 		Int("hour", now.Hour()).
+	// 		Int("offered", e.HourOffered[now.Hour()]).
+	// 		Int("succeeded", e.HourSucceed[now.Hour()]).
+	// 		Msg("skipping for an hour")
+	// 	return true
+	// }
+	// if e.Timeouts > 12 && e.Succeed == 0 {
+	// 	e.Ok = false // TODO: outer process
+	// 	log.Trace().Int("timeouts", e.Timeouts).Msg("to be blacklisted")
+	// 	return true
+	// }
 	e.HourOffered[now.Hour()]++
 	e.Offered += 1
 	log.Trace().Int("new_offered", e.Offered).Msg("offered")

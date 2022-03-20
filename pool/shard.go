@@ -188,10 +188,12 @@ func (pool *shard) handleRequest(r request) {
 	entry := pool.firstAvailableProxy(r)
 	if entry == nil {
 		// this pool has no entries, try next one
+		headers := http.Header{}
+		headers.Add("X-Proxy-Serial", fmt.Sprintf("%d", r.serial))
 		r.out <- &http.Response{
 			StatusCode: 552,
 			Status:     "Proxy Pool Exhausted",
-			Header:     http.Header{},
+			Header:     headers,
 			Request:    r.in,
 		}
 		return
@@ -254,9 +256,12 @@ func (pool *shard) handleReply(r reply) {
 		Stringer("t", time.Since(request.start)).
 		Msg("forwarding failed")
 	if request.attempt >= 10 {
+		headers := http.Header{}
+		headers.Add("X-Proxy-Serial", fmt.Sprintf("%d", request.serial))
 		request.out <- &http.Response{
 			StatusCode: 429,
 			Status:     err.Error(),
+			Header: headers,
 			Request:    request.in,
 		}
 		return

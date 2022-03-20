@@ -41,7 +41,7 @@ func NewPool(history *history.History) *Pool {
 			// TODO: add history logging on this level, so that we don't miss out sessions and seeders.
 			// theoretically we can add it also for checker?...
 			Transport: pmux.ContextualHttpTransport(),
-			Timeout:   3 * time.Second,
+			Timeout:   10 * time.Second,
 		},
 	}
 }
@@ -302,17 +302,32 @@ func (pool *Pool) nextSerial(ctx context.Context) int {
 func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 	// get sequence number and do some throttling if needed
 	ctx := req.Context()
+	start := time.Now()
 	serial := pool.nextSerial(ctx)
 	// add trace information deep to all other places
 	ctx = app.Log.WithInt(ctx, "serial", serial)
 	req = req.WithContext(ctx)
 	if pmux.GetProxyFromContext(req.Context()) != nil {
 		// fast path for session
-		// TODO: record in history
-		return pool.client.Do(req)
+		resp, err := pool.client.Do(req)
+		// whatever... there'll always be at least one shard
+		pool.shards[0].recordHistory(reply{
+			r: request{
+				in:     req,
+				start:  start,
+				serial: serial,
+			},
+			response: resp,
+			start:    start,
+			e: &entry{
+				// todo: make it better
+				Proxy: *pmux.GetProxyFromContext(req.Context()),
+			},
+			err: err,
+		}, err)
+		return resp, err
 	}
 	attempt := 0
-	start := time.Now()
 	log := app.Log.From(ctx)
 	for {
 		attempt++

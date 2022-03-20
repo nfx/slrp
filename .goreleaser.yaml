@@ -4,7 +4,7 @@ before:
 builds:
   - goos:
       - linux
-      # - windows
+      - windows
       - darwin
     goarch:
       - amd64

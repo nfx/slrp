@@ -37,6 +37,26 @@ SLRP - rotating open proxy multiplexer
 
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+# User Interface
+
+## Overview
+
+![overview](docs/overview.png)
+
+Shows current source refresh status and stats.
+
+## Proxies
+
+![proxies](docs/proxies.png)
+
+Search interface over active pool of found proxies. By default, entries are sorted by last working on top.
+
+## History
+
+![history](docs/history.png)
+
+Search interface over last 1000 forwarding attempts (configurable).
+
 # API
 
 ## GET `/api`

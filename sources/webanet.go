@@ -30,9 +30,9 @@ func (w *webaNet) Generate(ctx context.Context) <-chan pmux.Proxy {
 	merged := merged()
 	w.out = make(chan pmux.Proxy)
 	w.src = merged
-	// TODO: make year dynamic
-	// https://webanetlabs.net/proxylist2022/spisok_proksi_na_06.02.2022.html
-	recent, err := findLinksWithOn(ctx, w.h, "/proxylist2022", "https://webanetlabs.net/publ/24")
+	recent, err := findLinksWithOn(ctx, w.h,
+		fmt.Sprintf("/proxylist%d", time.Now().Year()),
+		"https://webanetlabs.net/publ/24")
 	if err != nil {
 		defer close(w.out)
 		w.err = err
@@ -45,9 +45,10 @@ func (w *webaNet) Generate(ctx context.Context) <-chan pmux.Proxy {
 	}
 	for _, v := range recent {
 		merged.refresh(func() ([]pmux.Proxy, error) {
-			return newRegexPage(ctx, w.h, v, func(proxy string) pmux.Proxy {
-				return pmux.HttpProxy(proxy)
-			})
+			return newRegexPage(ctx, w.h, v, "Список прокси",
+				func(proxy string) pmux.Proxy {
+					return pmux.HttpProxy(proxy)
+				})
 		})
 	}
 	go w.foward(ctx)

@@ -18,7 +18,7 @@ func init() {
 
 // Scrapes https://www.my-proxy.com/
 func myProxyCom(ctx context.Context, h *http.Client) Src {
-	f := regexFeedBase(ctx, h, "https://my-proxy.com")
+	f := regexFeedBase(ctx, h, "https://my-proxy.com", "Proxy List")
 	merged := merged().
 		refresh(f("/free-elite-proxy.html", "http")).
 		refresh(f("/free-anonymous-proxy.html", "http")).

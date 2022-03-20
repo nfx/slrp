@@ -14,23 +14,21 @@ import (
 
 func init() {
 	Sources = append(Sources, Source{
-		ID:        2,
-		Homepage:  "http://free-proxy.cz/",
-		Frequency: 1 * time.Hour,
-		Feed:      freeProxyCz,
+		ID:           2,
+		Homepage:     "http://free-proxy.cz/",
+		Frequency:    1 * time.Hour,
+		Feed:         freeProxyCz,
 	})
 }
 
 // Scrapes http://free-proxy.cz/
 func freeProxyCz(ctx context.Context, h *http.Client) Src {
 	b64 := base64.StdEncoding
+	//look for "Web Proxy List"
 	log := app.Log.From(ctx)
-	pattern := "http://free-proxy.cz/en/proxylist/main/date/%d"
-	merged := merged()
-	for i := 1; i < 23; i++ {
-		url := fmt.Sprintf(pattern, i)
-		merged.refresh(func() (found []pmux.Proxy, err error) {
-			p, err := newTablePage(ctx, h, url)
+	fetch := func(url string) func() ([]pmux.Proxy, error) {
+		return func() (found []pmux.Proxy, err error) {
+			p, serial, err := newTablePage(ctx, h, url, "Web Proxy List")
 			if err != nil {
 				return
 			}
@@ -47,10 +45,26 @@ func freeProxyCz(ctx context.Context, h *http.Client) Src {
 				found = append(found, proxy)
 			})
 			if err != nil {
-				err = fmt.Errorf("issue with %s: %s", url, err)
+				err = skipErr(err, intEC{"serial", serial}, strEC{"url", url})
 			}
 			return
-		})
+		}
+	}
+	pattern := "http://free-proxy.cz/en/proxylist/main/date/%d"
+	merged := merged()
+	for i := 1; i < 23; i++ {
+		url := fmt.Sprintf(pattern, i)
+		merged.refresh(fetch(url))
+	}
+	tpl := "http://free-proxy.cz/en/proxylist/country/%s/%s/ping/%s"
+	for _, country := range countries {
+		for _, anonlvl := range []string{"level1", "level2"} {
+			for _, protocol := range []string{"http", "https", "socks4", "socks5"} {
+				// it's simple enough for this horrible nesting
+				url := fmt.Sprintf(tpl, country, protocol, anonlvl)
+				merged.refresh(fetch(url))
+			}
+		}
 	}
 	return merged
 }

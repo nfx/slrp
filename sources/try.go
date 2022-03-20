@@ -2,6 +2,7 @@ package sources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
+	"github.com/rs/zerolog"
 )
 
 type Src interface {
@@ -54,14 +56,83 @@ func (f *retriableGenerator) Len() int {
 	return f.len
 }
 
-func skipRetry(format string, args ...interface{}) skip {
-	return skip(fmt.Sprintf(format, args...))
+type errorContext interface {
+	Apply(e *zerolog.Event)
 }
 
-type skip string
+type intEC struct {
+	key string
+	value int
+}
 
-func (se skip) Error() string {
-	return string(se)
+func (a intEC) Apply(e *zerolog.Event) {
+	e.Int(a.key, a.value)
+}
+
+type strEC struct {
+	key string
+	value string
+}
+
+func (a strEC) Apply(e *zerolog.Event) {
+	e.Str(a.key, a.value)
+}
+
+type sourceError struct {
+	msg string
+	fields []errorContext
+	skip bool
+}
+
+func (se sourceError) Error() string {
+	ctx := se.msg
+	for _, v := range se.fields {
+		switch x := v.(type) {
+		case intEC:
+			ctx = fmt.Sprintf("%s %s=%d", ctx, x.key, x.value)
+		case strEC:
+			ctx = fmt.Sprintf("%s %s=%s", ctx, x.key, x.value)
+		}
+	}
+	if se.skip {
+		ctx = fmt.Sprintf("%s (skip)", ctx)
+	}
+	return ctx
+}
+
+func newErr(msg string, ctx ...errorContext) sourceError {
+	return sourceError{
+		msg: msg,
+		fields: ctx,
+	}
+}
+
+func wrapError(err error, ctx ...errorContext) sourceError {
+	return newErr(err.Error(), ctx...)
+}
+
+func reWrapError(err error, ctx ...errorContext) sourceError {
+	switch x := err.(type) {
+	case sourceError:
+		x.fields = append(x.fields, ctx...)
+		return x
+	default:
+		return newErr(err.Error(), ctx...)
+	}
+}
+
+func skipErr(err error, ctx ...errorContext) sourceError {
+	se := reWrapError(err, ctx...)
+	se.skip = true
+	return se
+}
+
+func skipError(msg string, ctx ...errorContext) sourceError {
+	return sourceError{
+		msg: msg,
+		fields: ctx,
+		skip: true,
+	}
 }
 
 func (f *retriableGenerator) generate(ctx context.Context) {
@@ -81,10 +152,20 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 		case <-start:
 			proxies, err := f.f()
 			f.err = err
-			if _, ok := err.(skip); ok {
-				// we may change the interface to return stream of errors, maybe...
-				log.Warn().Err(err).Msg("skipping retry on error")
-				return
+			if se, ok := err.(sourceError); ok {
+				// contextualize errors
+				evt := log.Debug().Err(errors.New(se.msg))
+				for _, f := range se.fields {
+					f.Apply(evt)
+				}
+				if se.skip {
+					evt.Msg("skipping retry")
+					return
+				}
+				evt.Msg("intermediate failure")
+				sleep := rand.Intn(15)
+				next = time.Now().Add(time.Duration(sleep) * time.Second)
+				continue
 			}
 			if err != nil {
 				log.Trace().Err(err).Msg("intermediate source failure")

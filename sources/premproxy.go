@@ -2,6 +2,7 @@ package sources
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -58,11 +59,12 @@ func permproxyMapping(ctx context.Context, h *http.Client, html []byte, referer 
 	base := "https://premproxy.com"
 	match := premproxyPortMappingScriptRE.FindSubmatch(html)
 	if len(match) == 0 {
-		return nil, skipRetry("cannot find script location")
+		return nil, errors.New("cannot find script location")
 	}
 	scriptUrl := base + string(match[1])
-	packedJS, _, err := req{
-		URL: scriptUrl,
+	packedJS, serial, err := req{
+		URL:              scriptUrl,
+		ExpectInResponse: "function(p,a,c,k,e,d)",
 		Headers: map[string]string{
 			"Referer": referer,
 		},
@@ -71,27 +73,38 @@ func permproxyMapping(ctx context.Context, h *http.Client, html []byte, referer 
 		return nil, err
 	}
 	// TODO: perhaps we should do "parent serial"?...
-	return deobfuscatePorts(string(packedJS))
+	mapping, err := deobfuscatePorts(string(packedJS))
+	if err != nil {
+		return nil, wrapError(err, intEC{"serial", serial})
+	}
+	return mapping, err
 }
 
-//<script src="/js-socks/7e65e.js">
+func premproxyFetchPage(ctx context.Context, h *http.Client, url string) ([]byte, map[string]string, error) {
+	html, serial, err := req{
+		URL:              url,
+		ExpectInResponse: "Proxies on this list",
+		Headers: map[string]string{
+			"Referer": "https://premproxy.com/",
+		},
+	}.Do(ctx, h)
+	if err != nil {
+		return nil, nil, err
+	}
+	mapping, err := permproxyMapping(ctx, h, html, url)
+	if err != nil {
+		return nil, nil, skipErr(err, intEC{"parentSerial", serial})
+	}
+	return html, mapping, nil
+}
+
 var premproxyPortMappingScriptRE = regexp.MustCompile(`(?m)<script src="(/(js|js-socks)/[^\.]+.js)">`)
 var premproxyObfuscatedAddrRE = regexp.MustCompile(`(?m)\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}\|[^"]+`)
 var premproxyObfuscatedSocksAddrRE = regexp.MustCompile(`(?m)(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}\|[^"]+).*(SOCKS[4|5])`)
 
 func premproxyHttpPage(ctx context.Context, h *http.Client, url string) func() ([]pmux.Proxy, error) {
-	return func() ([]pmux.Proxy, error) {
-		found := []pmux.Proxy{}
-		html, _, err := req{
-			URL: url,
-			Headers: map[string]string{
-				"Referer": "https://premproxy.com/",
-			},
-		}.Do(ctx, h)
-		if err != nil {
-			return nil, err
-		}
-		mapping, err := permproxyMapping(ctx, h, html, url)
+	return func() (found []pmux.Proxy, err error) {
+		html, mapping, err := premproxyFetchPage(ctx, h, url)
 		if err != nil {
 			return nil, err
 		}
@@ -112,20 +125,10 @@ func premproxyHttpPage(ctx context.Context, h *http.Client, url string) func() (
 }
 
 func premproxySocksPage(ctx context.Context, h *http.Client, url string) func() ([]pmux.Proxy, error) {
-	return func() ([]pmux.Proxy, error) {
-		found := []pmux.Proxy{}
-		html, serial, err := req{
-			URL: url,
-			Headers: map[string]string{
-				"Referer": "https://premproxy.com/",
-			},
-		}.Do(ctx, h)
+	return func() (found []pmux.Proxy, err error) {
+		html, mapping, err := premproxyFetchPage(ctx, h, url)
 		if err != nil {
 			return nil, err
-		}
-		mapping, err := permproxyMapping(ctx, h, html, url)
-		if err != nil {
-			return nil, skipRetry("cannot read mapping from %s in serial %s: %s", url, serial, err)
 		}
 		for _, match := range premproxyObfuscatedSocksAddrRE.FindAllStringSubmatch(string(html), -1) {
 			split := strings.Split(match[1], "|")

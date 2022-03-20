@@ -13,13 +13,13 @@ func init() {
 		ID:        8,
 		Homepage:  "https://free-proxy-list.net",
 		Frequency: 1 * time.Hour,
-		Feed:      httpProxyRegexFeed("https://free-proxy-list.net"),
+		Feed:      httpProxyRegexFeed("https://free-proxy-list.net", "Proxy List"),
 	}, Source{
 		ID:        9,
 		Homepage:  "http://foxtools.ru/",
 		UrlPrefix: "http://api.foxtools.ru",
 		Frequency: 12 * time.Hour,
-		Feed:      httpProxyRegexFeed("http://api.foxtools.ru/v2/Proxy.txt"),
+		Feed:      httpProxyRegexFeed("http://api.foxtools.ru/v2/Proxy.txt", "1 1"),
 	}, Source{
 		ID:        10,
 		name:      "sunny9577",
@@ -27,7 +27,7 @@ func init() {
 		UrlPrefix: "https://sunny9577.github.io/",
 		Frequency: 3 * time.Hour,
 		Seed:      true,
-		Feed:      httpProxyRegexFeed("https://sunny9577.github.io/proxy-scraper/proxies.txt"),
+		Feed:      httpProxyRegexFeed("https://sunny9577.github.io/proxy-scraper/proxies.txt", ":"),
 	}, Source{
 		ID:        11,
 		Homepage:  "http://proxylists.net",
@@ -51,7 +51,7 @@ func init() {
 }
 
 func proxylists(ctx context.Context, h *http.Client) Src {
-	f := regexFeedBase(ctx, h, "http://proxylists.net")
+	f := regexFeedBase(ctx, h, "http://proxylists.net", ":")
 	return merged().
 		refresh(f("/http_highanon.txt", "http")).
 		refresh(f("/socks4.txt", "socks4")).
@@ -59,7 +59,7 @@ func proxylists(ctx context.Context, h *http.Client) Src {
 }
 
 func theSpeedX(ctx context.Context, h *http.Client) Src {
-	f := regexFeedBase(ctx, h, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master")
+	f := regexFeedBase(ctx, h, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master", ":")
 	return merged().
 		refresh(f("/http.txt", "http")).
 		refresh(f("/socks4.txt", "socks4")).
@@ -74,7 +74,7 @@ func proxyDb(ctx context.Context, h *http.Client) Src {
 			for _, protocol := range []string{"http", "https", "socks4", "socks5"} {
 				// it's simple enough for this horrible nesting
 				url := fmt.Sprintf(tpl, country, anonlvl, protocol)
-				merged.refresh(regexFeed(ctx, h, url, protocol))
+				merged.refresh(regexFeed(ctx, h, url, protocol, "Proxy List"))
 			}
 		}
 	}

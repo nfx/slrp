@@ -9,13 +9,14 @@ import (
 )
 
 type Source struct {
-	ID        int
-	name      string
-	Frequency time.Duration
-	Seed      bool
-	Session   bool
-	Homepage  string
-	UrlPrefix string
+	ID           int
+	name         string
+	Frequency    time.Duration
+	Seed         bool
+	Session      bool
+	Homepage     string
+	UrlPrefix    string
+	expectString string
 
 	Feed func(context.Context, *http.Client) Src
 }

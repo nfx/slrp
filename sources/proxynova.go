@@ -24,8 +24,8 @@ func init() {
 func proxyNova(ctx context.Context, h *http.Client) Src {
 	page := func(path string) func() ([]pmux.Proxy, error) {
 		return func() (found []pmux.Proxy, err error) {
-			p, err := newTablePage(ctx, h, fmt.Sprintf(
-				"https://proxynova.com/proxy-server-list%s", path))
+			url := fmt.Sprintf("https://proxynova.com/proxy-server-list%s", path)
+			p, serial, err := newTablePage(ctx, h, url, "Proxy Server List")
 			if err != nil {
 				return
 			}
@@ -38,6 +38,9 @@ func proxyNova(ctx context.Context, h *http.Client) Src {
 				port = strings.ReplaceAll(port, ".0", "")
 				found = append(found, pmux.HttpProxy(ip+":"+port))
 			})
+			if err != nil {
+				err = skipErr(err, intEC{"serial", serial}, strEC{"url", url})
+			}
 			return
 		}
 	}

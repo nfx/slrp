@@ -5,13 +5,13 @@ import (
 	"encoding"
 	"encoding/gob"
 	"fmt"
-	"io"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func init() {
@@ -95,16 +95,19 @@ func (f *Fabric) initLogging() {
 	}
 	zerolog.SetGlobalLevel(level)
 
-	formats := map[string]io.Writer{
-		"pretty": zerolog.ConsoleWriter{Out: os.Stdout},
-		"json":   os.Stdout,
-	}
 	logFormat := f.configuration["log"].StrOr("format", "pretty")
-	format, ok := formats[logFormat]
-	if !ok {
-		format = zerolog.ConsoleWriter{}
+	switch logFormat {
+	case "pretty":
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+	case "json":
+		log.Logger = log.Output(os.Stdout)
+	case "file":
+		var lb lumberjack.Logger
+		// TODO: make it more configurable
+		lb.Filename = f.configuration["log"].StrOr("file", "$PWD/$APP.log")
+		lb.MaxBackups = 0
+		log.Logger = log.Output(&lb)
 	}
-	log.Logger = log.Output(format)
 }
 
 func (f *Fabric) loadConfiguration() {

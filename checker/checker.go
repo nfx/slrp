@@ -62,6 +62,10 @@ func NewChecker() Checker {
 		strategies: map[string]Checker{
 			"twopass": newTwoPass(ip, client),
 			"simple":  newFederated(firstPass, client, ip),
+			"headers": newFederated([]string{
+				"https://ifconfig.me/all", 
+				"https://ifconfig.io/all.json",
+			}, client, ip),
 		},
 		strategy: "simple",
 	}

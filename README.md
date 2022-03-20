@@ -57,6 +57,72 @@ Search interface over active pool of found proxies. By default, entries are sort
 
 Search interface over last 1000 forwarding attempts (configurable).
 
+# Configuration
+
+Conf file is looked in the following paths:
+
+1. `$PWD/slrp.yml`
+2. `$PWD/config.yml`
+3. `$HOME/.slrp/config.yml`
+
+Default configuration is approximately the following:
+
+```yaml
+app:
+  state: $HOME/.slrp/data
+  sync: 1m
+log:
+  level: info
+  format: pretty
+server:
+  addr: "127.0.0.1:8089"
+  read_timeout: 15s
+  enable_profiler: false
+checker:
+  timeout: 5s
+  strategy: simple
+history:
+  limit: 1000
+```
+
+Every configuration property can be overridden through environment variable by using `SLRP_` prefix followed by section name and key, divided by `_`. For example, in order to set log level to trace, do `SLRP_LOG_LEVEL=TRACE slrp`.
+
+## app
+
+Fabric that holds application components together.
+
+* `state` - where data persists on disk through restarts of the application. Default is `.slrp/data` of your home directory.
+* `sync` - how often data is synchronised to disk, pending availability of any updates of component state. Default is every minute.
+
+## log
+
+Structured logging meta-components.
+
+* `level` - log level of application. Default is `info`. Possible values are `trace`, `debug`, `info`, `warn`, and `error`.
+* `format` - format of log lines printed. Default is `pretty`, though it's recommended for exploratory use only for performance reasons. Possible values are `pretty`, `json`, and `file` _(experimental)_. `file` will create a `$PWD/slrp.log`, unless specified by `log.file` property.
+* `file` _(experimental)_ - application logs in JSON format. Default value is `$PWD/slrp.log`.
+
+## server
+
+API and UI serving component.
+
+* `addr` - address of listening HTTP server. Default is [http://127.0.0.1:8089](http://127.0.0.1:8089).
+* `read_timeout` - default is `15s`.
+* `enable_profiler` - either or not enabling profiler endpoints. Default is `false`. Developer use only.
+
+## checker
+
+Component for verification of proxy liveliness and anonymity.
+
+* `timeout` - time to wait while performing verificatin. Default is `5s`.
+* `strategy` - verification strategy to check the IP of the proxy. Default is `simple`, which will randomly select one of publicly available sites: [ifconfig.me](https://ifconfig.me), [ifconfig.io](https://ifconfig.io), [myexternalip.com](https://myexternalip.com), [ipv4.icanhazip.com/](https://ipv4.icanhazip.com/), [https://ipinfo.io/](ipinfo.io/), [api.ipify.org/](https://api.ipify.org/), or [wtfismyip.com](https://wtfismyip.com). Another strategy is `headers`, which will look for the real IP address in [https://ifconfig.me/all](https://ifconfig.me/all) or [https://ifconfig.io/all.json](https://ifconfig.io/all.json), which might have been added in HTTP headers while forwarding. And there's `twopass` strategy, that will first perform `simple` check and `headers` afterwards.
+
+## history
+
+Component for recording forwarded requests through a pool of proxies.
+
+* `limit` - number of requests to keep in memory. Default is `1000`.
+
 # API
 
 ## GET `/api`

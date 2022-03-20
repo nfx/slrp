@@ -85,13 +85,11 @@ func (c Config) BoolOr(key string, def bool) bool {
 }
 
 func getConfig() (configuration, error) {
-	//os.Setenv("SLRP_LOG_LEVEL", "INFO")
 	os.Setenv("APP", Prefix)
 	var raw []byte
 	var err error
 	locs := []string{
 		path.Clean(expandEnv("$PWD/$APP.yml")),
-		path.Clean(expandEnv("../config.yml")),
 		path.Clean(expandEnv("$PWD/config.yml")),
 		path.Clean(expandEnv("$HOME/.$APP/config.yml")),
 	}

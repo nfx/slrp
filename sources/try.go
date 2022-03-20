@@ -61,7 +61,7 @@ type errorContext interface {
 }
 
 type intEC struct {
-	key string
+	key   string
 	value int
 }
 
@@ -70,7 +70,7 @@ func (a intEC) Apply(e *zerolog.Event) {
 }
 
 type strEC struct {
-	key string
+	key   string
 	value string
 }
 
@@ -79,9 +79,9 @@ func (a strEC) Apply(e *zerolog.Event) {
 }
 
 type sourceError struct {
-	msg string
+	msg    string
 	fields []errorContext
-	skip bool
+	skip   bool
 }
 
 func (se sourceError) Error() string {
@@ -102,7 +102,7 @@ func (se sourceError) Error() string {
 
 func newErr(msg string, ctx ...errorContext) sourceError {
 	return sourceError{
-		msg: msg,
+		msg:    msg,
 		fields: ctx,
 	}
 }
@@ -129,9 +129,9 @@ func skipErr(err error, ctx ...errorContext) sourceError {
 
 func skipError(msg string, ctx ...errorContext) sourceError {
 	return sourceError{
-		msg: msg,
+		msg:    msg,
 		fields: ctx,
-		skip: true,
+		skip:   true,
 	}
 }
 

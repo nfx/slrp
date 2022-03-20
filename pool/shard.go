@@ -261,7 +261,7 @@ func (pool *shard) handleReply(r reply) {
 		request.out <- &http.Response{
 			StatusCode: 429,
 			Status:     err.Error(),
-			Header: headers,
+			Header:     headers,
 			Request:    request.in,
 		}
 		return

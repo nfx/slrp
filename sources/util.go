@@ -100,12 +100,12 @@ func findLinksWithOn(ctx context.Context, h *http.Client, with, page string) (li
 }
 
 type req struct {
-	URL            string
-	RequestBody    io.Reader
+	URL              string
+	RequestBody      io.Reader
 	ExpectInResponse string
-	EmptyBodyValid bool
-	SkipOnStatus   int
-	Headers        map[string]string
+	EmptyBodyValid   bool
+	SkipOnStatus     int
+	Headers          map[string]string
 }
 
 var blockers = []string{

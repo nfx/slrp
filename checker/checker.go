@@ -57,26 +57,26 @@ func NewChecker() Checker {
 		Timeout:   5 * time.Second,
 	}
 	return &configurableChecker{
-		ip: ip,
+		ip:     ip,
 		client: client,
 		strategies: map[string]Checker{
 			"twopass": newTwoPass(ip, client),
-			"simple": newFederated(firstPass, client, ip),
+			"simple":  newFederated(firstPass, client, ip),
 		},
 		strategy: "simple",
 	}
 }
 
 type configurableChecker struct {
-	ip string
-	client *http.Client
+	ip         string
+	client     *http.Client
 	strategies map[string]Checker
-	strategy string
+	strategy   string
 }
 
 func (cc *configurableChecker) Configure(conf app.Config) error {
 	cc.strategy = conf.StrOr("strategy", "simple")
-	cc.client.Timeout = conf.DurOr("timeout", 5 * time.Second)
+	cc.client.Timeout = conf.DurOr("timeout", 5*time.Second)
 	return nil
 }
 

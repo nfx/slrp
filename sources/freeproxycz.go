@@ -14,10 +14,10 @@ import (
 
 func init() {
 	Sources = append(Sources, Source{
-		ID:           2,
-		Homepage:     "http://free-proxy.cz/",
-		Frequency:    1 * time.Hour,
-		Feed:         freeProxyCz,
+		ID:        2,
+		Homepage:  "http://free-proxy.cz/",
+		Frequency: 1 * time.Hour,
+		Feed:      freeProxyCz,
 	})
 }
 

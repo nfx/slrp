@@ -168,8 +168,8 @@ func (ref *Refresher) checkSources(ctx context.Context, trigger time.Time) time.
 	snapshot := ref.stats.Snapshot()
 	// poolSize := ref.pool.Len()
 	for _, s := range sources.Sources {
-		ctx = app.Log.WithStr(ctx, "source", s.Name())
-		log := app.Log.From(ctx)
+		sctx := app.Log.WithStr(ctx, "source", s.Name())
+		log := app.Log.From(sctx)
 		if s.Feed == nil {
 			log.Error().Msg("feed is nil")
 			continue
@@ -200,7 +200,7 @@ func (ref *Refresher) checkSources(ctx context.Context, trigger time.Time) time.
 		if s.Seed {
 			client = http.DefaultClient
 		}
-		go ref.refresh(ctx, client, s)
+		go ref.refresh(sctx, client, s)
 	}
 	// TODO: maybe bring back nextTrigger someday
 	return time.Now().Add(1 * time.Minute)
@@ -216,7 +216,9 @@ func (ref *Refresher) refresh(ctx context.Context, client *http.Client, source s
 	feed := source.Feed(ctx, client)
 	for proxy := range feed.Generate(ctx) {
 		ctx := app.Log.WithStringer(ctx, "proxy", proxy)
-		ref.probe.Schedule(ctx, proxy, source.ID)
+		if !ref.probe.Schedule(ctx, proxy, source.ID) {
+			log.Warn().Msg("failed to schedule")
+		}
 	}
 	// TODO: maybe update failed state from a secong goroutine?...
 	ref.stats.Finish(source.ID, feed.Err())

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import {useEffect, useState, useRef, Component} from 'react';
+import {useEffect, useState, useRef, Component, useCallback} from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 export const http = axios.create({
@@ -83,7 +83,7 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
   const [failure, setFailure] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  let doFilter = () => {
+  let doFilter = useCallback(() => {
     clearTimeout(savedCallback.current)
     savedCallback.current = setTimeout(() => {
       http.get(endpoint, { params: searchParams }).then(response => {
@@ -98,17 +98,17 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
         return false
       })
     }, 500)
-  }
+  }, [savedCallback, searchParams, endpoint, minDelay, onUpdate])
 
   useEffect(() => {
     doFilter()
     return () => clearTimeout(savedCallback.current)
-  }, [searchParams]);
+  }, [savedCallback, doFilter]);
 
   let filter = searchParams.get("filter") || ""
   let change = event => {
     filter = event.target.value
-    setSearchParams(filter == "" ? {} : { filter })
+    setSearchParams(filter === "" ? {} : { filter })
     doFilter()
   }
   return <div>
@@ -144,5 +144,5 @@ export function useTitle(title) {
     return () => {
       document.title = prev;
     };
-  }, []);
+  }, [title]);
 }

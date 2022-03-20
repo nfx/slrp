@@ -231,6 +231,7 @@ func isTemporary(err error) bool {
 		"Too many open connections",
 		"Too Many Requests",
 		"Gateway Timeout",
+		"too many open files",
 	} {
 		if strings.Contains(str, v) {
 			return true

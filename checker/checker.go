@@ -49,17 +49,42 @@ func NewChecker() Checker {
 	if err != nil {
 		panic(fmt.Errorf("cannot get this IP: %w", err))
 	}
-	return newTwoPass(ip).first
-}
-
-func newTwoPass(ip string) twoPass {
 	discardingTransport := pmux.ContextualHttpTransport()
 	discardingTransport.DisableKeepAlives = true
 	discardingTransport.MaxIdleConns = 0
 	client := &http.Client{
 		Transport: discardingTransport,
-		Timeout:   4 * time.Second,
+		Timeout:   5 * time.Second,
 	}
+	return &configurableChecker{
+		ip: ip,
+		client: client,
+		strategies: map[string]Checker{
+			"twopass": newTwoPass(ip, client),
+			"simple": newFederated(firstPass, client, ip),
+		},
+		strategy: "simple",
+	}
+}
+
+type configurableChecker struct {
+	ip string
+	client *http.Client
+	strategies map[string]Checker
+	strategy string
+}
+
+func (cc *configurableChecker) Configure(conf app.Config) error {
+	cc.strategy = conf.StrOr("strategy", "simple")
+	cc.client.Timeout = conf.DurOr("timeout", 5 * time.Second)
+	return nil
+}
+
+func (cc *configurableChecker) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, error) {
+	return cc.strategies[cc.strategy].Check(ctx, proxy)
+}
+
+func newTwoPass(ip string, client *http.Client) twoPass {
 	var res twoPass
 	for _, v := range firstPass {
 		res.first = append(res.first, &simple{
@@ -103,6 +128,17 @@ func (f twoPass) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, er
 }
 
 type federated []*simple
+
+func newFederated(sites []string, client *http.Client, ip string) (out federated) {
+	for _, v := range firstPass {
+		out = append(out, &simple{
+			client: client,
+			page:   v,
+			ip:     ip,
+		})
+	}
+	return out
+}
 
 func (f federated) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, error) {
 	choice := rand.Intn(len(f))

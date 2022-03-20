@@ -50,12 +50,17 @@ func NewProbe(stats *stats.Stats, p *pool.Pool, c checker.Checker) *Probe {
 	}
 }
 
-func (p *Probe) Schedule(ctx context.Context, proxy pmux.Proxy, source int) {
+func (p *Probe) Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool {
 	if len(proxy.IP) == 0 {
-		return
+		return false
 	}
 	p.stats.Update(source, stats.Scheduled)
-	p.state.scheduled <- verify{ctx, proxy, source, 0}
+	select {
+	case <-ctx.Done():
+		return false
+	case p.state.scheduled <- verify{ctx, proxy, source, 0}:
+		return true
+	}
 }
 
 func (p *Probe) Found() int {

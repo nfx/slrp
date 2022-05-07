@@ -219,6 +219,25 @@ func (ref *Refresher) refresh(ctx context.Context, client *http.Client, source s
 		if !ref.probe.Schedule(ctx, proxy, source.ID) {
 			log.Warn().Msg("failed to schedule")
 		}
+
+		// if proxy.Proto == pmux.HTTP {
+		// 	if !ref.probe.Schedule(ctx, pmux.Proxy{
+		// 		IP:    proxy.IP,
+		// 		Port:  proxy.Port,
+		// 		Proto: pmux.HTTPS,
+		// 	}, source.ID) {
+		// 		log.Warn().Msg("failed to schedule")
+		// 	}
+		// }
+		// if proxy.Proto == pmux.HTTPS {
+		// 	if !ref.probe.Schedule(ctx, pmux.Proxy{
+		// 		IP:    proxy.IP,
+		// 		Port:  proxy.Port,
+		// 		Proto: pmux.HTTP,
+		// 	}, source.ID) {
+		// 		log.Warn().Msg("failed to schedule")
+		// 	}
+		// }
 	}
 	// TODO: maybe update failed state from a secong goroutine?...
 	ref.stats.Finish(source.ID, feed.Err())

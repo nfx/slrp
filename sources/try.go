@@ -140,6 +140,7 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 	var next time.Time
 	var delay time.Duration
 	log := app.Log.From(ctx)
+	defer log.Debug().Msg("done simple forwarding")
 	for {
 		now := time.Now()
 		if next.After(now) {

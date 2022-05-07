@@ -56,6 +56,7 @@ func regexFeed(ctx context.Context, h *http.Client, url, proto, expect string) f
 
 func regexFeedBase(ctx context.Context, h *http.Client, baseUrl, expect string) func(path, proto string) func() ([]pmux.Proxy, error) {
 	return func(path, proto string) func() ([]pmux.Proxy, error) {
+		// TODO: in case of http proxies, do both HTTP and HTTPS?..
 		return regexFeed(ctx, h, baseUrl+path, proto, expect)
 	}
 }

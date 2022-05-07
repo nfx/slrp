@@ -25,13 +25,13 @@ type Checker interface {
 var (
 	firstPass = []string{
 		// these check for ext ip, but don't show headers
-		"https://ifconfig.me/ip",
-		"https://ifconfig.io/ip",
-		"https://myexternalip.com/raw",
-		"https://ipv4.icanhazip.com/",
-		"https://ipinfo.io/ip",
-		"https://api.ipify.org/",
-		"https://wtfismyip.com/text",
+		"https://ifconfig.me/ip",       // okhttp
+		//"https://ifconfig.io/ip",
+		"https://myexternalip.com/raw", // okhttp
+		"https://ipv4.icanhazip.com/",  // okhttp
+		"https://ipinfo.io/ip",         // okhttp
+		"https://api.ipify.org/",       // okhttp
+		"https://wtfismyip.com/text",   // okhttp
 	}
 	secondPass = map[string]string{
 		// checks for X-Forwarded-For and alikes
@@ -63,7 +63,7 @@ func NewChecker() Checker {
 			"twopass": newTwoPass(ip, client),
 			"simple":  newFederated(firstPass, client, ip),
 			"headers": newFederated([]string{
-				"https://ifconfig.me/all", 
+				"https://ifconfig.me/all",
 				"https://ifconfig.io/all.json",
 			}, client, ip),
 		},
@@ -158,7 +158,11 @@ type simple struct {
 
 func (sc *simple) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, error) {
 	start := time.Now()
-	req, err := http.NewRequestWithContext(proxy.InContext(ctx), "GET", sc.page, nil)
+	page := sc.page
+	if proxy.Proto == pmux.HTTP {
+		page = strings.Replace(page, "https", "http", 1)
+	}
+	req, err := http.NewRequestWithContext(proxy.InContext(ctx), "GET", page, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -172,7 +176,8 @@ func (sc *simple) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, e
 	if err != nil {
 		return 0, err
 	}
-	err = sc.validate(string(body))
+	stringBody := string(body)
+	err = sc.validate(stringBody)
 	if isTimeout(err) {
 		return 0, err
 	}

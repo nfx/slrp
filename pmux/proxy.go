@@ -152,7 +152,11 @@ func pickHttpProxyFromContext(r *http.Request) (*url.URL, error) {
 		// handled in DialContext
 		return nil, nil
 	}
-	return p.URL(), nil
+	//return p.URL(), nil
+	return &url.URL{
+		Host: fmt.Sprintf("%s:%d", p.IP, p.Port),
+		Scheme: "http",
+	}, nil
 }
 
 func ContextualHttpTransport() *http.Transport {

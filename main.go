@@ -21,6 +21,7 @@ func main() {
 	// go tool pprof -http=:8080 main http://127.0.0.1:8089/debug/pprof/profile
 	app.Run(context.Background(), app.Factories{
 		"ca":        serve.NewCA,
+		"blacklist": probe.NewBlacklistApi,
 		"checker":   checker.NewChecker,
 		"dashboard": serve.NewDashboard,
 		"history":   history.NewHistory,

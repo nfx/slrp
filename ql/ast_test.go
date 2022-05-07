@@ -24,7 +24,7 @@ var fixture = []x{
 
 type tt struct {
 	query string
-	want  *Query
+	want  *Query[x]
 	err   error
 }
 
@@ -38,7 +38,7 @@ func TestParse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			query, err := Parse(tt.query)
+			query, err := Parse[x](tt.query)
 
 			var result []x
 			err = query.Apply(&fixture, &result)

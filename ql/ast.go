@@ -52,7 +52,7 @@ func (e *Expression) eval(ctx internalRow) (bool, error) {
 	return true, nil
 }
 
-type Query struct {
+type Query[T any] struct {
 	Expression *Expression `@@`
 	// And     []*AndCondition `@@ ( "AND" @@ )*`
 	OrderBy []OrderBy `("ORDER" "BY" @@ (Comma @@)*)?`
@@ -61,12 +61,11 @@ type Query struct {
 
 // Apply takes a pointer to a slice and replaces it with
 // filtered and sorted version, assorting to a query
-func (q *Query) Apply(src interface{}, dst interface{}) error {
+func (q *Query[T]) Apply(src *[]T, dst *[]T) error {
 	return q.ApplyFacets(src, dst, nil)
 }
 
-func (q *Query) ApplyFacets(src interface{}, dst interface{},
-	beforeLimit func(interface{})) (err error) {
+func (q *Query[T]) ApplyFacets(src *[]T, dst *[]T, beforeLimit func(*[]T)) (err error) {
 	defer func() {
 		if panic := recover(); panic != nil {
 			err = fmt.Errorf("panic: %v", panic)
@@ -86,11 +85,11 @@ func (q *Query) ApplyFacets(src interface{}, dst interface{},
 	if beforeLimit != nil {
 		beforeLimit(dst)
 	}
-	q.applyLimit(destination)
+	q.applyLimit(dst)
 	return err
 }
 
-func (*Query) inferSchema(source reflect.Value) map[string]reflect.StructField {
+func (*Query[T]) inferSchema(source reflect.Value) map[string]reflect.StructField {
 	typeOfSlice := source.Type()
 	recordType := typeOfSlice.Elem()
 	fieldMap := map[string]reflect.StructField{}
@@ -101,7 +100,7 @@ func (*Query) inferSchema(source reflect.Value) map[string]reflect.StructField {
 	return fieldMap
 }
 
-func (q *Query) applyFilter(
+func (q *Query[T]) applyFilter(
 	source reflect.Value,
 	fieldMap map[string]reflect.StructField,
 	destination reflect.Value) error {
@@ -122,7 +121,7 @@ func (q *Query) applyFilter(
 	return nil
 }
 
-func (q *Query) applySort(
+func (q *Query[T]) applySort(
 	fieldMap map[string]reflect.StructField,
 	destination reflect.Value) error {
 	if len(q.OrderBy) == 0 {
@@ -147,16 +146,16 @@ func (q *Query) applySort(
 	return nil
 }
 
-func (q *Query) applyLimit(destination reflect.Value) {
+func (q *Query[T]) applyLimit(dst *[]T) {
 	if q.Limit == 0 {
 		// by default limit should be something small, like 100 records
 		q.Limit = 100
 	}
-	if destination.Len() < q.Limit {
+	if len(*dst) < q.Limit {
 		// and be adjusted to available data
-		q.Limit = destination.Len()
+		q.Limit = len(*dst)
 	}
-	destination.Set(destination.Slice(0, q.Limit))
+	*dst = (*dst)[0:q.Limit]
 }
 
 type OrderBy struct {
@@ -380,7 +379,7 @@ func (v *Value) eval(ctx internalRow) (interface{}, error) {
 var parser *participle.Parser
 
 func init() {
-	parser = participle.MustBuild(&Query{},
+	parser = participle.MustBuild(&Query[any]{},
 		participle.Elide("Whitespace"),
 		participle.UseLookahead(2),
 		participle.Unquote("String"),
@@ -398,9 +397,9 @@ func init() {
 	)
 }
 
-func Parse(query string) (q Query, err error) {
+func Parse[T any](query string) (q Query[T], err error) {
 	if query == "" {
-		return Query{}, nil
+		return Query[T]{}, nil
 	}
 	err = parser.ParseString("", query, &q)
 	return

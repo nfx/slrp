@@ -187,7 +187,7 @@ func (pool *Pool) HttpGet(r *http.Request) (interface{}, error) {
 	if filter == "" {
 		filter = "Offered > 1 ORDER BY LastSeen DESC"
 	}
-	query, err := ql.Parse(filter)
+	query, err := ql.Parse[entry](filter)
 	if err != nil {
 		return nil, err
 	}
@@ -198,8 +198,7 @@ func (pool *Pool) HttpGet(r *http.Request) (interface{}, error) {
 	}
 	result := PoolStats{}
 	snapshot := pool.snapshot()
-	err = query.ApplyFacets(&snapshot, &result.Entries, func(i interface{}) {
-		all := i.(*[]entry)
+	err = query.ApplyFacets(&snapshot, &result.Entries, func(all *[]entry) {
 		var http, https, socks4, socks5, alive, offered, succeeded int
 		for _, v := range *all {
 			switch v.Proxy.Proto {

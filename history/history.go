@@ -189,7 +189,7 @@ func (h *History) main(ctx app.Context) {
 
 func (h *History) handleFilter(f filter) filterResults {
 	result := []filteredRequest{}
-	query, err := ql.Parse(f.Query)
+	query, err := ql.Parse[Request](f.Query)
 	if err != nil {
 		return filterResults{
 			Err: err,

@@ -1,6 +1,6 @@
 module github.com/nfx/slrp
 
-go 1.17
+go 1.18
 
 // direct
 require (

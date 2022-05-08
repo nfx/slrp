@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/nfx/slrp/app"
+	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/sorter"
 
 	"github.com/alecthomas/participle/v2"
@@ -151,6 +152,13 @@ func (o *OrderBy) cmp(fieldMap map[string]reflect.StructField) (func(reflect.Val
 			v := record.FieldByIndex(index)
 			time := v.Interface().(time.Time)
 			return comparators[reflect.Int64][o.Direction](time.Unix())
+		}, nil
+	case "pmux.Proxy":
+		// TODO: it's hairy and must be fixed later.
+		return func(record reflect.Value) sorter.Cmp {
+			v := record.FieldByIndex(index)
+			proxy := v.Interface().(pmux.Proxy)
+			return comparators[reflect.Int64][o.Direction](int64(proxy))
 		}, nil
 	}
 	return nil, fmt.Errorf("%s (%s) does not support sorting yet", field.Name, field.Type.Name())
@@ -358,7 +366,7 @@ func (o DefaultLimit) apply(q *Query) {
 	}
 }
 
-func Execute[T any](src *[]T, dst *[]T, query string, facets func(*[]T), 
+func Execute[T any](src *[]T, dst *[]T, query string, facets func(*[]T),
 	opts ...executeOption) error {
 	q, err := parse(query)
 	if err != nil {

@@ -178,6 +178,7 @@ type Card struct {
 }
 
 type PoolStats struct {
+	Total   int
 	Cards   []Card
 	Entries []entry
 }
@@ -191,6 +192,7 @@ func (pool *Pool) HttpGet(r *http.Request) (interface{}, error) {
 	snapshot := pool.snapshot()
 	err := ql.Execute(&snapshot, &result.Entries, filter, func(all *[]entry) {
 		var http, https, socks4, socks5, alive, offered, succeeded int
+		result.Total = len(*all)
 		for _, v := range *all {
 			switch v.Proxy.Proto() {
 			case pmux.HTTP:

@@ -4,9 +4,10 @@ import './App.css';
 import React from 'react';
 import {Routes, Route, NavLink, Outlet} from "react-router-dom";
 import { ErrorBoundary } from "./util";
-import { Dashboard } from "./Sources";
-import { History } from "./History";
+import Dashboard from "./Sources";
 import Proxies from "./Proxies";
+import History from "./History";
+import Blacklist from "./Blacklist";
 
 function Header() {
   return <header className="p-1 mb-3 border-bottom">
@@ -19,6 +20,7 @@ function Header() {
           <li><NavLink to="/" className="nav-link px-2 link-secondary">Overview</NavLink></li>
           <li><NavLink to="/proxies" className="nav-link px-2 link-dark">Proxies</NavLink></li>
           <li><NavLink to="/history" className="nav-link px-2 link-dark">History</NavLink></li>
+          <li><NavLink to="/blacklist" className="nav-link px-2 link-dark">Blacklist</NavLink></li>
         </ul>
       </div>
     </div>
@@ -42,6 +44,7 @@ function App() {
       <Route index element={<Dashboard />} />
       <Route path="proxies" element={<Proxies />} />
       <Route path="history" element={<History />} />
+      <Route path="blacklist" element={<Blacklist />} />
     </Route>
   </Routes>
 }

@@ -109,7 +109,7 @@ function Probe(props) {
   </tr>
 }
 
-export function Dashboard() {
+export default function Dashboard() {
   useTitle("Overview")
   const [dashboard, setDashboard] = useState(null);
   const [delay, setDelay] = useState(1000);

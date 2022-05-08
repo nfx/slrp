@@ -75,9 +75,6 @@ function Entry(props) {
   </tr>
 }
 
-// from pmux/proxy.go
-const protos = ["http", "https", "socks4", "socks5"]
-
 function HourSuccessRate({HourSucceed, HourOffered}) {
   // https://stackoverflow.com/questions/45514676/react-check-if-element-is-visible-in-dom
   const rate = HourSucceed.map((s, i) => s === 0 ? 0 : 100 * s / HourOffered[i])

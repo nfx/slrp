@@ -58,7 +58,7 @@ function Request(props) {
   </tr>
 }
 
-export function History() {
+export default function History() {
   useTitle("History")
   const [history, setHistory] = useState(null);
   return <div className="card history table-responsive">

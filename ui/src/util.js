@@ -100,7 +100,7 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
         return false
       })
     }, 500)
-  }, [total, savedCallback, searchParams, endpoint, minDelay, onUpdate])
+  }, [savedCallback, searchParams, endpoint, minDelay, onUpdate])
 
   useEffect(() => {
     doFilter()

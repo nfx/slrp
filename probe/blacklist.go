@@ -33,7 +33,7 @@ type Card struct {
 }
 
 type blacklistedResults struct {
-	Total        int
+	Total       int
 	TopFailures []Card
 	TopSources  []Card
 	Items       []blacklisted
@@ -71,7 +71,7 @@ func (d *dashboard) HttpGet(r *http.Request) (interface{}, error) {
 				srcSummary[src]++
 			}
 		}
-	})
+	}, ql.DefaultLimit(50), ql.DefaultOrder{ql.Asc("Proxy")})
 	if err != nil {
 		return nil, err
 	}

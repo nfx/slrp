@@ -80,6 +80,7 @@ export function Card({ label, value, increment = 0 }) {
 
 export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
   const savedCallback = useRef();
+  const [total, setTotal] = useState(null);
   const [failure, setFailure] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -87,6 +88,7 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
     clearTimeout(savedCallback.current)
     savedCallback.current = setTimeout(() => {
       http.get(endpoint, { params: searchParams }).then(response => {
+        setTotal(response.data.Total)
         onUpdate(response.data)
         setFailure(null)
         savedCallback.current = setTimeout(doFilter, minDelay)
@@ -98,7 +100,7 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
         return false
       })
     }, 500)
-  }, [savedCallback, searchParams, endpoint, minDelay, onUpdate])
+  }, [total, savedCallback, searchParams, endpoint, minDelay, onUpdate])
 
   useEffect(() => {
     doFilter()
@@ -111,13 +113,37 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
     setSearchParams(filter === "" ? {} : { filter })
     doFilter()
   }
-  return <div>
+  return <div className='search-filter'>
+    {total != null && <span className='total'>{total} total</span>}
     <input className="form-control form-control-dark w-100" type="text"
       value={filter} onChange={change} placeholder="Search" aria-label="Search" />
     {failure != null && <div className="alert-danger" role="alert">
       {failure}
     </div>}
   </div>
+}
+
+function FilterableFacet({Name, Value, link}) {
+  const short = Name.length > 32 ? `${Name.substring(0, 32)}...` : Name
+  return <li>
+    {link === null ? short : <a className='link-primary app-link' 
+      href={link.replace('$', Name)}>
+      {short}
+    </a>} <sup>{Value}</sup>
+  </li>
+}
+
+export function SearchFacet({name, items, link = null}) {
+  let result = []
+  if (items.length > 1) {
+    result.push(<div key={name} className='search-facet'>
+      <strong>{name}</strong>
+      <ul>
+        {items.map(f => <FilterableFacet key={f.Name} link={link} {...f} />)}
+      </ul>
+    </div>)
+  }
+  return result
 }
 
 export function useInterval(callback, delay) {

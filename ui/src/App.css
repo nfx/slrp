@@ -91,3 +91,33 @@ a {
   .col-New { display: none; }
   .col-Ignored { display: none; }
 }
+
+.search-facet {
+  padding: .5em;
+}
+
+.search-facet ul {
+  display: inline;
+  padding-left: .5em;
+}
+
+.search-facet li {
+  display: inline;
+  margin-right: .5em;
+}
+
+small {
+  padding: 0;
+  margin: 0;
+}
+
+.search-filter {
+  position: relative;
+}
+
+.search-filter .total {
+  position: absolute;
+  right: 0.5em;
+  top: 0.5em;
+  color: #6c757d;
+}

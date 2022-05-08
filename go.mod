@@ -11,7 +11,7 @@ require (
 	github.com/dop251/goja v0.0.0-20220124171016-cfb079cdc7b4
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.8.0
-	github.com/microcosm-cc/bluemonday v1.0.17
+	github.com/microcosm-cc/bluemonday v1.0.18
 	github.com/rs/zerolog v1.26.1
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f

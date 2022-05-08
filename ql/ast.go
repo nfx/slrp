@@ -276,7 +276,7 @@ func (v *Value) eval(ctx internalRow) (interface{}, error) {
 		}
 		res := ctx.Get(*v.Identifier)
 		if x, ok := res.(stringer); ok {
-			return x, nil
+			return x.String(), nil
 		}
 		switch x := res.(type) {
 		case int:

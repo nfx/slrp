@@ -3,6 +3,9 @@ SLRP - rotating open proxy multiplexer
 
 ![slrp logo](ui/public/logo.png)
 
+![lines](https://img.shields.io/tokei/lines/github/nfx/slrp)
+[![downloads](https://img.shields.io/github/downloads/nfx/slrp/total.svg)](https://hanadigital.github.io/grev/?user=nfx&repo=slrp)
+
 * Searches for proxies in open sources
 * Intelligently stores state on disk across restarts
 * Validates via configurable speed thresholds and anonymity

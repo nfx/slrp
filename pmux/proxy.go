@@ -3,21 +3,20 @@ package pmux
 import (
 	"context"
 	"crypto/tls"
-	"encoding/binary"
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
-	"strconv"
 	"time"
 
 	"golang.org/x/net/proxy"
 )
 
-type proto int8
+type proto uint16
 
 const (
-	// don't change
+	// don't change the order!!!
 	HTTP proto = iota
 	HTTPS
 	SOCKS4
@@ -38,84 +37,78 @@ var reverseProtoMap = map[proto]string{
 	SOCKS5: "socks5",
 }
 
-type Proxy struct {
-	IP    net.IP
-	Port  uint16
-	Proto proto
+// uint64 = uint32 + uint16 + uint16 (padding for alignment)
+type Proxy uint64
+
+func (p Proxy) Address() string {
+	ip := p >> 32
+	a := ip >> 24 & 0xff
+	b := ip >> 16 & 0xff
+	c := ip >> 8 & 0xff
+	d := ip & 0xff
+	return fmt.Sprintf("%d.%d.%d.%d:%d",
+		a, b, c, d, p.Port())
 }
 
-func (p *Proxy) URL() *url.URL {
+func (p Proxy) Port() uint16 {
+	return uint16(p >> 16 & 0xffff)
+}
+
+func (p Proxy) Proto() proto {
+	return proto(p & 0xffff)
+}
+
+func (p Proxy) Scheme() string {
+	return reverseProtoMap[p.Proto()]
+}
+
+func (p Proxy) URL() *url.URL {
 	return &url.URL{
-		Host:   fmt.Sprintf("%s:%d", p.IP, p.Port),
-		Scheme: reverseProtoMap[p.Proto],
+		Host:   p.Address(),
+		Scheme: p.Scheme(),
 	}
 }
 
 func (p Proxy) String() string {
-	// use custom striner instead of URL stringer for performance
-	return fmt.Sprintf("%s://%s:%d", reverseProtoMap[p.Proto], p.IP, p.Port)
+	return fmt.Sprintf("%s://%s", p.Scheme(), p.Address())
 }
 
-func (p *Proxy) Equal(o Proxy) bool {
-	if len(p.IP) == 0 || len(o.IP) == 0 {
-		return false
-	}
-	// if !p.IP.Equal(p.IP) {
-	a := p.IP[0] != o.IP[0]
-	b := p.IP[1] != o.IP[1]
-	c := p.IP[2] != o.IP[2]
-	d := p.IP[3] != o.IP[3]
-	if a || b || c || d {
-		return false
-	}
-	if p.Port != o.Port {
-		return false
-	}
-	if p.Proto != o.Proto {
-		return false
-	}
-	return true
+func (p Proxy) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, p.String())), nil
 }
 
 type ckey int
 
 const ProxyURL ckey = iota
 
-func (p *Proxy) InContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, ProxyURL, &Proxy{
-		// should be copy, otherwise a data race
-		// sorting entry list & dialing a connection
-		IP:    p.IP,
-		Port:  p.Port,
-		Proto: p.Proto,
-	})
+func (p Proxy) InContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, ProxyURL, p)
 }
 
-func (p *Proxy) Valid() bool {
-	return p.Port != 0
+func (p Proxy) Valid() bool {
+	return p.Port() != 0
 }
 
-func (p *Proxy) IsTunnel() bool {
-	return p.Proto == SOCKS4 || p.Proto == SOCKS5
+func (p Proxy) IsTunnel() bool {
+	return p.Proto() == SOCKS4 || p.Proto() == SOCKS5
 }
 
-// returns int representation of IP address
-func (p *Proxy) Uint32() uint32 {
-	return binary.BigEndian.Uint32(p.IP)
+func (p Proxy) Bucket(buckets int) int {
+	bucket := int(p) % buckets
+	if bucket < 0 {
+		return bucket * -1
+	}
+	return bucket
 }
 
-func (p *Proxy) Bucket(buckets int) int {
-	return int(p.Uint32()) % buckets
-}
-
-func GetProxyFromContext(ctx context.Context) *Proxy {
+func GetProxyFromContext(ctx context.Context) Proxy {
 	p := ctx.Value(ProxyURL)
 	if p == nil {
-		return nil
+		return 0
 	}
-	proxy, ok := p.(*Proxy)
+	proxy, ok := p.(Proxy)
 	if !ok {
-		return nil
+		return 0
 	}
 	return proxy
 }
@@ -127,7 +120,7 @@ func GetProxyFromContext(ctx context.Context) *Proxy {
 func dialProxiedConnection(ctx context.Context, network, addr string) (net.Conn, error) {
 	p := GetProxyFromContext(ctx)
 	// given the wish and time to implement a proxy chain, it should be done here
-	if p == nil || !p.IsTunnel() {
+	if p == 0 || !p.IsTunnel() {
 		// use normal connection establishment in one of two cases:
 		// a) no proxy is specified
 		// b) HTTP proxy (handled higher on the stack)
@@ -145,7 +138,7 @@ func dialProxiedConnection(ctx context.Context, network, addr string) (net.Conn,
 
 func pickHttpProxyFromContext(r *http.Request) (*url.URL, error) {
 	p := GetProxyFromContext(r.Context())
-	if p == nil {
+	if p == 0 {
 		return nil, nil
 	}
 	if p.IsTunnel() {
@@ -154,7 +147,7 @@ func pickHttpProxyFromContext(r *http.Request) (*url.URL, error) {
 	}
 	//return p.URL(), nil
 	return &url.URL{
-		Host: fmt.Sprintf("%s:%d", p.IP, p.Port),
+		Host:   p.Address(),
 		Scheme: "http",
 	}, nil
 }
@@ -170,24 +163,25 @@ func ContextualHttpTransport() *http.Transport {
 }
 
 func NewProxy(addr string, t string) Proxy {
-	host, port, err := net.SplitHostPort(addr)
+	addrPort, err := netip.ParseAddrPort(addr)
 	if err != nil {
-		host = "127.0.0.1"
-		port = "0"
-	}
-	iport, err := strconv.Atoi(port)
-	if err != nil {
-		iport = 0
+		return 0
 	}
 	p, ok := protoMap[t]
 	if !ok {
 		p = HTTP
 	}
-	return Proxy{
-		IP:    net.ParseIP(host).To4(),
-		Port:  uint16(iport),
-		Proto: p,
+	var ipv4u64 uint64
+	ipv4bytes := addrPort.Addr().As4()
+	for i := 0; i < 4; i++ {
+		ipv4u64 |= uint64(ipv4bytes[i])
+		if i < 3 {
+			ipv4u64 <<= 8
+		}
 	}
+	ip := ipv4u64 << 32
+	port := uint64(addrPort.Port()) << 16
+	return Proxy(ip + port + uint64(p))
 }
 
 func HttpProxy(addr string) Proxy {

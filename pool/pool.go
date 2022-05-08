@@ -187,21 +187,12 @@ func (pool *Pool) HttpGet(r *http.Request) (interface{}, error) {
 	if filter == "" {
 		filter = "Offered > 1 ORDER BY LastSeen DESC"
 	}
-	query, err := ql.Parse[entry](filter)
-	if err != nil {
-		return nil, err
-	}
-	if len(query.OrderBy) == 0 {
-		query.OrderBy = []ql.OrderBy{
-			ql.Desc("LastSeen"),
-		}
-	}
 	result := PoolStats{}
 	snapshot := pool.snapshot()
-	err = query.ApplyFacets(&snapshot, &result.Entries, func(all *[]entry) {
+	err := ql.Execute(&snapshot, &result.Entries, filter, func(all *[]entry) {
 		var http, https, socks4, socks5, alive, offered, succeeded int
 		for _, v := range *all {
-			switch v.Proxy.Proto {
+			switch v.Proxy.Proto() {
 			case pmux.HTTP:
 				http++
 			case pmux.HTTPS:
@@ -225,7 +216,7 @@ func (pool *Pool) HttpGet(r *http.Request) (interface{}, error) {
 			{"SOCKS4 proxies", socks4},
 			{"SOCKS5 proxies", socks5},
 		}
-	})
+	}, ql.DefaultOrder{ql.Desc("LastSeen")}, ql.DefaultLimit(20))
 	return result, err
 }
 
@@ -306,7 +297,7 @@ func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 	// add trace information deep to all other places
 	ctx = app.Log.WithInt(ctx, "serial", serial)
 	req = req.WithContext(ctx)
-	if pmux.GetProxyFromContext(req.Context()) != nil {
+	if pmux.GetProxyFromContext(req.Context()) != 0 {
 		// fast path for session
 		resp, err := pool.client.Do(req)
 		// whatever... there'll always be at least one shard
@@ -320,7 +311,7 @@ func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 			start:    start,
 			e: &entry{
 				// todo: make it better
-				Proxy: *pmux.GetProxyFromContext(req.Context()),
+				Proxy: pmux.GetProxyFromContext(req.Context()),
 			},
 			err: err,
 		}, err)

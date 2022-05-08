@@ -25,7 +25,7 @@ type Checker interface {
 var (
 	firstPass = []string{
 		// these check for ext ip, but don't show headers
-		"https://ifconfig.me/ip",       // okhttp
+		"https://ifconfig.me/ip", // okhttp
 		//"https://ifconfig.io/ip",
 		"https://myexternalip.com/raw", // okhttp
 		"https://ipv4.icanhazip.com/",  // okhttp
@@ -159,7 +159,7 @@ type simple struct {
 func (sc *simple) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, error) {
 	start := time.Now()
 	page := sc.page
-	if proxy.Proto == pmux.HTTP {
+	if proxy.Proto() == pmux.HTTP {
 		page = strings.Replace(page, "https", "http", 1)
 	}
 	req, err := http.NewRequestWithContext(proxy.InContext(ctx), "GET", page, nil)

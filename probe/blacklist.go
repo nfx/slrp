@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 
+	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/ql"
 	"github.com/nfx/slrp/sources"
 )
@@ -20,11 +22,9 @@ func NewBlacklistApi(probe *Probe) *dashboard {
 }
 
 type blacklisted struct {
-	Proxy   string
+	Proxy   pmux.Proxy
 	Failure string
 	Sources []string
-
-	failureIndex int
 }
 
 type Card struct {
@@ -33,6 +33,7 @@ type Card struct {
 }
 
 type blacklistedResults struct {
+	Total        int
 	TopFailures []Card
 	TopSources  []Card
 	Items       []blacklisted
@@ -41,46 +42,42 @@ type blacklistedResults struct {
 func (d *dashboard) HttpGet(r *http.Request) (interface{}, error) {
 	probe := d.probe.Snapshot()
 	snapshot := []blacklisted{}
-	for proxyUint32, failureIndex := range probe.Blacklist {
+	for proxy, failureIndex := range probe.Blacklist {
 		srcs := []string{}
-		for src := range probe.SeenSources[proxyUint32] {
+		for src := range probe.SeenSources[proxy] {
 			srcs = append(srcs, sources.ByID(src).Name())
 		}
 		snapshot = append(snapshot, blacklisted{
-			Proxy:   fmt.Sprintf("%d", proxyUint32), // TODO: fix it
 			Failure: probe.Failures[failureIndex],
+			Proxy:   proxy,
 			Sources: srcs,
-
-			failureIndex: failureIndex,
 		})
 	}
 	if len(snapshot) == 0 {
 		return nil, fmt.Errorf("blacklist is empty")
 	}
 	filter := r.FormValue("filter")
-	query, err := ql.Parse[blacklisted](filter)
-	if err != nil {
-		return nil, err
-	}
-	// if len(query.OrderBy) == 0 {
-	// 	query.OrderBy = []ql.OrderBy{
-	// 		ql.Asc("Failure"),
-	// 	}
-	// }
 	result := blacklistedResults{}
-	failureSummary := map[int]int{}
 	srcSummary := map[string]int{}
-	err = query.ApplyFacets(&snapshot, &result.Items, func(all *[]blacklisted) {
+	failureSummary := map[string]int{}
+	err := ql.Execute(&snapshot, &result.Items, filter, func(all *[]blacklisted) {
+		result.Total = len(*all)
 		for _, v := range *all {
-			failureSummary[v.failureIndex]++
+			split := strings.Split(v.Failure, ": ")
+			// perform error common suffix normalisation
+			failure := split[len(split)-1]
+			failureSummary[failure]++
 			for _, src := range v.Sources {
 				srcSummary[src]++
 			}
 		}
 	})
-	for failureIndex, cnt := range failureSummary {
+	if err != nil {
+		return nil, err
+	}
+	for failure, cnt := range failureSummary {
 		result.TopFailures = append(result.TopFailures, Card{
-			Name:  probe.Failures[failureIndex],
+			Name:  failure,
 			Value: cnt,
 		})
 	}

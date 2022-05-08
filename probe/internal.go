@@ -51,10 +51,10 @@ type reVerify struct {
 }
 
 type internal struct {
-	LastReverified   map[uint32]reVerify
-	Blacklist        map[uint32]int
-	Seen             map[uint32]bool
-	SeenSources      map[uint32]map[int]bool
+	LastReverified   map[pmux.Proxy]reVerify
+	Blacklist        map[pmux.Proxy]int
+	Seen             map[pmux.Proxy]bool
+	SeenSources      map[pmux.Proxy]map[int]bool
 	Failures         []string
 	ReverifyCounter  int64
 	ReverifyAttempts int64
@@ -81,10 +81,10 @@ func newInternal(stats *stats.Stats, probing chan verify, buffer int) internal {
 		timeout:          make(chan failure, buffer),
 		found:            make(chan verify, buffer),
 		snapshot:         make(chan chan internal),
-		SeenSources:      make(map[uint32]map[int]bool),
-		Seen:             make(map[uint32]bool),
-		Blacklist:        make(map[uint32]int),
-		LastReverified:   make(map[uint32]reVerify),
+		SeenSources:      make(map[pmux.Proxy]map[int]bool),
+		Seen:             make(map[pmux.Proxy]bool),
+		Blacklist:        make(map[pmux.Proxy]int),
+		LastReverified:   make(map[pmux.Proxy]reVerify),
 	}
 }
 
@@ -130,35 +130,34 @@ func (i *internal) main(ctx app.Context) {
 
 func (i *internal) handleScheduled(v verify) {
 	log := app.Log.From(v.ctx)
-	if len(v.Proxy.IP) == 0 {
+	if v.Proxy == 0 {
 		i.stats.Update(v.Source, stats.Ignored)
 		log.Trace().Msg("empty ip")
 		return
 	}
-	ipUint32 := v.Proxy.Uint32()
-	_, ok := i.SeenSources[ipUint32]
+	_, ok := i.SeenSources[v.Proxy]
 	if ok {
-		i.SeenSources[ipUint32][v.Source] = true
+		i.SeenSources[v.Proxy][v.Source] = true
 	} else {
-		i.SeenSources[ipUint32] = map[int]bool{v.Source: true}
+		i.SeenSources[v.Proxy] = map[int]bool{v.Source: true}
 	}
-	_, ok = i.Blacklist[ipUint32]
+	_, ok = i.Blacklist[v.Proxy]
 	if ok {
 		i.stats.Update(v.Source, stats.Ignored)
-		delete(i.LastReverified, ipUint32)
+		delete(i.LastReverified, v.Proxy)
 		log.Trace().Msg("was blacklisted")
 		return
 	}
-	_, ok = i.LastReverified[ipUint32]
+	_, ok = i.LastReverified[v.Proxy]
 	if ok && v.Attempt == 0 {
 		i.stats.Update(v.Source, stats.Ignored)
 		log.Trace().Msg("in reverify backlog")
 		return
 	}
-	_, ok = i.Seen[ipUint32]
+	_, ok = i.Seen[v.Proxy]
 	if ok {
 		i.stats.Update(v.Source, stats.Ignored)
-		delete(i.LastReverified, ipUint32)
+		delete(i.LastReverified, v.Proxy)
 		log.Trace().Msg("in pool")
 		return
 	}
@@ -177,10 +176,10 @@ func (i *internal) hanldeSnapshot(response chan internal) {
 	snapshot := internal{
 		ReverifyCounter:  i.ReverifyCounter,
 		ReverifyAttempts: i.ReverifyAttempts,
-		LastReverified:   map[uint32]reVerify{},
-		Blacklist:        map[uint32]int{},
-		Seen:             map[uint32]bool{},
-		SeenSources:      map[uint32]map[int]bool{},
+		LastReverified:   map[pmux.Proxy]reVerify{},
+		Blacklist:        map[pmux.Proxy]int{},
+		Seen:             map[pmux.Proxy]bool{},
+		SeenSources:      map[pmux.Proxy]map[int]bool{},
 		Failures:         make([]string, len(i.Failures)),
 	}
 	for k, v := range i.LastReverified {
@@ -209,8 +208,7 @@ const Reverify int = 0
 func (i *internal) handleForget(f failure) {
 	i.stats.Update(f.v.Source, stats.Blacklisted)
 	log := app.Log.From(f.v.ctx)
-	ipUint32 := f.v.Proxy.Uint32()
-	delete(i.LastReverified, ipUint32)
+	delete(i.LastReverified, f.v.Proxy)
 	if f.v.Source == Reverify {
 		i.ReverifyAttempts += int64(f.v.Attempt)
 		i.ReverifyCounter++
@@ -222,13 +220,13 @@ func (i *internal) handleForget(f failure) {
 		i.Failures = append(i.Failures, shErr.Error())
 		i.failuresInverted[shErr.Error()] = idx
 	}
-	i.Blacklist[ipUint32] = idx
+	i.Blacklist[f.v.Proxy] = idx
 	log.Info().Err(shErr).Int("idx", idx).Msg("blacklisted")
 }
 
 func (i *internal) handleTimeout(f failure) {
 	i.stats.Update(f.v.Source, stats.Timeout)
-	i.LastReverified[f.v.Proxy.Uint32()] = reVerify{
+	i.LastReverified[f.v.Proxy] = reVerify{
 		Proxy:   f.v.Proxy,
 		Attempt: f.v.Attempt + 1,
 		After:   time.Now().Add(1 * time.Hour).Unix(),
@@ -245,7 +243,7 @@ func (i *internal) handleReverify(ctx context.Context) {
 		return
 	}
 	now := time.Now().Unix()
-	reverify := make(map[uint32]reVerify, len(i.LastReverified))
+	reverify := make(map[pmux.Proxy]reVerify, len(i.LastReverified))
 	for k, v := range i.LastReverified {
 		if v.Attempt > maxReverifies {
 			// only in Go it's allowed to modify hashmap during iteration...
@@ -292,7 +290,6 @@ func (i *internal) handleFound(v verify) {
 		i.ReverifyAttempts += int64(v.Attempt)
 		i.ReverifyCounter++
 	}
-	ipUint32 := v.Proxy.Uint32()
-	delete(i.LastReverified, ipUint32)
-	i.Seen[ipUint32] = true
+	delete(i.LastReverified, v.Proxy)
+	i.Seen[v.Proxy] = true
 }

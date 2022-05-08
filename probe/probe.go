@@ -51,7 +51,7 @@ func NewProbe(stats *stats.Stats, p *pool.Pool, c checker.Checker) *Probe {
 }
 
 func (p *Probe) Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool {
-	if len(proxy.IP) == 0 {
+	if proxy == 0 {
 		return false
 	}
 	p.stats.Update(source, stats.Scheduled)

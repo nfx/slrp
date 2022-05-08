@@ -128,7 +128,7 @@ func (pool *shard) removeProxy(r removal) {
 	newEntries := []entry{}
 	found := false
 	for _, v := range pool.Entries {
-		if v.Proxy.Equal(r.proxy) {
+		if v.Proxy == r.proxy {
 			found = true
 			continue
 		}

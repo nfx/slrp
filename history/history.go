@@ -15,6 +15,7 @@ import (
 )
 
 type filterResults struct {
+	Total     int
 	Requests []filteredRequest
 	Err      error `json:",omitempty"`
 }
@@ -88,7 +89,7 @@ type History struct {
 	filter         chan filter
 	record         chan Request
 	requests       []Request
-	appears        map[uint32]int
+	appears        map[pmux.Proxy]int
 	limit          int
 }
 
@@ -97,7 +98,7 @@ func NewHistory() *History {
 		requestRequest: make(chan requestRequest),
 		filter:         make(chan filter),
 		record:         make(chan Request, 128),
-		appears:        map[uint32]int{},
+		appears:        map[pmux.Proxy]int{},
 	}
 }
 
@@ -158,9 +159,8 @@ func (h *History) main(ctx app.Context) {
 			// this may turn into partitioned data structure or index?..
 			counter++
 			r.ID = counter
-			i := r.Proxy.Uint32()
-			h.appears[i] += 1
-			r.Appeared = h.appears[i]
+			h.appears[r.Proxy] += 1
+			r.Appeared = h.appears[r.Proxy]
 			if len(h.requests) == h.limit {
 				h.requests = h.requests[1:]
 			}
@@ -188,31 +188,19 @@ func (h *History) main(ctx app.Context) {
 }
 
 func (h *History) handleFilter(f filter) filterResults {
-	result := []filteredRequest{}
-	query, err := ql.Parse[Request](f.Query)
-	if err != nil {
-		return filterResults{
-			Err: err,
-		}
-	}
-	if query.Limit == 0 {
-		query.Limit = 100
-	}
-	if len(query.OrderBy) == 0 {
-		query.OrderBy = []ql.OrderBy{
-			ql.Desc("Ts"),
-		}
-	}
+	total := 0
+	var buf []Request
 	// TODO: compare if it's okay to search on original slice
 	// or make a copy every request
-	var buf []Request
-	// TODO: pass map of "virtual field matchers" (Size, Proxy, ...)
-	err = query.Apply(&h.requests, &buf)
+	err := ql.Execute(&h.requests, &buf, f.Query, func(all *[]Request) {
+		total = len(*all)
+	}, ql.DefaultLimit(100), ql.DefaultOrder{ql.Desc("Ts")})
 	if err != nil {
 		return filterResults{
 			Err: err,
 		}
 	}
+	result := []filteredRequest{}
 	for _, v := range buf {
 		result = append(result, filteredRequest{
 			ID:         v.ID,
@@ -224,12 +212,13 @@ func (h *History) handleFilter(f filter) filterResults {
 			Status:     v.Status,
 			StatusCode: v.StatusCode,
 			Proxy:      v.Proxy.String(),
-			Appeared:   h.appears[v.Proxy.Uint32()],
+			Appeared:   h.appears[v.Proxy],
 			Size:       len(v.OutBody),
 			Took:       v.Took.Round(time.Second).Seconds(),
 		})
 	}
 	return filterResults{
+		Total: total,
 		Requests: result,
 	}
 }

@@ -7,7 +7,6 @@ __debug_bin
 
 node_modules
 build
-**package-lock.json
 
 config.yml
 dist/

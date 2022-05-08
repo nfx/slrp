@@ -145,6 +145,10 @@ Get 100 last forwarding attempts
 
 Get sanitized HTTP response from forwarding attempt
 
+## GET `/api/blacklist`
+
+Get first 20 blacklisted items sorted by proxy along with common error stats
+
 # References
 
 * [ProxyBroker](https://github.com/constverum/ProxyBroker) is pretty similar project in nature. Requires couple of Python module dependencies and had the last commit in March 2019. 

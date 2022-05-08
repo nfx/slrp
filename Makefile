@@ -3,6 +3,9 @@ default: build
 build-ui:
 	npm --prefix ui run build
 
+dev-ui:
+	npm --prefix ui start
+
 snapshot: build-ui
 	goreleaser build --snapshot --rm-dist --single-target
 

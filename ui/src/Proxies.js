@@ -4,7 +4,6 @@ import { useState } from 'react';
 export default function Proxies() {
   useTitle("Proxies")
   const [pool, setPool] = useState(null);
-  const key = (e) => `${e.Proxy.Proto}:${e.Proxy.IP}:${e.Proxy.Port}:${e.FirstSeen}`
   return <div>
     {pool != null && <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3">
       {pool.Cards.map(card => 
@@ -26,7 +25,7 @@ export default function Proxies() {
         </thead>
         <tbody>
         {pool.Entries.map(proxy => 
-          <Entry key={key(proxy)} {...proxy} />)}
+          <Entry key={proxy.Proxy} {...proxy} />)}
         </tbody>
       </table>
     </div>}
@@ -42,19 +41,19 @@ function timeTook(duration) {
 }
 
 function Entry(props) {
-  let {IP, Port, Proto} = props.Proxy
-  let {FirstSeen, LastSeen, Timeouts, Ok, ReanimateAfter, Speed} = props
-  let removeProxy = e => {
-    http.delete(`/probe/${protos[Proto]}:${IP}:${Port}`)
+  const proxy = props.Proxy
+  const {FirstSeen, LastSeen, Timeouts, Ok, ReanimateAfter, Speed} = props
+  const removeProxy = e => {
+    http.delete(`/probe/${proxy.replace("//", '')}`)
     return false
   }
   return <tr className='list-group-item-action'>
     <td>
       <a className='link-primary app-link' 
-        href={`/history?filter=Proxy:"${protos[Proto]}://${IP}:${Port}"`} 
+        href={`/history?filter=Proxy:"${proxy}"`} 
         rel="noreferrer" 
         target="_blank">
-        <span className='text-muted'>{protos[Proto]}://</span>{IP}:{Port}
+        {proxy}
       </a> <TimeDiff ts={FirstSeen*1000} title='First seen' />
     </td>
     <td>{timeTook(Speed)}</td>

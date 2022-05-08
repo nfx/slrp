@@ -324,16 +324,16 @@ func init() {
 		participle.Elide("Whitespace"),
 		participle.UseLookahead(2),
 		participle.Unquote("String"),
-		participle.Lexer(lexer.MustSimple([]lexer.Rule{
-			{"Ident", `[a-zA-Z]\w*`, nil},
-			{"Duration", `(\d+[wdhms])+`, nil},
-			{"Int", `[-+]?\d+`, nil},
-			{"Float", `[-+]?(\d*\.)?\d+`, nil},
-			{"Number", `[-+]?(\d*\.)?\d+`, nil},
-			{"Operator", `>=|>|<=|<|~|:|=`, nil},
-			{"String", `\"(?:[^\"]|\\.)*\"`, nil},
-			{"Comma", `,`, nil},
-			{"Whitespace", `[ \t]+`, nil},
+		participle.Lexer(lexer.MustSimple([]lexer.SimpleRule{
+			{"Ident", `[a-zA-Z]\w*`},
+			{"Duration", `(\d+[wdhms])+`},
+			{"Int", `[-+]?\d+`},
+			{"Float", `[-+]?(\d*\.)?\d+`},
+			{"Number", `[-+]?(\d*\.)?\d+`},
+			{"Operator", `>=|>|<=|<|~|:|=`},
+			{"String", `\"(?:[^\"]|\\.)*\"`},
+			{"Comma", `,`},
+			{"Whitespace", `[ \t]+`},
 		})),
 	)
 }

@@ -7,7 +7,7 @@ __debug_bin
 
 node_modules
 build
-ui/package-lock.json
+**package-lock.json
 
 config.yml
 dist/

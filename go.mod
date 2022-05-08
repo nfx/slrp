@@ -5,7 +5,7 @@ go 1.18
 // direct
 require (
 	github.com/Bogdan-D/go-socks4 v1.0.0
-	github.com/PuerkitoBio/goquery v1.7.1
+	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/alecthomas/participle/v2 v2.0.0-alpha8
 	github.com/corpix/uarand v0.1.1
 	github.com/dop251/goja v0.0.0-20220124171016-cfb079cdc7b4
@@ -23,7 +23,7 @@ require github.com/stretchr/testify v1.7.1
 
 // indirect
 require (
-	github.com/andybalholm/cascadia v1.2.0 // indirect
+	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect

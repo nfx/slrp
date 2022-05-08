@@ -1,7 +1,6 @@
 package ql
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -24,7 +23,6 @@ var fixture = []x{
 
 type tt struct {
 	query string
-	want  *Query[x]
 	err   error
 }
 
@@ -33,21 +31,16 @@ func TestParse(t *testing.T) {
 		// time.ParseDuration("5h30m40s")
 		// {"Second > 22", nil, nil},
 		// {"Second > 22 ORDER BY First, Second DESC LIMIT 2", nil, nil},
-		{"Fifth~a OR Fifth~d ORDER BY First, Second DESC LIMIT 2", nil, nil},
+		{"Fifth~a OR Fifth~d ORDER BY First, Second DESC LIMIT 2", nil},
 		//{"foo:bar AND NOT (bar=\"baz\" OR foo ~ 1) ORDER BY foo, bar DESC", nil, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			query, err := Parse[x](tt.query)
-
 			var result []x
-			err = query.Apply(&fixture, &result)
+			err := Execute(&fixture, &result, tt.query, func(t *[]x) {})
 			if err != tt.err {
-				t.Errorf("Parse() error = %v, wantErr %v", err, tt.want)
+				t.Errorf("Parse() error = %v", err)
 				return
-			}
-			if !reflect.DeepEqual(query, tt.want) {
-				t.Errorf("Parse() = %+v, want %v", query, tt.want)
 			}
 		})
 	}

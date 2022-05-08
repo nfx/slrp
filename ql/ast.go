@@ -52,76 +52,14 @@ func (e *Expression) eval(ctx internalRow) (bool, error) {
 	return true, nil
 }
 
-type Query[T any] struct {
+type Query struct {
 	Expression *Expression `@@`
 	// And     []*AndCondition `@@ ( "AND" @@ )*`
 	OrderBy []OrderBy `("ORDER" "BY" @@ (Comma @@)*)?`
 	Limit   int       `("LIMIT" @Int)?`
 }
 
-// Apply takes a pointer to a slice and replaces it with
-// filtered and sorted version, assorting to a query
-func (q *Query[T]) Apply(src *[]T, dst *[]T) error {
-	return q.ApplyFacets(src, dst, nil)
-}
-
-func (q *Query[T]) ApplyFacets(src *[]T, dst *[]T, beforeLimit func(*[]T)) (err error) {
-	defer func() {
-		if panic := recover(); panic != nil {
-			err = fmt.Errorf("panic: %v", panic)
-		}
-	}()
-	source := reflect.ValueOf(src).Elem()
-	destination := reflect.ValueOf(dst).Elem()
-	fieldMap := q.inferSchema(source)
-	err = q.applyFilter(source, fieldMap, destination)
-	if err != nil {
-		return err
-	}
-	err = q.applySort(fieldMap, destination)
-	if err != nil {
-		return err
-	}
-	if beforeLimit != nil {
-		beforeLimit(dst)
-	}
-	q.applyLimit(dst)
-	return err
-}
-
-func (*Query[T]) inferSchema(source reflect.Value) map[string]reflect.StructField {
-	typeOfSlice := source.Type()
-	recordType := typeOfSlice.Elem()
-	fieldMap := map[string]reflect.StructField{}
-	for i := 0; i < recordType.NumField(); i++ {
-		field := recordType.Field(i)
-		fieldMap[field.Name] = field
-	}
-	return fieldMap
-}
-
-func (q *Query[T]) applyFilter(
-	source reflect.Value,
-	fieldMap map[string]reflect.StructField,
-	destination reflect.Value) error {
-	if q.Expression == nil {
-		// empty expression is matching all
-		q.Expression = &Expression{}
-	}
-	for i := 0; i < source.Len(); i++ {
-		recordRV := source.Index(i)
-		success, err := q.Expression.eval(internalRow{recordRV, fieldMap})
-		if err != nil {
-			return fmt.Errorf("error filtering %d record: %w", i, err)
-		}
-		if success {
-			destination.Set(reflect.Append(destination, recordRV))
-		}
-	}
-	return nil
-}
-
-func (q *Query[T]) applySort(
+func (q *Query) applySort(
 	fieldMap map[string]reflect.StructField,
 	destination reflect.Value) error {
 	if len(q.OrderBy) == 0 {
@@ -144,18 +82,6 @@ func (q *Query[T]) applySort(
 		return chain
 	})
 	return nil
-}
-
-func (q *Query[T]) applyLimit(dst *[]T) {
-	if q.Limit == 0 {
-		// by default limit should be something small, like 100 records
-		q.Limit = 100
-	}
-	if len(*dst) < q.Limit {
-		// and be adjusted to available data
-		q.Limit = len(*dst)
-	}
-	*dst = (*dst)[0:q.Limit]
 }
 
 type OrderBy struct {
@@ -337,6 +263,10 @@ type Value struct {
 	Inner      *Expression `| "(" @@ ")"`
 }
 
+type stringer interface {
+	String() string
+}
+
 func (v *Value) eval(ctx internalRow) (interface{}, error) {
 	if v.Number != nil {
 		return *v.Number, nil
@@ -345,6 +275,9 @@ func (v *Value) eval(ctx internalRow) (interface{}, error) {
 			return *v.Identifier, nil
 		}
 		res := ctx.Get(*v.Identifier)
+		if x, ok := res.(stringer); ok {
+			return x, nil
+		}
 		switch x := res.(type) {
 		case int:
 			return float64(x), nil
@@ -379,7 +312,7 @@ func (v *Value) eval(ctx internalRow) (interface{}, error) {
 var parser *participle.Parser
 
 func init() {
-	parser = participle.MustBuild(&Query[any]{},
+	parser = participle.MustBuild(&Query{},
 		participle.Elide("Whitespace"),
 		participle.UseLookahead(2),
 		participle.Unquote("String"),
@@ -397,10 +330,100 @@ func init() {
 	)
 }
 
-func Parse[T any](query string) (q Query[T], err error) {
+func parse(query string) (q Query, err error) {
 	if query == "" {
-		return Query[T]{}, nil
+		return Query{}, nil
 	}
 	err = parser.ParseString("", query, &q)
 	return
+}
+
+type executeOption interface {
+	apply(q *Query)
+}
+
+type DefaultOrder []OrderBy
+
+func (o DefaultOrder) apply(q *Query) {
+	if len(q.OrderBy) == 0 {
+		q.OrderBy = o
+	}
+}
+
+type DefaultLimit int
+
+func (o DefaultLimit) apply(q *Query) {
+	if q.Limit == 0 {
+		q.Limit = int(o)
+	}
+}
+
+func Execute[T any](src *[]T, dst *[]T, query string, facets func(*[]T), 
+	opts ...executeOption) error {
+	q, err := parse(query)
+	if err != nil {
+		return err
+	}
+	for _, o := range opts {
+		o.apply(&q)
+	}
+	source := reflect.ValueOf(src).Elem()
+	fieldMap := inferSchema(source)
+	err = applyFilter(src, dst, &q, fieldMap)
+	if err != nil {
+		return err
+	}
+	dstRV := reflect.ValueOf(dst).Elem()
+	err = q.applySort(fieldMap, dstRV)
+	if err != nil {
+		return err
+	}
+	if facets != nil {
+		facets(dst)
+	}
+	applyLimit(dst, q.Limit)
+	return nil
+}
+
+func inferSchema(source reflect.Value) map[string]reflect.StructField {
+	typeOfSlice := source.Type()
+	recordType := typeOfSlice.Elem()
+	fieldMap := map[string]reflect.StructField{}
+	for i := 0; i < recordType.NumField(); i++ {
+		field := recordType.Field(i)
+		fieldMap[field.Name] = field
+	}
+	return fieldMap
+}
+
+func applyFilter[T any](src *[]T, dst *[]T, q *Query,
+	fieldMap map[string]reflect.StructField) error {
+	if q.Expression == nil {
+		// empty expression is matching all
+		q.Expression = &Expression{}
+	}
+	for i := 0; i < len(*src); i++ {
+		record := (*src)[i]
+		recordRV := reflect.ValueOf(record)
+		success, err := q.Expression.eval(internalRow{recordRV, fieldMap})
+		if err != nil {
+			return fmt.Errorf("error filtering %d record: %w", i, err)
+		}
+		if success {
+			*dst = append(*dst, record)
+		}
+	}
+	return nil
+}
+
+func applyLimit[T any](dst *[]T, limit int) {
+	if limit == 0 {
+		// by default limit should be something small, like 100 records
+		limit = 100
+	}
+	if len(*dst) < limit {
+		// and be adjusted to available data
+		limit = len(*dst)
+	}
+	*dst = (*dst)[0:limit]
 }

@@ -17,7 +17,7 @@ function Item({Proxy, Failure, Sources, Provider, ASN, Country}) {
     </td>
     <td className='country text-muted' title={Countries[Country]?.name}>{Countries[Country]?.flag}</td>
     <td className='provider text-muted'>
-      <a href={`https://ipasn.com/asn-downstreams/${ASN}`} rel='nofollow' target='_blank'>{Provider}</a>
+      <a href={`https://ipasn.com/asn-downstreams/${ASN}`} rel='noreferrer' target='_blank'>{Provider}</a>
     </td>
     <td className='failure text-muted'>{Failure}</td>
   </tr>

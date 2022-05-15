@@ -16,6 +16,10 @@ import (
 // Prefix is the env var prefix
 var Prefix = "slrp"
 
+func init() {
+	os.Setenv("APP", Prefix)
+}
+
 var envVar = regexp.MustCompile(`\$([A-Z_]+)`)
 
 func expandEnv(in string) string {
@@ -85,7 +89,6 @@ func (c Config) BoolOr(key string, def bool) bool {
 }
 
 func getConfig() (configuration, error) {
-	os.Setenv("APP", Prefix)
 	var raw []byte
 	var err error
 	locs := []string{

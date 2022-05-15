@@ -7,6 +7,7 @@ import (
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/checker"
 	"github.com/nfx/slrp/history"
+	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pool"
 	"github.com/nfx/slrp/probe"
 	"github.com/nfx/slrp/refresher"
@@ -25,6 +26,7 @@ func main() {
 		"checker":   checker.NewChecker,
 		"dashboard": serve.NewDashboard,
 		"history":   history.NewHistory,
+		"ipinfo":    ipinfo.NewLookup,
 		"mitm":      serve.NewMitmProxyServer,
 		"pool":      pool.NewPool,
 		"probe":     probe.NewProbe,

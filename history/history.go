@@ -15,7 +15,7 @@ import (
 )
 
 type filterResults struct {
-	Total     int
+	Total    int
 	Requests []filteredRequest
 	Err      error `json:",omitempty"`
 }
@@ -218,7 +218,7 @@ func (h *History) handleFilter(f filter) filterResults {
 		})
 	}
 	return filterResults{
-		Total: total,
+		Total:    total,
 		Requests: result,
 	}
 }

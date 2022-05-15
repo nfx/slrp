@@ -40,6 +40,15 @@ var reverseProtoMap = map[proto]string{
 // uint64 = uint32 + uint16 + uint16 (padding for alignment)
 type Proxy uint64
 
+func (p Proxy) IP() net.IP {
+	ip := p >> 32
+	a := ip >> 24 & 0xff
+	b := ip >> 16 & 0xff
+	c := ip >> 8 & 0xff
+	d := ip & 0xff
+	return net.IPv4(byte(a), byte(b), byte(c), byte(d))
+}
+
 func (p Proxy) Address() string {
 	ip := p >> 32
 	a := ip >> 24 & 0xff

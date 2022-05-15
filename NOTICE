@@ -48,3 +48,6 @@ This project uses software from https://github.com/remix-run/react-router (MIT)
 * Copyright (c) Remix Software 2020-2021
 
 This project uses font from https://www.onlygfx.com/newspaper-cutout-font-white-on-black-ttf/
+
+This project uses software from https://github.com/oschwald/maxminddb-golang (ISC)
+* Copyright (c) 2015, Gregory J. Oschwald <oschwald@gmail.com>

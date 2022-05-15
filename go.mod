@@ -12,6 +12,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/microcosm-cc/bluemonday v1.0.18
+	github.com/oschwald/maxminddb-golang v1.9.0
 	github.com/rs/zerolog v1.26.1
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
@@ -37,4 +38,7 @@ require (
 // TODO: fix yaml dependencies
 require gopkg.in/yaml.v2 v2.4.0 // indirect
 
-require github.com/BurntSushi/toml v1.0.0 // indirect
+require (
+	github.com/BurntSushi/toml v1.0.0 // indirect
+	golang.org/x/sys v0.0.0-20220325203850-36772127a21f // indirect
+)

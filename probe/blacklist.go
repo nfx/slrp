@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/ql"
 	"github.com/nfx/slrp/sources"
@@ -13,18 +14,23 @@ import (
 
 type dashboard struct {
 	probe *Probe
+	info  *ipinfo.Lookup
 }
 
-func NewBlacklistApi(probe *Probe) *dashboard {
+func NewBlacklistApi(probe *Probe, info *ipinfo.Lookup) *dashboard {
 	return &dashboard{
 		probe: probe,
+		info:  info,
 	}
 }
 
 type blacklisted struct {
-	Proxy   pmux.Proxy
-	Failure string
-	Sources []string
+	Proxy    pmux.Proxy
+	Country  string
+	Provider string
+	ASN      uint16
+	Failure  string
+	Sources  []string
 }
 
 type Card struct {
@@ -33,10 +39,12 @@ type Card struct {
 }
 
 type blacklistedResults struct {
-	Total       int
-	TopFailures []Card
-	TopSources  []Card
-	Items       []blacklisted
+	Total        int
+	TopFailures  []Card
+	TopSources   []Card
+	TopCountries []Card
+	TopProviders []Card
+	Items        []blacklisted
 }
 
 func (d *dashboard) HttpGet(r *http.Request) (interface{}, error) {
@@ -47,10 +55,14 @@ func (d *dashboard) HttpGet(r *http.Request) (interface{}, error) {
 		for src := range probe.SeenSources[proxy] {
 			srcs = append(srcs, sources.ByID(src).Name())
 		}
+		info := d.info.Get(proxy)
 		snapshot = append(snapshot, blacklisted{
-			Failure: probe.Failures[failureIndex],
-			Proxy:   proxy,
-			Sources: srcs,
+			Failure:  probe.Failures[failureIndex],
+			Country:  info.Country,
+			Provider: info.Provider,
+			ASN:      info.ASN,
+			Proxy:    proxy,
+			Sources:  srcs,
 		})
 	}
 	if len(snapshot) == 0 {
@@ -58,15 +70,21 @@ func (d *dashboard) HttpGet(r *http.Request) (interface{}, error) {
 	}
 	filter := r.FormValue("filter")
 	result := blacklistedResults{}
-	srcSummary := map[string]int{}
-	failureSummary := map[string]int{}
+	srcSummary := Summary{}
+	failureSummary := Summary{}
+	countrySummary := Summary{}
+	providerSummary := Summary{}
 	err := ql.Execute(&snapshot, &result.Items, filter, func(all *[]blacklisted) {
 		result.Total = len(*all)
 		for _, v := range *all {
 			split := strings.Split(v.Failure, ": ")
 			// perform error common suffix normalisation
 			failure := split[len(split)-1]
+
+			// TODO: facetisation seems soo common, that it could be reflected through fieldMap
 			failureSummary[failure]++
+			countrySummary[v.Country]++
+			providerSummary[v.Provider]++
 			for _, src := range v.Sources {
 				srcSummary[src]++
 			}
@@ -75,21 +93,27 @@ func (d *dashboard) HttpGet(r *http.Request) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	for failure, cnt := range failureSummary {
-		result.TopFailures = append(result.TopFailures, Card{
-			Name:  failure,
-			Value: cnt,
-		})
-	}
-	topNCards(10, &result.TopFailures)
-	for src, cnt := range srcSummary {
-		result.TopSources = append(result.TopSources, Card{
-			Name:  src,
-			Value: cnt,
-		})
-	}
-	topNCards(10, &result.TopSources)
+	result.TopFailures = failureSummary.TopN(10)
+	result.TopSources = srcSummary.TopN(10)
+	result.TopCountries = countrySummary.TopN(10)
+	result.TopProviders = providerSummary.TopN(10)
 	return result, err
+}
+
+type Summary map[string]int
+
+func (s Summary) TopN(n int) (cards []Card) {
+	for name, cnt := range s {
+		if name == "" {
+			name = "n/a"
+		}
+		cards = append(cards, Card{
+			Name:  name,
+			Value: cnt,
+		})
+	}
+	topNCards(n, &cards)
+	return cards
 }
 
 func topNCards(min int, cards *[]Card) {

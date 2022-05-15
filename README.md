@@ -126,6 +126,14 @@ Component for recording forwarded requests through a pool of proxies.
 
 * `limit` - number of requests to keep in memory. Default is `1000`.
 
+## ipinfo
+
+You can optionally enable this feature. This product includes GeoLite2 Data created by MaxMind, available from https://www.maxmind.com. 
+
+* `license` - your (free) license key for MaxMind downloads. You can skip specifying license key if `mmdb_asn` and `mmdb_city` are already downloaded in any other way and configured.
+* `mmdb_asn` - already (or automatically) downloaded snapshots of MaxMind database. Default is `$HOME/.slrp/maxmind/GeoLite2-ASN.mmdb`
+* `mmdb_city` - already (or automatically) downloaded snapshots of MaxMind database. Default is `$HOME/.slrp/maxmind/GeoLite2-City.mmdb`
+
 # API
 
 ## GET `/api`

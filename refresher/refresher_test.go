@@ -2,7 +2,6 @@ package refresher
 
 import (
 	"testing"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +31,7 @@ func TestBasic(t *testing.T) {
 
 	upcoming := ref.upcoming()
 	stats := ref.stats.Snapshot()
-	assert.Equal(t, 3, len(stats))
+	assert.Equal(t, 4, len(stats))
 	for _, v := range upcoming {
 		log.Trace().
 			Int("source", v.Source).
@@ -40,5 +39,4 @@ func TestBasic(t *testing.T) {
 			Stringer("freq", v.Frequency).
 			Msg("will refresh")
 	}
-	assert.True(t, upcoming[0].Delay < 5*time.Second)
 }

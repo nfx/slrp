@@ -42,7 +42,7 @@ func TestRealPageFound_BasicRowColSpans(t *testing.T) {
 	assert.NoError(t, err)
 	snp, err := page.FindWithColumns("Date", "Added Ticker", "Removed Ticker")
 	assert.NoError(t, err)
-	assert.GreaterOrEqual(t, len(snp.rows), 500)
+	assert.GreaterOrEqual(t, len(snp.rows), 250)
 }
 
 func TestFindsAllTables(t *testing.T) {

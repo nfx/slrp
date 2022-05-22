@@ -56,17 +56,3 @@ func TestConsiderSkip_Reanimate(t *testing.T) {
 	assert.Equal(t, 1, e.Reanimated)
 	assert.Equal(t, time.Time{}, e.ReanimateAfter)
 }
-
-func TestConsiderSkip_TenOffersNoSuccessSkipsForLong(t *testing.T) {
-	e := &entry{
-		Offered:     10,
-		HourOffered: i24a(0, 10),
-		Ok:          true,
-	}
-	now = func() time.Time {
-		return ti(0, 0, 0)
-	}
-	assert.True(t, e.ConsiderSkip(context.Background()))
-	assert.False(t, e.Ok)
-	assert.Equal(t, 10, e.Offered)
-}

@@ -21,3 +21,11 @@ fmt:
 
 race:
 	GORACE="halt_on_error=1" go run -race main.go
+
+test:
+	go test ./... -coverprofile=coverage.txt
+
+coverage: test
+	go tool cover -html=coverage.txt
+
+.PHONY: build fmt coverage test

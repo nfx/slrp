@@ -22,6 +22,9 @@ fmt:
 race:
 	GORACE="halt_on_error=1" go run -race main.go
 
+vendor:
+	go mod vendor
+
 test:
 	go test ./... -coverprofile=coverage.txt
 

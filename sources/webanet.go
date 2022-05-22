@@ -44,8 +44,9 @@ func (w *webaNet) Generate(ctx context.Context) <-chan pmux.Proxy {
 		return w.out
 	}
 	for _, v := range recent {
+		page := v // that nasty go iteration gotcha...
 		merged.refresh(func() ([]pmux.Proxy, error) {
-			return newRegexPage(ctx, w.h, v, "Список прокси",
+			return newRegexPage(ctx, w.h, page, "Список прокси",
 				func(proxy string) pmux.Proxy {
 					return pmux.HttpProxy(proxy)
 				})

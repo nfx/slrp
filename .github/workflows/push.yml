@@ -16,6 +16,7 @@ jobs:
         with:
           go-version: 1.18.x
       - run: go mod vendor
+      - run: npm --prefix ui install
       - run: make build-ui
       - run: make test
       - uses: codecov/codecov-action@v1

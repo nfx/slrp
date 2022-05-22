@@ -7,7 +7,7 @@ require (
 	github.com/Bogdan-D/go-socks4 v1.0.0
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/alecthomas/participle/v2 v2.0.0-alpha8
-	github.com/corpix/uarand v0.1.1
+	github.com/corpix/uarand v0.2.0
 	github.com/dop251/goja v0.0.0-20220124171016-cfb079cdc7b4
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.8.0
@@ -20,9 +20,7 @@ require (
 )
 
 // test
-require (
-	github.com/stretchr/testify v1.7.1
-)
+require github.com/stretchr/testify v1.7.1
 
 // indirect
 require (

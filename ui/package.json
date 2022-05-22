@@ -14,10 +14,10 @@
     "react-scripts": "^5.0.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "node_modules/react-scripts/bin/react-scripts.js start",
+    "build": "node_modules/react-scripts/bin/react-scripts.js build",
+    "test": "node_modules/react-scripts/bin/react-scripts.js test",
+    "eject": "node_modules/react-scripts/bin/react-scripts.js eject"
   },
   "eslintConfig": {
     "extends": [

@@ -135,6 +135,10 @@ func (pool *shard) removeProxy(r removal) {
 		newEntries = append(newEntries, v)
 	}
 	pool.Entries = newEntries
+	if found {
+		log := app.Log.From(context.TODO())
+		log.Info().Stringer("proxy", r.proxy).Msg("removed")
+	}
 	r.reply <- found
 }
 

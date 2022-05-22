@@ -128,6 +128,7 @@ func skipErr(err error, ctx ...errorContext) sourceError {
 }
 
 func skipError(msg string, ctx ...errorContext) sourceError {
+	// todo: merge with prev one
 	return sourceError{
 		msg:    msg,
 		fields: ctx,

@@ -7,6 +7,7 @@ import (
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/checker"
 	"github.com/nfx/slrp/history"
+	"github.com/nfx/slrp/internal/qa"
 	"github.com/nfx/slrp/pool"
 	"github.com/nfx/slrp/probe"
 	"github.com/nfx/slrp/refresher"
@@ -14,6 +15,7 @@ import (
 )
 
 func TestServe(t *testing.T) {
+	qa.RunOnlyInDebug(t)
 	// run with race detector
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

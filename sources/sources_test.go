@@ -5,9 +5,12 @@ import (
 	"log"
 	"net/http"
 	"testing"
+
+	"github.com/nfx/slrp/internal/qa"
 )
 
 func TestSpysme(t *testing.T) {
+	qa.RunOnlyInDebug(t)
 	ctx := context.Background()
 	src := premproxy(ctx, &http.Client{})
 	seen := map[string]int{}

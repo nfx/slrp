@@ -20,7 +20,10 @@ require (
 )
 
 // test
-require github.com/stretchr/testify v1.7.1
+require (
+	github.com/stretchr/testify v1.7.1
+	github.com/mitchellh/go-ps v1.0.0
+)
 
 // indirect
 require (

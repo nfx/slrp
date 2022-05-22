@@ -10,9 +10,11 @@ import (
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/history"
+	"github.com/nfx/slrp/internal/qa"
 )
 
 func load(t *testing.T) *Pool {
+	qa.RunOnlyInDebug(t)
 	f, err := os.Open("/tmp/harvester/pool")
 	if err != nil {
 		t.Fatal(err)

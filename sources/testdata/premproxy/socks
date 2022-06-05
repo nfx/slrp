@@ -1,0 +1,4 @@
+Proxies on this list
+<script src="/js/a.js"></script>
+value="127.0.0.3|r7ca5" is for SOCKS4
+value="127.0.0.4|r0cf7" is for SOCKS5

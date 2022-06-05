@@ -1,0 +1,1 @@
+eval(function(p,a,c,k,e,d){e=String;if(!''.replace(/^/,String)){while(c--)d[c]=k[c]||c;k=[function(e){return d[e]}];e=function(){return'\\w+'};c=1};while(c--)if(k[c])p=p.replace(new RegExp('\\b'+e(c)+'\\b','g'),k[c]);return p}('$(1).2(3(){$(\'.4\').0(5);$(\'.6\').0(7)});',8,8,'html|document|ready|function|r7ca5|1234|r0cf7|2345'.split('|'),0,{}))

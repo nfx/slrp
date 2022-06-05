@@ -56,12 +56,12 @@ func deobfuscatePorts(script string) (map[string]string, error) {
 }
 
 func permproxyMapping(ctx context.Context, h *http.Client, html []byte, referer string) (map[string]string, error) {
-	base := "https://premproxy.com"
+	split := strings.Split(referer, "/")
 	match := premproxyPortMappingScriptRE.FindSubmatch(html)
 	if len(match) == 0 {
 		return nil, errors.New("cannot find script location")
 	}
-	scriptUrl := base + string(match[1])
+	scriptUrl := fmt.Sprintf("%s//%s%s", split[0], split[2], string(match[1]))
 	packedJS, serial, err := req{
 		URL:              scriptUrl,
 		ExpectInResponse: "function(p,a,c,k,e,d)",
@@ -146,16 +146,28 @@ func premproxySocksPage(ctx context.Context, h *http.Client, url string) func() 
 	}
 }
 
-func premproxy(ctx context.Context, h *http.Client) Src {
-	m := merged()
+var premProxyHttpPages []string
+var premProxySocksPages []string
+
+func init() {
 	list := "https://premproxy.com/list/%02d.htm"
 	for i := 1; i <= 5; i++ {
 		url := fmt.Sprintf(list, i)
-		m.refresh(premproxyHttpPage(ctx, h, url))
+		premProxyHttpPages = append(premProxyHttpPages, url)
 	}
 	list = "https://premproxy.com/socks-list/%02d.htm"
 	for i := 1; i <= 13; i++ {
 		url := fmt.Sprintf(list, i)
+		premProxySocksPages = append(premProxySocksPages, url)
+	}
+}
+
+func premproxy(ctx context.Context, h *http.Client) Src {
+	m := merged()
+	for _, url := range premProxyHttpPages {
+		m.refresh(premproxyHttpPage(ctx, h, url))
+	}
+	for _, url := range premProxySocksPages {
 		m.refresh(premproxySocksPage(ctx, h, url))
 	}
 	return m

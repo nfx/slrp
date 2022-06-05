@@ -1,0 +1,53 @@
+match: Web Proxy List
+records: <table id="proxy_list">
+  <thead>
+    <tr>
+      <th>IP address</th>
+      <th>Port</th>
+      <th>Protocol</th>
+      <th>Country</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align:center" class="left">
+        <script type="text/javascript">document.write(Base64.decode("MTI3LjAuMC4x"))</script>
+      </td>
+      <td style=""><span class="fport" style=''>80</span></td>
+      <td><small>HTTP</small></td>
+      <td class="left">
+        ..
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align:center" class="left">
+        <script type="text/javascript">document.write(Base64.decode("MTI3LjAuMC4y"))</script>
+      </td>
+      <td style=""><span class="fport" style=''>81</span></td>
+      <td><small>HTTPS</small></td>
+      <td class="left">
+        ..
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align:center" class="left">
+        <script type="text/javascript">document.write(Base64.decode("MTI3LjAuMC4z"))</script>
+      </td>
+      <td style=""><span class="fport" style=''>81</span></td>
+      <td><small>SOCKS4</small></td>
+      <td class="left">
+        ..
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align:center" class="left">
+        <script type="text/javascript">document.write(Base64.decode("MTI3LjAuMC40"))</script>
+      </td>
+      <td style=""><span class="fport" style=''>81</span></td>
+      <td><small>SOCKS5</small></td>
+      <td class="left">
+        ..
+      </td>
+    </tr>
+  </tbody>
+</table>

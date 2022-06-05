@@ -13,6 +13,8 @@ import (
 	"github.com/nfx/slrp/pmux"
 )
 
+var proxyListPages []string
+
 func init() {
 	Sources = append(Sources, Source{
 		ID:        6,
@@ -20,6 +22,11 @@ func init() {
 		Frequency: 5 * time.Minute,
 		Feed:      proxyListOrg,
 	})
+	list := "https://proxy-list.org/english/index.php?p=%d"
+	for i := 1; i <= 10; i++ {
+		url := fmt.Sprintf(list, i)
+		proxyListPages = append(proxyListPages, url)
+	}
 }
 
 var proxyListOrgRE = regexp.MustCompile(`(?m)Proxy\('([^']+)'\)`)
@@ -47,9 +54,7 @@ func proxyListOrg(ctx context.Context, h *http.Client) Src {
 			return found, nil
 		}
 	}
-	list := "https://proxy-list.org/english/index.php?p=%d"
-	for i := 1; i <= 10; i++ {
-		url := fmt.Sprintf(list, i)
+	for _, url := range proxyListPages {
 		merged.refresh(x(url))
 	}
 	return merged

@@ -10,6 +10,8 @@ import (
 	"github.com/nfx/slrp/pmux"
 )
 
+var proxyNovaPrefix = "https://proxynova.com/proxy-server-list"
+
 func init() {
 	Sources = append(Sources, Source{
 		ID:        7,
@@ -24,7 +26,7 @@ func init() {
 func proxyNova(ctx context.Context, h *http.Client) Src {
 	page := func(path string) func() ([]pmux.Proxy, error) {
 		return func() (found []pmux.Proxy, err error) {
-			url := fmt.Sprintf("https://proxynova.com/proxy-server-list%s", path)
+			url := proxyNovaPrefix + path
 			p, serial, err := newTablePage(ctx, h, url, "Proxy Server List")
 			if err != nil {
 				return

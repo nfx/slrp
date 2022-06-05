@@ -18,10 +18,8 @@ import (
 )
 
 func TestSimpleAddAndRemove(t *testing.T) {
-	pool := NewPool(history.NewHistory())
-	runtime := app.Singletons{"pool": pool}.MockStart()
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
 	defer runtime.Stop()
-	runtime["pool"].Spin()
 
 	ctx := context.Background()
 
@@ -33,10 +31,8 @@ func TestSimpleAddAndRemove(t *testing.T) {
 }
 
 func TestMarshallAndUnmarshall(t *testing.T) {
-	pool := NewPool(history.NewHistory())
-	firstRuntime := app.Singletons{"pool": pool}.MockStart()
-	defer firstRuntime.Stop()
-	firstRuntime["pool"].Spin()
+	pool, first := app.MockStartSpin(NewPool(history.NewHistory()))
+	defer first.Stop()
 
 	ctx := context.Background()
 
@@ -50,19 +46,16 @@ func TestMarshallAndUnmarshall(t *testing.T) {
 	err = loaded.UnmarshalBinary(raw)
 	assert.NoError(t, err)
 
-	secondRuntime := app.Singletons{"pool": loaded}.MockStart()
-	defer secondRuntime.Stop()
-
+	_, second := app.MockStartSpin(loaded)
+	defer second.Stop()
+	
 	// snapshots rely on runtime channels to compute
 	assert.Equal(t, loaded.snapshot(), pool.snapshot())
 }
 
 func TestRoundTrip(t *testing.T) {
-	t.Skip("TODO: FIXME!")
-	pool := NewPool(history.NewHistory())
-	runtime := app.Singletons{"pool": pool}.MockStart()
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
 	defer runtime.Stop()
-	runtime["pool"].Spin()
 
 	var proxy pmux.Proxy
 	defer pmux.SetupProxy(&proxy)()

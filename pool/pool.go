@@ -344,6 +344,10 @@ func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 			attempt: attempt,
 		}
 		res := <-out
+		// when no response is returned or proxy pool is exhausted
+		if attempt < len(pool.shards) && res.StatusCode == 552 {
+			continue
+		}
 		if res == nil {
 			continue
 		}

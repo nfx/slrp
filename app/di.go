@@ -14,6 +14,12 @@ type dependency struct {
 	In  []reflect.Type
 }
 
+func MockStartSpin[T any](this *T) (*T, MockRuntime) {
+	runtime := Singletons{"this": this}.MockStart()
+	runtime["this"].Spin()
+	return this, runtime
+}
+
 func (r MockRuntime) Stop() {
 	for _, v := range r {
 		v.Cancel()

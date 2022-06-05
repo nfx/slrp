@@ -174,8 +174,7 @@ func (pool *shard) firstAvailableProxy(r request) *entry {
 	// TODO: per-request offset selection strategy -
 	// scrapes are encouraged to refresh the old or
 	// the least offered proxies, but relays need fresher pool
-
-	available := pool.Entries[offset : size-1]
+	available := pool.Entries[offset : size]
 	for idx := range available {
 		e := &pool.Entries[offset+idx]
 		if e.ConsiderSkip(r.in.Context()) {

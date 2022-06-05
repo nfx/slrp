@@ -1,0 +1,7 @@
+match: Fresh Proxy List
+mangles: <script type="text/javascript">p=3;m=6;u=5;l=2;s=1;j=9;v=8;r=4;t=7;k=0;</script>
+records:
+<td>127.0.0.1<script type="text/javascript">document.write(":"+u+p+l+v+s)</script></td>
+<td>127.0.0.2<script type="text/javascript">document.write(":"+v+k)</script></td>
+<td>127.0.0.3<script type="text/javascript">document.write(":"+r+l+k+p+p)</script></td>
+<td>127.0.0.4<script type="text/javascript">document.write(":"+j+p+k+k)</script></td>

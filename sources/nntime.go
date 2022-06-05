@@ -11,6 +11,9 @@ import (
 	"github.com/nfx/slrp/pmux"
 )
 
+var nntimePages = 10
+var nntimePattern = "http://nntime.com/proxy-updated-%02d.htm"
+
 func init() {
 	Sources = append(Sources, Source{
 		ID:        4,
@@ -21,25 +24,18 @@ func init() {
 }
 
 func newNetTimeNew(ctx context.Context, h *http.Client) Src {
-	return merged().
-		refresh(newNetTimePage(ctx, h, 1)).
-		refresh(newNetTimePage(ctx, h, 2)).
-		refresh(newNetTimePage(ctx, h, 3)).
-		refresh(newNetTimePage(ctx, h, 4)).
-		refresh(newNetTimePage(ctx, h, 5)).
-		refresh(newNetTimePage(ctx, h, 6)).
-		refresh(newNetTimePage(ctx, h, 7)).
-		refresh(newNetTimePage(ctx, h, 8)).
-		refresh(newNetTimePage(ctx, h, 9)).
-		refresh(newNetTimePage(ctx, h, 10))
+	m := merged()
+	for i := 1; i <= nntimePages; i++ {
+		m = m.refresh(newNetTimePage(ctx, h, i))
+	}
+	return m
 }
 
 func newNetTimePage(ctx context.Context, h *http.Client, i int) func() ([]pmux.Proxy, error) {
 	var mangedIPs = regexp.MustCompile(`(?m)>(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}).*\":\"\+(.*)\)`)
 	var mangles = regexp.MustCompile(`(?m)(?P<char>\w)=(?P<digit>\d);`)
-	pattern := "http://nntime.com/proxy-updated-%02d.htm"
 	return func() (found []pmux.Proxy, err error) {
-		body, _, err := req{URL: fmt.Sprintf(pattern, i)}.Do(ctx, h)
+		body, _, err := req{URL: fmt.Sprintf(nntimePattern, i)}.Do(ctx, h)
 		if err != nil {
 			return
 		}

@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -70,6 +71,48 @@ func TestRoundTrip(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, 200, res.StatusCode)
+}
+
+func TestSessionHistory(t *testing.T) {
+	var proxy pmux.Proxy
+	defer pmux.SetupProxy(&proxy)()
+
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	defer runtime.Stop()
+
+	ctx := context.Background()
+	pool.Add(ctx, proxy, 1*time.Second)
+	assert.Equal(t, 1, pool.Len())
+
+	err := pool.Session(ctx, func(ctx context.Context, c *http.Client) error {
+		req, _ := http.NewRequestWithContext(ctx, "GET", "http://httpbin.org/get", nil)
+		res, err := c.Do(req)
+		if err != nil {
+				return err
+		}
+		assert.Equal(t, 200, res.StatusCode)
+		return nil
+	})
+	assert.NoError(t, err)
+}
+
+func TestHttpGet(t *testing.T) {
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	defer runtime.Stop()
+
+	ctx := context.Background()
+
+	pool.Add(ctx, pmux.HttpProxy("127.0.0.1:8080"), 1*time.Second)
+	assert.Equal(t, 1, pool.Len())
+
+	res, err := pool.HttpGet(&http.Request{
+		URL: &url.URL{
+			RawQuery: "filter=Offered:1",
+		},
+	})
+	assert.NoError(t, err)
+	stats := res.(PoolStats)
+	assert.Equal(t, 1, stats.Total)
 }
 
 func load(t *testing.T) *Pool {

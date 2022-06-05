@@ -1,7 +1,10 @@
 package app
 
-import "context"
-import "github.com/rs/zerolog/log"
+import (
+	"context"
+
+	"github.com/rs/zerolog/log"
+)
 
 type Service interface {
 	Start(Context)
@@ -50,6 +53,11 @@ func (a *mockCtx) Start(s Service) {
 	a.Spin()
 }
 
+func (a *mockCtx) WaitAndSpin() {
+	<-a.Wait
+	a.Spin()
+}
+
 func (a *mockCtx) Spin() {
 	a.spin = true
 }
@@ -66,6 +74,7 @@ func (a *mockCtx) Heartbeat() {
 	}
 	log.Trace().Str("service", a.name).Msg("heartbeat mock")
 	a.Wait <- true
+	log.Trace().Str("service", a.name).Msg("heartbeat mock done")
 }
 
 type serviceContext struct {

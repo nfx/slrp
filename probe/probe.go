@@ -110,15 +110,6 @@ func (p *Probe) Snapshot() internal {
 	return p.state.requestSnapshot()
 }
 
-func (p *Probe) Stats() Stats2 {
-	state := p.Snapshot()
-	return Stats2{
-		Reverify:  len(state.LastReverified),
-		Blacklist: len(state.Blacklist),
-		Seen:      len(state.Seen),
-	}
-}
-
 func (p *Probe) HttpDeletetByID(id string, r *http.Request) (interface{}, error) {
 	// TODO: harden it
 	split := strings.SplitN(id, ":", 3)

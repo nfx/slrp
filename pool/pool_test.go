@@ -48,7 +48,7 @@ func TestMarshallAndUnmarshall(t *testing.T) {
 
 	_, second := app.MockStartSpin(loaded)
 	defer second.Stop()
-	
+
 	// snapshots rely on runtime channels to compute
 	assert.Equal(t, loaded.snapshot(), pool.snapshot())
 }
@@ -65,7 +65,7 @@ func TestRoundTrip(t *testing.T) {
 	assert.Equal(t, 1, pool.Len())
 
 	// TODO: spin up test servers not to get to internet for no reason
-	req, _ := http.NewRequestWithContext(ctx, "GET", "https://httpbin.org/get", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "http://httpbin.org/get", nil)
 	res, err := pool.RoundTrip(req)
 	assert.NoError(t, err)
 

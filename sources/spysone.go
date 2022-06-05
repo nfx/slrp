@@ -18,6 +18,10 @@ import (
 
 // https://geekflare.com/best-rotating-proxy/
 
+// the way to inject testing fixtures
+var spysOnePageURL string
+var spysOneSleep func()
+
 func init() {
 	Sources = append(Sources,
 		Source{
@@ -36,13 +40,18 @@ func init() {
 			Seed:      true,
 			Feed:      httpProxyRegexFeed("https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt", ":"),
 		})
+	spysOnePageURL = "https://spys.one/en/free-proxy-list/"
+	spysOneSleep = func() {
+		sleep := rand.Intn(15) // we have to be gently creative here
+		time.Sleep(time.Duration(sleep) * time.Second)
+	}
 }
 
 func spysOne(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error) {
 	var xx0regex = regexp.MustCompile(`([a-z0-9]{32})`)
 	ua := uarand.GetRandom()
 	body, serial, err := req{
-		URL:              "https://spys.one/en/free-proxy-list/",
+		URL:              spysOnePageURL,
 		ExpectInResponse: "proxy list",
 		Headers: map[string]string{
 			"User-Agent":      ua,
@@ -68,8 +77,7 @@ func spysOne(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error
 			form.Set("xf3", "0")
 			form.Set("xf4", "0")
 			form.Set("xf5", xf5)
-			sleep := rand.Intn(15) // we have to be gently creative here
-			time.Sleep(time.Duration(sleep) * time.Second)
+			spysOneSleep()
 			new, err := spysOnePage(ctx, h, ua, form, proxyType)
 			if err != nil {
 				return found, reWrapError(err, intEC{"parentSerial", serial})
@@ -83,16 +91,15 @@ func spysOne(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error
 func spysOnePage(ctx context.Context, h *http.Client, ua string, form url.Values, proxyType string) (found []pmux.Proxy, err error) {
 	var mangles = regexp.MustCompile(`[>;]{1}(?P<char>[a-z\d]{4,})=(?P<num>[a-z\d\^]+)`)
 	var mangled = regexp.MustCompile(`(?m)<script [^\+]+(?P<js_port_code>(?:\+\([a-z0-9^+]+\))+)\)<\/script>`)
-	page := "https://spys.one/en/free-proxy-list/"
 	body, _, err := req{
-		URL:              page,
+		URL:              spysOnePageURL,
 		ExpectInResponse: "proxy list",
 		RequestBody:      strings.NewReader(form.Encode()),
 		Headers: map[string]string{
 			"Accept":          accept,
 			"Accept-Language": "en-US,en;q=0.5",
 			"Content-Type":    "application/x-www-form-urlencoded",
-			"Referer":         page,
+			"Referer":         spysOnePageURL,
 			"User-Agent":      ua,
 		},
 	}.Do(ctx, h)
@@ -126,7 +133,9 @@ func spysOnePage(ctx context.Context, h *http.Client, ua string, form url.Values
 	})
 	log := app.Log.From(ctx)
 	log.Info().Int("count", i).Msg("found")
-	return extractProxiesFromReader(ctx, page+"#"+proxyType, body, func(proxy string) pmux.Proxy {
-		return pmux.NewProxy(proxy, proxyType)
-	})
+	return extractProxiesFromReader(ctx,
+		spysOnePageURL+"#"+proxyType, body,
+		func(proxy string) pmux.Proxy {
+			return pmux.NewProxy(proxy, proxyType)
+		})
 }

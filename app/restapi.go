@@ -34,9 +34,20 @@ type httpResource struct {
 	deleteByID httpDeleteByID
 }
 
+type NotFound string
+
+func (nf NotFound) Error() string {
+	return string(nf)
+}
+
 func (hr *httpResource) err(rw http.ResponseWriter, err error) {
+	switch err.(type) {
+	case NotFound:
+		rw.WriteHeader(404)
+	default:
+		rw.WriteHeader(400)
+	}
 	errBody, _ := json.Marshal(errorBody{err.Error()})
-	rw.WriteHeader(400)
 	rw.Write(errBody)
 }
 

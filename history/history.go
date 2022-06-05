@@ -126,6 +126,9 @@ func (h *History) HttpGetByID(id string, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 	d := h.get(id_)
+	if d.ID == 0 {
+		return nil, app.NotFound("request not found: " + id)
+	}
 	return d, nil
 }
 
@@ -161,7 +164,7 @@ func (h *History) main(ctx app.Context) {
 			r.ID = counter
 			h.appears[r.Proxy] += 1
 			r.Appeared = h.appears[r.Proxy]
-			if len(h.requests) == h.limit {
+			if h.limit > 0 && len(h.requests) == h.limit {
 				h.requests = h.requests[1:]
 			}
 			h.requests = append(h.requests, r)

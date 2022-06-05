@@ -12,6 +12,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var checkerProxyURL = "https://checkerproxy.net/"
+
 func init() {
 	Sources = append(Sources, Source{
 		ID:        1,
@@ -24,7 +26,7 @@ func init() {
 // Scrapes https://checkerproxy.net/
 func checkerProxy(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error) {
 	log.Info().Msg("Loading proxy checker database")
-	archives, err := findLinksWithOn(ctx, h, "/archive", "https://checkerproxy.net/")
+	archives, err := findLinksWithOn(ctx, h, "/archive", checkerProxyURL)
 	if err != nil {
 		return
 	}

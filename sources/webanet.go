@@ -26,13 +26,15 @@ type webaNet struct {
 	src Src
 }
 
+var webanetURL = "https://webanetlabs.net/publ/24"
+
 func (w *webaNet) Generate(ctx context.Context) <-chan pmux.Proxy {
 	merged := merged()
 	w.out = make(chan pmux.Proxy)
 	w.src = merged
 	recent, err := findLinksWithOn(ctx, w.h,
 		fmt.Sprintf("/proxylist%d", time.Now().Year()),
-		"https://webanetlabs.net/publ/24")
+		webanetURL)
 	if err != nil {
 		defer close(w.out)
 		w.err = err

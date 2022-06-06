@@ -8,6 +8,79 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestEntryMarkSeen(t *testing.T) {
+	e := &entry{Seen: 3}
+
+	now = func() time.Time {
+		return ti(0, 2, 0)
+	}
+	e.MarkSeen()
+
+	assert.Equal(t, 4, e.Seen)
+	assert.Equal(t, now().Unix(), e.LastSeen)
+}
+
+func TestEntryMarkFailure(t *testing.T) {
+	e := &entry{Ok: true}
+	now = func() time.Time {
+		return ti(0, 2, 0)
+	}
+
+	e.MarkFailure(context.DeadlineExceeded)
+
+	assert.Equal(t, false, e.Ok)
+	assert.Equal(t, 1, e.Timeouts)
+	assert.Equal(t, ti(0, 3, 0), e.ReanimateAfter)
+}
+
+func TestEntryReanimateIfNeeded_Zero(t *testing.T) {
+	e := &entry{Ok: true}
+
+	res := e.ReanimateIfNeeded()
+
+	assert.Equal(t, false, res)
+}
+
+func TestEntryReanimateIfNeeded_ReanimateAfterAfterNow(t *testing.T) {
+	e := &entry{ReanimateAfter: ti(0, 3, 0)}
+	now = func() time.Time {
+		return ti(0, 2, 0)
+	}
+
+	res := e.ReanimateIfNeeded()
+
+	assert.Equal(t, false, res)
+}
+
+func TestEntryReanimateIfNeeded_ReanimateAfterBeforeNow(t *testing.T) {
+	e := &entry{ReanimateAfter: ti(0, 1, 0)}
+	now = func() time.Time {
+		return ti(0, 2, 0)
+	}
+
+	res := e.ReanimateIfNeeded()
+
+	assert.Equal(t, true, res)
+	assert.Equal(t, 1, e.Reanimated)
+	assert.Equal(t, true, e.Ok)
+	assert.Equal(t, time.Time{}, e.ReanimateAfter)
+}
+
+func TestEntryForceReanimate(t *testing.T) {
+	e := &entry{Ok: false}
+
+	e.ForceReanimate()
+
+	assert.Equal(t, true, e.Ok)
+	assert.Equal(t, 1, e.Reanimated)
+}
+
+func TestEntryStringerBasic(t *testing.T) {
+	e := &entry{Succeed: 3, Offered: 10, LastSeen: now().Unix()}
+	res := e.String()
+	assert.NotEmpty(t, res)
+}
+
 func TestFailuresDelayReanimation(t *testing.T) {
 	e := &entry{
 		Offered: 10,

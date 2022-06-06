@@ -339,3 +339,68 @@ func TestConditionOperandEvalWrongOperator(t *testing.T) {
 	_, err := co.eval(ir)
 	assert.EqualError(t, err, "cannot eval: B kiss C")
 }
+
+func TestValueEval(t *testing.T) {
+	type a struct {
+		Stringer pmux.Proxy
+		Int      int
+		Int64    int64
+		Float64  float64
+		Time     time.Time
+		Dur      time.Duration
+		Ptr      *string
+		Bool     bool
+	}
+	ir := newInternalRow(a{
+		Stringer: pmux.HttpProxy("127.0.0.1:1234"),
+		Int:      1,
+		Int64:    2,
+		Float64:  3,
+		Time:     time.Time{},
+		Dur:      1 * time.Second,
+	})
+	v, err := (&Value{Identifier: ref("Stringer")}).eval(ir)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://127.0.0.1:1234", v)
+
+	v, err = (&Value{Identifier: ref("Int")}).eval(ir)
+	assert.NoError(t, err)
+	assert.Equal(t, float64(1), v)
+
+	v, err = (&Value{Identifier: ref("Int64")}).eval(ir)
+	assert.NoError(t, err)
+	assert.Equal(t, float64(2), v)
+
+	v, err = (&Value{Identifier: ref("Float64")}).eval(ir)
+	assert.NoError(t, err)
+	assert.Equal(t, float64(3), v)
+
+	v, err = (&Value{Identifier: ref("Time")}).eval(ir)
+	assert.NoError(t, err)
+	assert.Equal(t, "0001-01-01 00:00:00 +0000 UTC", v) // TODO: bug?..
+
+	v, err = (&Value{Identifier: ref("Dur")}).eval(ir)
+	assert.NoError(t, err)
+	assert.Equal(t, "1s", v)
+
+	_, err = (&Value{Identifier: ref("Ptr")}).eval(ir)
+	assert.EqualError(t, err, "Ptr is of unknown type: <nil>")
+
+	v, err = (&Value{Inner: &Expression{
+		And: []AndCondition{
+			{
+				Or: []Condition{
+					{
+						Operand: &ConditionOperand{
+							Left: &Value{
+								Identifier: ref("Bool"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}}).eval(ir)
+	assert.NoError(t, err)
+	assert.Equal(t, false, v)
+}

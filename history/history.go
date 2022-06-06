@@ -111,6 +111,10 @@ func (h *History) Start(ctx app.Context) {
 	go h.main(ctx)
 }
 
+func (h *History) Wrap(transport http.RoundTripper) http.RoundTripper {
+	return roundTripper{h, transport}
+}
+
 func (h *History) Record(r Request) {
 	h.record <- r
 }

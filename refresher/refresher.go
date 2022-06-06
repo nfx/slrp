@@ -198,6 +198,7 @@ func (ref *Refresher) checkSources(ctx context.Context, trigger time.Time) time.
 		log.Trace().Msg("scheduling refresh")
 		client := ref.client
 		if s.Seed {
+			// TODO: wrap with history
 			client = http.DefaultClient
 		}
 		go ref.refresh(sctx, client, s)

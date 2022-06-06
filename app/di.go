@@ -14,9 +14,15 @@ type dependency struct {
 	In  []reflect.Type
 }
 
-func MockStartSpin[T any](this *T) (*T, MockRuntime) {
-	runtime := Singletons{"this": this}.MockStart()
-	runtime["this"].Spin()
+func MockStartSpin[T any](this *T, other ...any) (*T, MockRuntime) {
+	sgltns := Singletons{"this": this}
+	for i, service := range other {
+		sgltns[fmt.Sprintf("service%d", i+1)] = service
+	}
+	runtime := sgltns.MockStart()
+	for k := range runtime {
+		runtime[k].Spin()
+	}
 	return this, runtime
 }
 

@@ -24,7 +24,6 @@ type Pool struct {
 	pressure      chan int
 	halt          chan int
 	client        *http.Client
-	history       *history.History
 	shards        []shard
 	workerCancels []context.CancelFunc
 }
@@ -36,11 +35,8 @@ func NewPool(history *history.History) *Pool {
 		pressure: make(chan int),
 		halt:     make(chan int),
 		shards:   make([]shard, 32),
-		history:  history,
 		client: &http.Client{
-			// TODO: add history logging on this level, so that we don't miss out sessions and seeders.
-			// theoretically we can add it also for checker?...
-			Transport: pmux.ContextualHttpTransport(),
+			Transport: history.Wrap(pmux.ContextualHttpTransport()),
 			Timeout:   10 * time.Second,
 		},
 	}
@@ -51,7 +47,7 @@ func (pool *Pool) Start(ctx app.Context) {
 	go pool.halter(ctx)
 	for i := range pool.shards {
 		shard := &pool.shards[i]
-		shard.init(pool.work, pool.history)
+		shard.init(pool.work)
 		go shard.main(ctx)
 		shard.reanimate <- true
 	}
@@ -299,26 +295,6 @@ func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 	// add trace information deep to all other places
 	ctx = app.Log.WithInt(ctx, "serial", serial)
 	req = req.WithContext(ctx)
-	if pmux.GetProxyFromContext(req.Context()) != 0 {
-		// fast path for session
-		resp, err := pool.client.Do(req)
-		// whatever... there'll always be at least one shard
-		pool.shards[0].recordHistory(reply{
-			r: request{
-				in:     req,
-				start:  start,
-				serial: serial,
-			},
-			response: resp,
-			start:    start,
-			e: &entry{
-				// todo: make it better
-				Proxy: pmux.GetProxyFromContext(req.Context()),
-			},
-			err: err,
-		}, err)
-		return resp, err
-	}
 	attempt := 0
 	log := app.Log.From(ctx)
 	for {
@@ -335,6 +311,9 @@ func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 		// shard := rand.Intn(len(pool.shards))
 		shard := (serial + attempt) % len(pool.shards)
 		log.Trace().Int("shard", shard).Msg("try")
+		// set attempt and serial for history wrapper to pick up
+		req.Header.Set("X-Proxy-Serial", fmt.Sprint(serial))
+		req.Header.Set("X-Proxy-Attempt", fmt.Sprint(attempt))
 		// send over the request to one of the shards for randomization purposes
 		pool.shards[shard].requests <- request{
 			in:      req,

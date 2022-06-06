@@ -32,7 +32,8 @@ func TestSimpleAddAndRemove(t *testing.T) {
 }
 
 func TestMarshallAndUnmarshall(t *testing.T) {
-	pool, first := app.MockStartSpin(NewPool(history.NewHistory()))
+	history := history.NewHistory()
+	pool, first := app.MockStartSpin(NewPool(history))
 	defer first.Stop()
 
 	ctx := context.Background()
@@ -43,7 +44,7 @@ func TestMarshallAndUnmarshall(t *testing.T) {
 	raw, err := pool.MarshalBinary()
 	assert.NoError(t, err)
 
-	loaded := NewPool(pool.history)
+	loaded := NewPool(history)
 	err = loaded.UnmarshalBinary(raw)
 	assert.NoError(t, err)
 
@@ -77,7 +78,8 @@ func TestSessionHistory(t *testing.T) {
 	var proxy pmux.Proxy
 	defer pmux.SetupProxy(&proxy)()
 
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	hist := history.NewHistory()
+	pool, runtime := app.MockStartSpin(NewPool(hist), hist)
 	defer runtime.Stop()
 
 	ctx := context.Background()
@@ -88,12 +90,18 @@ func TestSessionHistory(t *testing.T) {
 		req, _ := http.NewRequestWithContext(ctx, "GET", "http://httpbin.org/get", nil)
 		res, err := c.Do(req)
 		if err != nil {
-				return err
+			return err
 		}
 		assert.Equal(t, 200, res.StatusCode)
 		return nil
 	})
 	assert.NoError(t, err)
+
+	res, err := hist.HttpGetByID("1", nil)
+	assert.NoError(t, err)
+	req := res.(history.Request)
+	assert.Equal(t, "GET", req.Method)
+	assert.Equal(t, "http://httpbin.org/get", req.URL)
 }
 
 func TestHttpGet(t *testing.T) {

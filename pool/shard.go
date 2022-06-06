@@ -1,19 +1,14 @@
 package pool
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/nfx/slrp/app"
-	"github.com/nfx/slrp/history"
 	"github.com/nfx/slrp/pmux"
 
 	"github.com/corpix/uarand"
@@ -62,10 +57,9 @@ type shard struct {
 	reply     chan reply
 	work      chan work //todo channel in pool
 	minute    *time.Ticker
-	history   *history.History
 }
 
-func (pool *shard) init(work chan work, history *history.History) {
+func (pool *shard) init(work chan work) {
 	pool.work = work
 	pool.incoming = make(chan incoming)
 	pool.remove = make(chan removal)
@@ -74,7 +68,6 @@ func (pool *shard) init(work chan work, history *history.History) {
 	pool.snapshot = make(chan chan []entry)
 	pool.reply = make(chan reply)
 	pool.minute = time.NewTicker(1 * time.Minute)
-	pool.history = history
 }
 
 func (pool *shard) main(ctx app.Context) {
@@ -174,7 +167,7 @@ func (pool *shard) firstAvailableProxy(r request) *entry {
 	// TODO: per-request offset selection strategy -
 	// scrapes are encouraged to refresh the old or
 	// the least offered proxies, but relays need fresher pool
-	available := pool.Entries[offset : size]
+	available := pool.Entries[offset:size]
 	for idx := range available {
 		e := &pool.Entries[offset+idx]
 		if e.ConsiderSkip(r.in.Context()) {
@@ -235,7 +228,6 @@ func (pool *shard) handleReply(r reply) {
 	if err == nil && res.StatusCode >= 400 {
 		err = fmt.Errorf(res.Status)
 	}
-	pool.recordHistory(r, err)
 	if err == nil {
 		entry.MarkSuccess()
 		res.Header.Set("X-Proxy-Through", entry.Proxy.String())
@@ -271,48 +263,4 @@ func (pool *shard) handleReply(r reply) {
 	}
 	// todo: proxies becoming dead (connections rejected, etc)
 	request.out <- nil
-}
-
-func justRead(r io.Reader) (buf []byte) {
-	if r != nil {
-		buf, _ = ioutil.ReadAll(r)
-	}
-	return
-}
-
-func (pool *shard) recordHistory(r reply, err error) {
-	var outBody []byte
-	if r.response == nil {
-		r.response = &http.Response{
-			StatusCode: 551,
-			Status:     err.Error(),
-			Header:     http.Header{},
-		}
-	} else {
-		outBody = justRead(r.response.Body)
-		r.response.Body = ioutil.NopCloser(bytes.NewBuffer(outBody))
-	}
-	hr := history.Request{
-		Serial:     r.r.serial,
-		Attempt:    r.r.attempt,
-		Ts:         time.Now(),
-		Method:     r.r.in.Method,
-		URL:        r.r.in.URL.String(),
-		StatusCode: r.response.StatusCode,
-		Status:     r.response.Status,
-		Proxy:      r.e.Proxy,
-		InHeaders:  map[string]string{},
-		OutHeaders: map[string]string{},
-		InBody:     justRead(r.r.in.Body),
-		OutBody:    outBody,
-		Took:       time.Since(r.start),
-	}
-	for k, v := range r.r.in.Header {
-		// seems reasonable, right?...
-		hr.InHeaders[k] = strings.Join(v, "; ")
-	}
-	for k, v := range r.response.Header {
-		hr.OutHeaders[k] = strings.Join(v, "; ")
-	}
-	pool.history.Record(hr)
 }

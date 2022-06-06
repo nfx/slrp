@@ -12,3 +12,4 @@ config.yml
 dist/
 
 coverage.txt
+.DS_Store

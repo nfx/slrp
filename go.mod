@@ -20,7 +20,10 @@ require (
 )
 
 // test
-require github.com/stretchr/testify v1.7.1
+require (
+	github.com/maxmind/mmdbwriter v0.0.0-20220606140952-b99976ab4826
+	github.com/stretchr/testify v1.7.2
+)
 
 // indirect
 require (
@@ -32,7 +35,7 @@ require (
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/text v0.3.6 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 // TODO: fix yaml dependencies
@@ -40,5 +43,9 @@ require gopkg.in/yaml.v2 v2.4.0 // indirect
 
 require (
 	github.com/BurntSushi/toml v1.0.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
+	go4.org/unsafe/assume-no-moving-gc v0.0.0-20211027215541-db492cf91b37 // indirect
 	golang.org/x/sys v0.0.0-20220325203850-36772127a21f // indirect
+	inet.af/netaddr v0.0.0-20211027220019-c74959edd3b6 // indirect
 )

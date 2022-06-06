@@ -120,7 +120,7 @@ var comparators = map[reflect.Kind]map[string]func(interface{}) sorter.Cmp{
 			return sorter.StrAsc(i.(string))
 		},
 		"DESC": func(i interface{}) sorter.Cmp {
-			return sorter.StrAsc(i.(string))
+			return sorter.StrDesc(i.(string))
 		},
 	},
 }
@@ -128,7 +128,7 @@ var comparators = map[reflect.Kind]map[string]func(interface{}) sorter.Cmp{
 func (o *OrderBy) cmp(fieldMap map[string]reflect.StructField) (func(reflect.Value) sorter.Cmp, error) {
 	field, ok := fieldMap[o.Identifier]
 	if !ok {
-		return nil, fmt.Errorf("%s is not present in schema", field.Name)
+		return nil, fmt.Errorf("%s is not present in schema", o.Identifier)
 	}
 	if o.Direction == "" {
 		o.Direction = "ASC"
@@ -136,7 +136,7 @@ func (o *OrderBy) cmp(fieldMap map[string]reflect.StructField) (func(reflect.Val
 	index := field.Index
 	kind := field.Type.Kind()
 	switch field.Type.String() {
-	case "int", "int64":
+	case "int", "int64", "string":
 		return func(record reflect.Value) sorter.Cmp {
 			v := record.FieldByIndex(index)
 			return comparators[kind][o.Direction](v.Interface())
@@ -301,6 +301,8 @@ func (v *Value) eval(ctx internalRow) (interface{}, error) {
 			return float64(x), nil
 		case string:
 			return x, nil
+		case bool:
+			return x, nil
 		}
 		return nil, fmt.Errorf("%s is of unknown type: %+v",
 			*v.Identifier, res)
@@ -313,6 +315,9 @@ func (v *Value) eval(ctx internalRow) (interface{}, error) {
 		}
 		earlier := time.Now().Add(-1 * d).Unix()
 		return float64(earlier), nil
+	}
+	if v.Inner == nil {
+		return nil, fmt.Errorf("empty AST value")
 	}
 	return v.Inner.eval(ctx)
 }

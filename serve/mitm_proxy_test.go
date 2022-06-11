@@ -13,6 +13,7 @@ import (
 	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/pool"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMitmWorksForHttp(t *testing.T) {
@@ -57,10 +58,10 @@ func TestMitmWorksForHttp(t *testing.T) {
 	// TODO: spin up test servers not to get to internet for no reason
 	req, _ := http.NewRequestWithContext(ctx, "GET", "http://httpbin.org/get", nil)
 	res, err := client.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// TODO: make it working properly
-	assert.Equal(t, 429, res.StatusCode)
+	assert.Equal(t, 200, res.StatusCode)
 }
 
 func TestMitmWorksForHttps(t *testing.T) {

@@ -75,6 +75,7 @@ func (mps *MitmProxyServer) counter(ctx app.Context) {
 func (mps *MitmProxyServer) handleSimpleHttp(rw http.ResponseWriter, r *http.Request) {
 	log := app.Log.From(r.Context()).With().Str("connection", "HTTP").Logger()
 	log.Debug().Str("method", r.Method).Stringer("url", r.URL).Msg("init")
+	r.RequestURI = "" // request uri cannot be set in client requests
 	res, err := mps.pool.RoundTrip(r)
 	if err != nil {
 		log.Err(err).Msg("cannot do RoundTrip(r)")

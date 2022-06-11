@@ -168,6 +168,7 @@ func (pool *Pool) snapshot() (entries []entry) {
 	return
 }
 
+// TODO: think of rather type Facet struct { Name, Field string; Values []string }
 type Card struct {
 	Name  string
 	Value interface{}

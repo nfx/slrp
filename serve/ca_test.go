@@ -7,9 +7,9 @@ import (
 )
 
 func TestSignHost(t *testing.T) {
-		ca, err := NewCA()
-		assert.NoError(t, err)
-		mitm, err := ca.Sign("anything")
-		assert.NoError(t, err)
-		assert.NotNil(t, mitm)
+	ca, err := NewCA()
+	assert.NoError(t, err)
+	mitm, err := ca.Sign("anything")
+	assert.NoError(t, err)
+	assert.NotNil(t, mitm)
 }

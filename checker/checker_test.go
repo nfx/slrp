@@ -9,7 +9,7 @@ import (
 
 func TestFailure(t *testing.T) {
 	var proxy pmux.Proxy
-	defer pmux.SetupProxy(&proxy)()
+	defer pmux.SetupHttpProxy(&proxy)()
 	c := NewChecker()
 
 	ctx := context.Background()

@@ -21,7 +21,7 @@ func TestNewProxy(t *testing.T) {
 
 func TestVerifyProxyInContext(t *testing.T) {
 	var proxy Proxy
-	defer SetupProxy(&proxy)()
+	defer SetupHttpProxy(&proxy)()
 	c := &http.Client{
 		Transport: &http.Transport{
 			DialContext: dialProxiedConnection,

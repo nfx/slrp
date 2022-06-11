@@ -18,20 +18,20 @@ import (
 func TestMitmWorks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	var proxy pmux.Proxy
-	defer pmux.SetupProxy(&proxy)()
+	defer pmux.SetupHttpProxy(&proxy)()
 
 	ca, err := NewCA()
 	assert.NoError(t, err)
-	
+
 	history := history.NewHistory()
 	pool := pool.NewPool(history)
 	mitm := NewMitmProxyServer(pool, ca)
 
 	runtime := app.Singletons{
-		"pool": pool,
-		"mitm": mitm,
+		"pool":    pool,
+		"mitm":    mitm,
 		"history": history,
 	}.MockStart()
 	defer runtime.Stop()
@@ -41,7 +41,7 @@ func TestMitmWorks(t *testing.T) {
 
 	pool.Add(ctx, proxy, 1*time.Second)
 	assert.Equal(t, 1, pool.Len())
-	
+
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyURL(&url.URL{

@@ -118,7 +118,7 @@ func (f failingSrc) Err() error {
 func start() (*Refresher, app.MockRuntime, func()) {
 	// we might even need mutex here :(
 	var proxy pmux.Proxy
-	stopProxy := pmux.SetupProxy(&proxy)
+	stopProxy := pmux.SetupHttpProxy(&proxy)
 	stubSource(proxy)
 	singletons := app.Factories{
 		"checker":   checker.NewChecker,

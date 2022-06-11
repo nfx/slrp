@@ -18,7 +18,7 @@ func init() {
 	zerolog.DurationFieldUnit = time.Second
 }
 
-func SetupProxy(proxy *Proxy) func() {
+func SetupHttpProxy(proxy *Proxy) func() {
 	tproxy := httptest.NewServer(BypassProxy())
 	*proxy = HttpProxy(strings.ReplaceAll(tproxy.URL, "http://", ""))
 	return func() {

@@ -60,7 +60,7 @@ func TestRoundTrip(t *testing.T) {
 	defer runtime.Stop()
 
 	var proxy pmux.Proxy
-	defer pmux.SetupProxy(&proxy)()
+	defer pmux.SetupHttpProxy(&proxy)()
 	ctx := context.Background()
 
 	pool.Add(ctx, proxy, 1*time.Second)
@@ -76,7 +76,7 @@ func TestRoundTrip(t *testing.T) {
 
 func TestSessionHistory(t *testing.T) {
 	var proxy pmux.Proxy
-	defer pmux.SetupProxy(&proxy)()
+	defer pmux.SetupHttpProxy(&proxy)()
 
 	hist := history.NewHistory()
 	pool, runtime := app.MockStartSpin(NewPool(hist), hist)

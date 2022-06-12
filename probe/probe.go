@@ -63,10 +63,6 @@ func (p *Probe) Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool
 	}
 }
 
-func (p *Probe) Found() int {
-	return p.pool.Len()
-}
-
 func (p *Probe) Start(ctx app.Context) {
 	go p.state.main(ctx)
 	workers := 16

@@ -12,43 +12,27 @@ import (
 	"github.com/nfx/slrp/history"
 	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/pool"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMitmWorksForHttp(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	var proxy pmux.Proxy
-	defer pmux.SetupHttpProxy(&proxy)()
-
 	ca, err := NewCA()
 	assert.NoError(t, err)
 
+	proxy := NewLocalHttpProxy()
 	history := history.NewHistory()
 	pool := pool.NewPool(history)
-	mitm := NewMitmProxyServer(pool, ca)
-
-	runtime := app.Singletons{
-		"pool":    pool,
-		"mitm":    mitm,
-		"history": history,
-	}.MockStart()
+	mitm, runtime := app.MockStartSpin(NewMitmProxyServer(pool, ca), history, pool, proxy)
 	defer runtime.Stop()
-	runtime["pool"].Spin()
-	runtime["mitm"].Spin()
-	runtime["history"].Spin()
 
-	pool.Add(ctx, proxy, 1*time.Second)
+	pool.Add(runtime.Context(), proxy.Proxy(), 1*time.Second)
 	assert.Equal(t, 1, pool.Len())
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			Proxy: http.ProxyURL(&url.URL{
-				Scheme: "http",
-				Host:   "localhost:8090",
-			}),
+			Proxy: mitm.transportProxy(),
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
@@ -56,7 +40,7 @@ func TestMitmWorksForHttp(t *testing.T) {
 	}
 
 	// TODO: spin up test servers not to get to internet for no reason
-	req, _ := http.NewRequestWithContext(ctx, "GET", "http://httpbin.org/get", nil)
+	req, _ := http.NewRequestWithContext(runtime.Context(), "GET", "http://httpbin.org/get", nil)
 	res, err := client.Do(req)
 	require.NoError(t, err)
 

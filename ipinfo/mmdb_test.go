@@ -14,11 +14,12 @@ import (
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/internal/qa"
 	"github.com/nfx/slrp/pmux"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/maxmind/mmdbwriter"
 	"github.com/maxmind/mmdbwriter/inserter"
 	"github.com/maxmind/mmdbwriter/mmdbtype"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDonwloadAndLookup(t *testing.T) {

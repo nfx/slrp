@@ -43,7 +43,7 @@ type configuration map[string]Config
 
 func (c Config) StrOr(key, def string) string {
 	if c == nil {
-		return def
+		return expandEnv(def)
 	}
 	v, ok := c[key]
 	if !ok {

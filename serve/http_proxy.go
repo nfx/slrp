@@ -68,8 +68,7 @@ func (srv *HttpProxyServer) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 func (srv *HttpProxyServer) handleSimpleHttp(rw http.ResponseWriter, r *http.Request) {
 	log := app.Log.From(r.Context()).With().Str("connection", "HTTP").Logger()
 	log.Debug().Str("method", r.Method).Stringer("url", r.URL).Msg("init")
-	r.RequestURI = "" // request uri cannot be set in client requests
-	res, err := srv.transport.RoundTrip(r)
+	res, err := srv.transport.RoundTrip(srv.rewrapRequest(log, r.URL.Scheme, r))
 	if err != nil {
 		log.Err(err).Msg("cannot do RoundTrip(r)")
 		http.Error(rw, err.Error(), 470)
@@ -141,24 +140,28 @@ func (srv *HttpProxyServer) handleHandshake(src net.Conn, host string) (*tls.Con
 	return ssl, ssl.Handshake()
 }
 
-func (srv *HttpProxyServer) handleInnerHttp(log zerolog.Logger, ssl *tls.Conn, buf *bufio.Reader) error {
-	req, err := http.ReadRequest(buf)
-	if err != nil {
-		return err
-	}
-	defer req.Body.Close()
-	res, err := srv.transport.RoundTrip((&http.Request{
+func (srv *HttpProxyServer) rewrapRequest(log zerolog.Logger, scheme string, req *http.Request) *http.Request {
+	return (&http.Request{
 		Method: req.Method,
 		Body:   req.Body,
 		URL: &url.URL{
 			Host:     req.Host,
 			Path:     req.URL.Path,
 			RawQuery: req.URL.RawQuery,
-			Scheme:   "https",
+			Scheme:   scheme,
 		},
 		Header: req.Header,
 		Proto:  req.Proto,
-	}).WithContext(app.Log.To(req.Context(), log)))
+	}).WithContext(app.Log.To(req.Context(), log))
+}
+
+func (srv *HttpProxyServer) handleInnerHttp(log zerolog.Logger, ssl *tls.Conn, buf *bufio.Reader) error {
+	req, err := http.ReadRequest(buf)
+	if err != nil {
+		return err
+	}
+	defer req.Body.Close()
+	res, err := srv.transport.RoundTrip(srv.rewrapRequest(log, "https", req))
 	if err != nil {
 		log.Err(err).Msg("round trip")
 		return err

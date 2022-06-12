@@ -36,6 +36,24 @@ func NewLocalHttpProxy() *HttpProxyServer {
 	return srv
 }
 
+func NewLocalHttpsProxy() *HttpProxyServer {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		panic(err)
+	}
+	ca, err := NewCA()
+	if err != nil {
+		panic(err)
+	}
+	srv := &HttpProxyServer{
+		listener:  ln,
+		transport: http.DefaultTransport,
+		ca:        ca,
+	}
+	srv.Handler = srv
+	return srv
+}
+
 // ListenAndServe uses listener configured in Start method, so that
 // this type could be reused for both testing and real serving
 func (srv *HttpProxyServer) ListenAndServe() error {

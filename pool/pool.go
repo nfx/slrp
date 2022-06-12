@@ -310,7 +310,8 @@ func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 		}
 		out := make(chan *http.Response)
 		// shard := rand.Intn(len(pool.shards))
-		shard := (serial + attempt) % len(pool.shards)
+		// shart from the first shard to reduce the number of test attempts
+		shard := (serial - 1 + attempt - 1) % len(pool.shards)
 		log.Trace().Int("shard", shard).Msg("try")
 		// set attempt and serial for history wrapper to pick up
 		req.Header.Set("X-Proxy-Serial", fmt.Sprint(serial))
@@ -324,11 +325,11 @@ func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 			attempt: attempt,
 		}
 		res := <-out
-		// when no response is returned or proxy pool is exhausted
-		if attempt < len(pool.shards) && res.StatusCode == 552 {
+		if res == nil {
 			continue
 		}
-		if res == nil {
+		// when no response is returned or proxy pool is exhausted
+		if attempt < len(pool.shards) && res.StatusCode == 552 {
 			continue
 		}
 		// if res.StatusCode == 552 && pool.pressure != nil {

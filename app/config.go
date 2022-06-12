@@ -42,6 +42,9 @@ type configurable interface {
 type configuration map[string]Config
 
 func (c Config) StrOr(key, def string) string {
+	if c == nil {
+		return def
+	}
 	v, ok := c[key]
 	if !ok {
 		v = def
@@ -50,6 +53,9 @@ func (c Config) StrOr(key, def string) string {
 }
 
 func (c Config) DurOr(key string, def time.Duration) time.Duration {
+	if c == nil {
+		return def
+	}
 	v, ok := c[key]
 	if !ok {
 		return def
@@ -63,6 +69,9 @@ func (c Config) DurOr(key string, def time.Duration) time.Duration {
 }
 
 func (c Config) IntOr(key string, def int) int {
+	if c == nil {
+		return def
+	}
 	v, ok := c[key]
 	if !ok {
 		return def
@@ -76,6 +85,9 @@ func (c Config) IntOr(key string, def int) int {
 }
 
 func (c Config) BoolOr(key string, def bool) bool {
+	if c == nil {
+		return def
+	}
 	v, ok := c[key]
 	if !ok {
 		return def

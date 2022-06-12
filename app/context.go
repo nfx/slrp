@@ -7,6 +7,7 @@ import (
 )
 
 type Service interface {
+	// TODO: Start(Context) error
 	Start(Context)
 }
 

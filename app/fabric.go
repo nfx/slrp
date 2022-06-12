@@ -33,7 +33,6 @@ type Fabric struct {
 	syncService chan string
 	askStats    chan chan stats
 	syncTrigger *time.Ticker
-	wg          sync.WaitGroup
 }
 
 type stat struct {
@@ -73,12 +72,19 @@ func (f *Fabric) Start(ctx context.Context) {
 	syncTrigger := f.configuration["app"].DurOr("sync", 1*time.Minute)
 	f.syncTrigger = time.NewTicker(syncTrigger)
 	f.State = f.configuration["app"].StrOr("state", "$HOME/.$APP/data")
+	monitor := f.singletons.Monitor()
+
+	// treat all ListenAndServe exposing singletons as another service
+	f.services["monitor"] = monitor
+
 	f.initServices()
 	f.configureServices()
 	f.loadState()
 	f.startAll(ctx)
 	go f.sync(ctx)
-	f.serveAll(ctx)
+
+	// wait for all servers to stop
+	monitor.Wait()
 }
 
 func (f *Fabric) initLogging() {
@@ -118,18 +124,34 @@ func (f *Fabric) loadConfiguration() {
 	f.configuration = conf
 }
 
-func (f *Fabric) serveAll(ctx context.Context) {
-	for k, v := range f.singletons {
+type monitorServers struct {
+	sync.WaitGroup
+	Singletons
+}
+
+func (m monitorServers) Start(ctx Context) {
+	for s, v := range m.Singletons {
 		srv, ok := v.(aServer)
 		if !ok {
 			continue
 		}
-		f.wg.Add(1)
-		go f.closeServerOnContextDone(ctx, k, srv)
-		go f.listenAndServe(k, srv)
+		m.Add(1)
+		go m.closeOnDone(ctx.Done(), s, srv)
+		go m.listenAndServe(s, srv)
 	}
-	// wait for all servers to stop
-	f.wg.Wait()
+}
+
+func (m *monitorServers) closeOnDone(done <-chan struct{}, service string, srv aServer) {
+	<-done
+	err := srv.Close()
+	log.Warn().Str("service", service).Err(err).Msg("parent context done")
+}
+
+func (m *monitorServers) listenAndServe(service string, server aServer) {
+	log.Info().Str("service", service).Msg("starting")
+	err := server.ListenAndServe()
+	log.Warn().Str("service", service).Err(err).Msg("stopped")
+	m.Done()
 }
 
 func (f *Fabric) startAll(ctx context.Context) {
@@ -182,19 +204,6 @@ func (f *Fabric) initServices() {
 		}
 		f.services[k] = srv
 	}
-}
-
-func (h *Fabric) closeServerOnContextDone(
-	ctx context.Context, service string, server aServer) {
-	<-ctx.Done()
-	err := server.Close()
-	log.Warn().Str("service", service).Err(err).Msg("parent context done")
-}
-
-func (h *Fabric) listenAndServe(service string, server aServer) {
-	err := server.ListenAndServe()
-	log.Warn().Str("service", service).Err(err).Msg("stopped")
-	h.wg.Done()
 }
 
 func (h *Fabric) snapshot() stats {

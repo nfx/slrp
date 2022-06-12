@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 )
@@ -26,14 +27,40 @@ func MockStartSpin[T any](this *T, other ...any) (*T, MockRuntime) {
 	return this, runtime
 }
 
+func (r MockRuntime) Context(main ...string) context.Context {
+	if len(main) == 0 {
+		main = append(main, "this")
+	}
+	this, ok := r[main[0]]
+	if !ok {
+		panic("no main service found")
+	}
+	return this.ctx
+}
+
 func (r MockRuntime) Stop() {
 	for _, v := range r {
 		v.Cancel()
 	}
 }
 
+func (s Singletons) Monitor() *monitorServers {
+	return &monitorServers{Singletons: s}
+}
+
 func (s Singletons) MockStart() MockRuntime {
 	r := MockRuntime{}
+	s["monitor"] = s.Monitor()
+	for _, s := range s {
+		c, ok := s.(configurable)
+		if !ok {
+			continue
+		}
+		err := c.Configure(nil)
+		if err != nil {
+			panic(err)
+		}
+	}
 	for k, v := range s {
 		service, ok := v.(Service)
 		if !ok {

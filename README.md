@@ -17,6 +17,10 @@ SLRP - rotating open proxy multiplexer
 * Real-time statistics display about available pool
 * Packaged as a single executable binary, that also includes Web UI
 
+# Usage
+
+Download service, start it up, wait couple of minutes for the pool to pick up. Now run `curl -D - -x http://127.0.0.1:8090 -k http://httpbin.org/get` couple of times and see different origins and user agent headers.
+
 # Concepts
 
 * *Source* is an async process that looks at one or more pages for refreshed proxy list. 
@@ -32,11 +36,11 @@ SLRP - rotating open proxy multiplexer
 * Successful *check* results in *Found* queue and gets added to a *Pool*.
 * *Pool* subdivides its memory into *shards* for randomized rotation and minimal resource contention.
 * *Pool* uses configurable and backpressure-controlled workers to perform HTTP request forwarding.
-* Every *forwarded request* gets a serial number and picks a different *shard* for an *attempt*.
+* Every *forwarded request* gets a serial number (returned in `X-Proxy-Serial` header) and picks a different *shard* for an *attempt*, which is reflected in response in `X-Proxy-Attempt` header.
 * Every *forwarded request* can later be inspected through `GET /api/history` or UI.
-* Every *attempt* picks first available working random proxy from a *shard* and marks it as *Offered*.
+* Every *attempt* picks first available working random proxy from a *shard* and marks it as *Offered*. Total number of offers per used proxy is returned in response in `X-Proxy-Offered` header.
 * In the event of no working proxies in a *shard*, *proxy pool exhaustion* errors can do backpressure and slow down issuing of *serial* numbers through simple leaky bucket algorithm.
-* Every *succeeded attempt* through a proxy increases it's *Success Rate* (*Succeeded*/*Offered*), which is also calculated per hour.
+* Every *succeeded attempt* through a proxy increases it's *Success Rate* (*Succeeded*/*Offered*), which is also calculated per hour. Total number of succeded attempts of used proxy are returned via `X-Proxy-Succeed` header. Proxy used is returned in `X-Proxy-Through` header.
 * Every *failed attempt* marks proxy as not working and *suspends offering* it for 5 minutes.
 
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -47,19 +51,23 @@ SLRP - rotating open proxy multiplexer
 
 ![overview](docs/overview.png)
 
-Shows current source refresh status and stats.
+[http://localhost:8089/](http://localhost:8089/) shows current source refresh status and stats.
 
 ## Proxies
 
 ![proxies](docs/proxies.png)
 
-Search interface over active pool of found proxies. By default, entries are sorted by last working on top.
+[http://localhost:8089/proxies](http://localhost:8089/proxies) provides search interface over active pool of found proxies. By default, entries are sorted by last working on top.
 
 ## History
 
 ![history](docs/history.png)
 
-Search interface over last 1000 forwarding attempts (configurable).
+[http://localhost:8089/history](http://localhost:8089/history) provides search interface over last 1000 forwarding attempts (configurable).
+
+## Blacklist
+
+[http://localhost:8089/blacklist](http://localhost:8089/blacklist) provides search interface over unsuccessful probes.
 
 # Configuration
 

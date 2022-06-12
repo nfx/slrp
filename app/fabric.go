@@ -129,7 +129,7 @@ type monitorServers struct {
 	Singletons
 }
 
-func (m monitorServers) Start(ctx Context) {
+func (m *monitorServers) Start(ctx Context) {
 	for s, v := range m.Singletons {
 		srv, ok := v.(aServer)
 		if !ok {

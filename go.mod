@@ -22,7 +22,7 @@ require (
 // test
 require (
 	github.com/maxmind/mmdbwriter v0.0.0-20220606140952-b99976ab4826
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 )
 
 // indirect

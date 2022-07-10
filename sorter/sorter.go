@@ -63,7 +63,7 @@ func (s StrAsc) Less(o Cmp) bool {
 type StrDesc string
 
 func (s StrDesc) Less(o Cmp) bool {
-	return string(s) < string(o.(StrDesc))
+	return string(s) > string(o.(StrDesc))
 }
 
 type Chain []Cmp

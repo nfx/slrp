@@ -31,4 +31,4 @@ test:
 coverage: test
 	go tool cover -html=coverage.txt
 
-.PHONY: build fmt coverage test
+.PHONY: build fmt coverage test vendor

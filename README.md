@@ -87,9 +87,14 @@ log:
   level: info
   format: pretty
 server:
-  addr: "127.0.0.1:8089"
+  addr: "localhost:8089"
   read_timeout: 15s
   enable_profiler: false
+mitm:
+  addr: "localhost:8090"
+  read_timeout: 15s
+  idle_timeout: 15s
+  write_timeout: 15s
 checker:
   timeout: 5s
   strategy: simple
@@ -121,6 +126,15 @@ API and UI serving component.
 * `addr` - address of listening HTTP server. Default is [http://127.0.0.1:8089](http://127.0.0.1:8089).
 * `read_timeout` - default is `15s`.
 * `enable_profiler` - either or not enabling profiler endpoints. Default is `false`. Developer use only.
+
+## mitm
+
+HTTP proxy frontend.
+
+* `addr` - address of listening HTTP proxy server. Default is [http://127.0.0.1:8090](http://127.0.0.1:8090).
+* `read_timeout` - default is `15s`.
+* `idle_timeout` - default is `15s`.
+* `write_timeout` - default is `15s`.
 
 ## checker
 

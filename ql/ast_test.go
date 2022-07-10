@@ -146,8 +146,8 @@ func TestOrderByStringDesc(t *testing.T) {
 	fifthDesc := Desc("Fifth")
 	cmp, err := fifthDesc.cmp(ir.fieldMap)
 	assert.NoError(t, err)
-	less := cmp(ir.record).Less(sorter.StrDesc("e")) // TODO: bug o_O
-	assert.Equal(t, true, less)
+	less := cmp(ir.record).Less(sorter.StrDesc("e"))
+	assert.Equal(t, false, less)
 }
 
 type y struct {

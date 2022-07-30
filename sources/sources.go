@@ -12,7 +12,7 @@ func init() {
 	Sources = append(Sources, Source{
 		ID:        8,
 		Homepage:  "https://free-proxy-list.net",
-		Frequency: 1 * time.Hour,
+		Frequency: 10 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net", "Proxy List"),
 	}, Source{
 		ID:        9,
@@ -58,24 +58,24 @@ func init() {
 	}, Source{
 		ID:        18,
 		Homepage:  "https://sslproxies.org/",
-		Frequency: 30 * time.Minute,
+		Frequency: 10 * time.Minute,
 		Feed:      sslProxies,
 	}, Source{
 		ID:        19,
 		name:      "anonymous-free-proxy",
 		Homepage:  "https://free-proxy-list.net/anonymous-proxy.html",
-		Frequency: 30 * time.Minute,
+		Frequency: 10 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/anonymous-proxy.html", "Anonymous Proxy"),
 	}, Source{
 		ID:        20,
-		Homepage:  "https://www.us-proxy.org",
-		Frequency: 30 * time.Minute,
+		Homepage:  "https://us-proxy.org",
+		Frequency: 10 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://www.us-proxy.org", "US Proxy List"),
 	}, Source{
 		ID:        21,
 		name:      "uk-proxy",
 		Homepage:  "https://free-proxy-list.net/uk-proxy.html",
-		Frequency: 30 * time.Minute,
+		Frequency: 10 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/uk-proxy.html", "UK Proxy List"),
 	})
 }

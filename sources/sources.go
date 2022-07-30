@@ -60,6 +60,11 @@ func init() {
 		Homepage:  "https://sslproxies.org/",
 		Frequency: 30 * time.Minute,
 		Feed:      sslProxies,
+	}, Source{
+		ID:        19,
+		Homepage:  "https://free-proxy-list.net/anonymous-proxy.html",
+		Frequency: 30 * time.Minute,
+		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/anonymous-proxy.html", "Anonymous Proxy"),
 	})
 }
 

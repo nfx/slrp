@@ -187,3 +187,4 @@ Get first 20 blacklisted items sorted by proxy along with common error stats
 
 * [ProxyBroker](https://github.com/constverum/ProxyBroker) is pretty similar project in nature. Requires couple of Python module dependencies and had the last commit in March 2019. 
 * [Scylla](https://github.com/imWildCat/scylla) is pretty similar project in nature. Requires couple of Python module dependencies.
+* [ProxyBuilder](https://github.com/jetkai/proxy-builder-2)

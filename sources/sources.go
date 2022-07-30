@@ -47,7 +47,25 @@ func init() {
 		Homepage:  "http://proxydb.net/",
 		Frequency: 6 * time.Hour,
 		Feed:      proxyDb,
+	}, Source{
+		ID:        17,
+		name:      "jetkai",
+		Homepage:  "https://github.com/jetkai/proxy-list",
+		UrlPrefix: "https://raw.githubusercontent.com/jetkai/proxy-list",
+		Frequency: 2 * time.Hour,
+		Seed:      true,
+		Feed:      jetkaiProxyBuilder,
 	})
+}
+
+func jetkaiProxyBuilder(ctx context.Context, h *http.Client) Src {
+	// aggregated by https://github.com/jetkai/proxy-builder-2
+	f := regexFeedBase(ctx, h, "https://raw.githubusercontent.com/jetkai/proxy-list", ":")
+	return merged().
+		refresh(f("/main/online-proxies/txt/proxies-http.txt", "http")).
+		refresh(f("/main/online-proxies/txt/proxies-https.txt", "https")).
+		refresh(f("/main/online-proxies/txt/proxies-socks4.txt", "socks4")).
+		refresh(f("/main/online-proxies/txt/proxies-socks5.txt", "socks5"))
 }
 
 func proxylists(ctx context.Context, h *http.Client) Src {

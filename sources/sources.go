@@ -55,7 +55,17 @@ func init() {
 		Frequency: 2 * time.Hour,
 		Seed:      true,
 		Feed:      jetkaiProxyBuilder,
+	}, Source{
+		ID:        18,
+		Homepage:  "https://sslproxies.org/",
+		Frequency: 30 * time.Minute,
+		Feed:      sslProxies,
 	})
+}
+
+func sslProxies(ctx context.Context, h *http.Client) Src {
+	f := regexFeedBase(ctx, h, "http://sslproxies.org/", "SSL Proxy List")
+	return merged().refresh(f("/", "https"))
 }
 
 func jetkaiProxyBuilder(ctx context.Context, h *http.Client) Src {

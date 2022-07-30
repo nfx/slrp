@@ -62,6 +62,7 @@ func init() {
 		Feed:      sslProxies,
 	}, Source{
 		ID:        19,
+		name:      "anonymous-free-proxy",
 		Homepage:  "https://free-proxy-list.net/anonymous-proxy.html",
 		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/anonymous-proxy.html", "Anonymous Proxy"),
@@ -70,6 +71,12 @@ func init() {
 		Homepage:  "https://www.us-proxy.org",
 		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://www.us-proxy.org", "US Proxy List"),
+	}, Source{
+		ID:        21,
+		name:      "uk-proxy",
+		Homepage:  "https://free-proxy-list.net/uk-proxy.html",
+		Frequency: 30 * time.Minute,
+		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/uk-proxy.html", "UK Proxy List"),
 	})
 }
 

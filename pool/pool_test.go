@@ -199,7 +199,7 @@ func TestCounterOnHalt(t *testing.T) {
 	assert.Equal(t, 1, serial)
 
 	now := time.Now()
-	slowDown := time.Second
+	slowDown := time.Second*1
 
 	pool.halt <- slowDown
 	serial = <-pool.serial

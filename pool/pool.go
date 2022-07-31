@@ -81,7 +81,7 @@ func (pool *Pool) worker(ctx context.Context) {
 func (pool *Pool) halter(ctx app.Context) {
 	var pressure int
 	// TODO: make configurable
-	slowDown := time.Minute
+	slowDown := time.Minute*1
 	maxPressure := 32
 	log := app.Log.From(ctx.Ctx())
 	for {

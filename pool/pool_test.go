@@ -206,15 +206,16 @@ func TestCounterOnHalt(t *testing.T) {
 	now := time.Now()
 	slowDown := time.Second*1
 
-	pool.halt <- slowDown
+	<-pool.serial
+	pool.halt <- slowDown // <= bug
 	serial = <-pool.serial
 
-	assert.Equal(t, 2, serial)
+	assert.Equal(t, 3, serial)
 	assert.GreaterOrEqual(t, time.Since(now), slowDown)
 
 	serial = <-pool.serial
 
-	assert.Equal(t, 3, serial)
+	assert.Equal(t, 4, serial)
 }
 
 func TestRandomFast(t *testing.T) {

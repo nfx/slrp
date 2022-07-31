@@ -3,7 +3,6 @@ package sources
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"sync"
@@ -11,12 +10,12 @@ import (
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
-	"github.com/rs/zerolog"
 )
 
 type Src interface {
 	Generate(ctx context.Context) <-chan pmux.Proxy
 	Err() error
+	Len() int
 }
 
 func gen(r func() ([]pmux.Proxy, error)) Src {
@@ -53,87 +52,7 @@ func (f *retriableGenerator) Err() error {
 }
 
 func (f *retriableGenerator) Len() int {
-	return f.len
-}
-
-type errorContext interface {
-	Apply(e *zerolog.Event)
-}
-
-type intEC struct {
-	key   string
-	value int
-}
-
-func (a intEC) Apply(e *zerolog.Event) {
-	e.Int(a.key, a.value)
-}
-
-type strEC struct {
-	key   string
-	value string
-}
-
-func (a strEC) Apply(e *zerolog.Event) {
-	e.Str(a.key, a.value)
-}
-
-type sourceError struct {
-	msg    string
-	fields []errorContext
-	skip   bool
-}
-
-func (se sourceError) Error() string {
-	ctx := se.msg
-	for _, v := range se.fields {
-		switch x := v.(type) {
-		case intEC:
-			ctx = fmt.Sprintf("%s %s=%d", ctx, x.key, x.value)
-		case strEC:
-			ctx = fmt.Sprintf("%s %s=%s", ctx, x.key, x.value)
-		}
-	}
-	if se.skip {
-		ctx = fmt.Sprintf("%s (skip)", ctx)
-	}
-	return ctx
-}
-
-func newErr(msg string, ctx ...errorContext) sourceError {
-	return sourceError{
-		msg:    msg,
-		fields: ctx,
-	}
-}
-
-func wrapError(err error, ctx ...errorContext) sourceError {
-	return newErr(err.Error(), ctx...)
-}
-
-func reWrapError(err error, ctx ...errorContext) sourceError {
-	switch x := err.(type) {
-	case sourceError:
-		x.fields = append(x.fields, ctx...)
-		return x
-	default:
-		return newErr(err.Error(), ctx...)
-	}
-}
-
-func skipErr(err error, ctx ...errorContext) sourceError {
-	se := reWrapError(err, ctx...)
-	se.skip = true
-	return se
-}
-
-func skipError(msg string, ctx ...errorContext) sourceError {
-	// todo: merge with prev one
-	return sourceError{
-		msg:    msg,
-		fields: ctx,
-		skip:   true,
-	}
+	return f.len // race condition?...
 }
 
 func (f *retriableGenerator) generate(ctx context.Context) {
@@ -150,6 +69,7 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 		start := time.After(delay)
 		select {
 		case <-ctx.Done():
+			log.Trace().Msg("stopped trying to forward")
 			return
 		case <-start:
 			proxies, err := f.f()
@@ -179,6 +99,7 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 			for _, proxy := range proxies {
 				select {
 				case <-ctx.Done():
+					log.Trace().Msg("stopped forwarding")
 					return
 				case f.out <- proxy:
 				}
@@ -207,23 +128,23 @@ func (m *mergeSrc) refresh(r func() ([]pmux.Proxy, error)) *mergeSrc {
 
 func (m *mergeSrc) forward(ctx context.Context, src Src) {
 	defer m.wg.Done()
+	log := app.Log.From(ctx)
 	for proxy := range src.Generate(ctx) {
 		select {
 		case m.out <- proxy:
 		case <-ctx.Done():
+			log.Trace().Msg("stopped merge forward")
 			return
 		}
 	}
-	log := app.Log.From(ctx)
 	log.Debug().Msg("done merged forwarding")
 }
 
 func (m *mergeSrc) finish(ctx context.Context) {
 	m.wg.Wait()
-	close(m.out)
 	log := app.Log.From(ctx)
-	// TODO: lens
 	log.Debug().Int("sources", len(m.srcs)).Msg("done merged source")
+	close(m.out)
 }
 
 func (m *mergeSrc) Generate(ctx context.Context) <-chan pmux.Proxy {
@@ -233,6 +154,19 @@ func (m *mergeSrc) Generate(ctx context.Context) <-chan pmux.Proxy {
 	}
 	go m.finish(ctx)
 	return m.out
+}
+
+func (m *mergeSrc) Len() int {
+	items := 0
+	for _, src := range m.srcs {
+		v := src.Len()
+		if v == 0 {
+			// source is not yet ready
+			v = 1
+		}
+		items += v
+	}
+	return items
 }
 
 func (m *mergeSrc) Err() error {

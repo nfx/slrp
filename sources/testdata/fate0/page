@@ -1,0 +1,6 @@
+{"host": "127.0.0.1", "port": 12345, "type": "http", "anonymity": "high"}
+{"host": "127.0.0.1", "port": 12346, "type": "http", "anonymity": "transparent"}
+{"host": "127.0.0.1", "port": 12347, "type": "https", "anonymity": "high"}
+{"host": "127.0.0.1", "port": 12348, "type": "socks4", "anonymity": "high"}
+{"host": "127.0.0.1", "port": 12349, "type": "socks5", "anonymity": "high"}
+{"host": "127.0.0.1", "port": 12350, "type": "socks5", "anonymity": "anonymous"}

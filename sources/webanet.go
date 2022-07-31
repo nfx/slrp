@@ -73,6 +73,10 @@ func (w *webaNet) Err() error {
 	return w.err
 }
 
+func (w *webaNet) Len() int {
+	return w.src.Len()
+}
+
 func webanet(ctx context.Context, h *http.Client) Src {
 	return &webaNet{
 		h: h,

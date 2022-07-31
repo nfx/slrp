@@ -162,6 +162,9 @@ func (i *internal) handleScheduled(v verify) {
 		return
 	}
 	i.stats.Update(v.Source, stats.New)
+	// TODO: introduce a persistent "probing buffer",
+	// so that sources are re-checked faster and code
+	// does not block in this place
 	i.probing <- v
 }
 

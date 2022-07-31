@@ -81,7 +81,11 @@ func findLinksWithOn(ctx context.Context, h *http.Client, with, page string) (li
 	if err != nil {
 		return nil, err
 	}
-	document, err := goquery.NewDocumentFromReader(bytes.NewBuffer(body))
+	return findLinksWithInBytes(bytes.NewBuffer(body), serial, with, page)
+}
+
+func findLinksWithInBytes(body io.Reader, serial int, with, page string) (links []string, err error) {
+	document, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, wrapError(err, intEC{"serial", serial})
 	}
@@ -109,13 +113,25 @@ type req struct {
 	Headers          map[string]string
 }
 
+// all strings here must be lowercase
 var blockers = []string{
 	//"captcha", different...
-	"Cloudflare",
+	"cloudflare",
 	"contentkeeper.net", // body onload submit, perhaps can be tuned?...
 }
 
-func (r req) Do(ctx context.Context, h *http.Client) ([]byte, int, error) {
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+func (r req) Do(ctx context.Context, h httpClient) ([]byte, int, error) {
+	if x, ok := h.(*http.Client); ok && x == nil {
+		// not sure if it's the best way of unit testing it, but who cares.
+		return nil, 0, skipError("no http client")
+	}
+	if h == nil {
+		return nil, 0, skipError("no http client")
+	}
 	request, _ := http.NewRequestWithContext(ctx, "GET", r.URL, r.RequestBody)
 	if r.Headers != nil {
 		for k, v := range r.Headers {
@@ -142,10 +158,11 @@ func (r req) Do(ctx context.Context, h *http.Client) ([]byte, int, error) {
 	if err != nil {
 		serial = 0
 	}
-	body, err := io.ReadAll(resp.Body)
-	if resp.Body != nil {
-		resp.Body.Close()
+	if resp.Body == nil {
+		return nil, serial, fmt.Errorf("nil body: %s %s", request.Method, request.URL)
 	}
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
 	if len(body) > 0 {
 		for _, v := range blockers {
 			// TODO: highlight in history?...
@@ -161,7 +178,9 @@ func (r req) Do(ctx context.Context, h *http.Client) ([]byte, int, error) {
 	}
 	if resp.StatusCode >= 400 {
 		return nil, serial, newErr("error status",
-			intEC{"serial", serial}, strEC{"status", resp.Status})
+			intEC{"serial", serial},
+			intEC{"code", resp.StatusCode},
+			strEC{"status", resp.Status})
 	}
 	if len(body) == 0 && !r.EmptyBodyValid {
 		return nil, serial, newErr("empty body",
@@ -174,16 +193,15 @@ func (r req) Do(ctx context.Context, h *http.Client) ([]byte, int, error) {
 	return body, serial, err
 }
 
-func newTablePage(ctx context.Context, h *http.Client, url, expect string) (*htmltable.Page, int, error) {
+func newTablePage(ctx context.Context, h httpClient, url, expect string) (*htmltable.Page, int, error) {
 	body, serial, err := req{URL: url, ExpectInResponse: expect}.Do(ctx, h)
 	if err != nil {
 		return nil, serial, err
 	}
 	ctx = app.Log.WithInt(ctx, "serial", serial)
-	page, err := htmltable.New(ctx, bytes.NewBuffer(body))
-	if err != nil {
-		return nil, serial, err
-	}
+	// downstream html parser can only fail on buffer errors,
+	// which are handled (or should be) in `req` type
+	page, _ := htmltable.New(ctx, bytes.NewBuffer(body))
 	if page.Len() == 0 {
 		return nil, serial, skipError("no tables found",
 			intEC{"serial", serial}, strEC{"url", url})

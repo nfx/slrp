@@ -81,6 +81,10 @@ func (t proxyArraySrc) Err() error {
 	return nil
 }
 
+func (t proxyArraySrc) Len() int {
+	return len(t)
+}
+
 type sleepingSrc int
 
 func (t sleepingSrc) Generate(ctx context.Context) <-chan pmux.Proxy {
@@ -103,6 +107,10 @@ func (t sleepingSrc) Err() error {
 	return nil
 }
 
+func (t sleepingSrc) Len() int {
+	return 1
+}
+
 type failingSrc string
 
 func (f failingSrc) Generate(ctx context.Context) <-chan pmux.Proxy {
@@ -113,6 +121,10 @@ func (f failingSrc) Generate(ctx context.Context) <-chan pmux.Proxy {
 
 func (f failingSrc) Err() error {
 	return fmt.Errorf(string(f))
+}
+
+func (f failingSrc) Len() int {
+	return 100500
 }
 
 func start() (*Refresher, app.MockRuntime, func()) {

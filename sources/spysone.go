@@ -80,7 +80,7 @@ func spysOne(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error
 			spysOneSleep()
 			new, err := spysOnePage(ctx, h, ua, form, proxyType)
 			if err != nil {
-				return found, reWrapError(err, intEC{"parentSerial", serial})
+				return found, wrapError(err, intEC{"parentSerial", serial})
 			}
 			found = append(found, new...)
 		}

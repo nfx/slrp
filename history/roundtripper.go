@@ -82,5 +82,9 @@ func (rt roundTripper) RoundTrip(in *http.Request) (*http.Response, error) {
 		OutBody:    outBody,
 		Took:       time.Since(start),
 	})
-	return out, err
+	if err != nil {
+		// net/http/client.go expects no body on error
+		return nil, err
+	}
+	return out, nil
 }

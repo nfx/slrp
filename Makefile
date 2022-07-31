@@ -26,7 +26,7 @@ vendor:
 	go mod vendor
 
 test:
-	go test ./... -coverprofile=coverage.txt
+	go test ./... -coverprofile=coverage.txt -timeout=1m
 
 coverage: test
 	go tool cover -html=coverage.txt

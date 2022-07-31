@@ -28,13 +28,17 @@ type Pool struct {
 	workerCancels []context.CancelFunc
 }
 
+// TODO: make these values configurable
+var poolWorkSize = 128
+var poolShards = 32
+
 func NewPool(history *history.History) *Pool {
 	return &Pool{
 		serial:   make(chan int),
-		work:     make(chan work, 128),
+		work:     make(chan work, poolWorkSize),
 		pressure: make(chan int),
 		halt:     make(chan time.Duration),
-		shards:   make([]shard, 32), // TODO: make shardnum configurable
+		shards:   make([]shard, poolShards),
 		client: &http.Client{
 			Transport: history.Wrap(pmux.ContextualHttpTransport()),
 			Timeout:   10 * time.Second,

@@ -18,6 +18,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func init() {
+	poolShards = 1
+	poolWorkSize = 1
+}
+
 func TestSimpleAddAndRemove(t *testing.T) {
 	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
 	defer runtime.Stop()

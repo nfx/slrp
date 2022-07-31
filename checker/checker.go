@@ -204,10 +204,10 @@ func (sc *simple) validate(body string) error {
 		return ErrNotAnonymous
 	}
 	if sc.valid == "" && !ipRegex.MatchString(body) {
-		return fmt.Errorf("invalid response received: %s", truncatedBody(body))
+		return fmt.Errorf("not ip: %s", truncatedBody(body))
 	}
 	if !strings.Contains(body, sc.valid) {
-		return fmt.Errorf("invalid response received: %s", truncatedBody(body))
+		return fmt.Errorf("no %s found: %s", sc.valid, truncatedBody(body))
 	}
 	return nil
 }

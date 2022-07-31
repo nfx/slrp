@@ -178,3 +178,103 @@ func TestSelection(t *testing.T) {
 	// log.Info().Msgf("all:\n%s", strings.Join(all, "\n"))
 	t.Fail()
 }
+
+func TestReceiveHalt(t *testing.T) {
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	defer runtime.Stop()
+
+	for i := 0; i < 33; i++ {
+		pool.pressure <- i
+	}
+
+	v := <-pool.halt
+	assert.Equal(t, time.Minute, v)
+}
+
+func TestCounterOnHalt(t *testing.T) {
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	defer runtime.Stop()
+
+	serial := <-pool.serial
+	assert.Equal(t, 1, serial)
+
+	now := time.Now()
+	slowDown := time.Second
+
+	pool.halt <- slowDown
+	serial = <-pool.serial
+
+	assert.Equal(t, 2, serial)
+	assert.GreaterOrEqual(t, time.Since(now), slowDown)
+
+	serial = <-pool.serial
+
+	assert.Equal(t, 3, serial)
+}
+
+func TestRandomFast(t *testing.T) {
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	defer runtime.Stop()
+
+	x := pmux.HttpProxy("127.0.0.1:1024")
+	y := pmux.HttpProxy("127.0.0.1:1025")
+
+	ctx := context.Background()
+	pool.Add(ctx, x, time.Minute)
+	pool.Add(ctx, y, time.Second)
+
+	ctx2 := pool.RandomFast(ctx)
+	found := pmux.GetProxyFromContext(ctx2)
+	assert.Equal(t, y, found)
+}
+
+func TestRoundTripCtxErr(t *testing.T) {
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	defer runtime.Stop()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	pool.Add(ctx, pmux.HttpProxy("127.0.0.1:1024"), time.Second)
+
+	cancel()
+	res, err := pool.RoundTrip((&http.Request{}).WithContext(ctx))
+	assert.Nil(t, res)
+
+	assert.EqualError(t, err, "context canceled")
+}
+
+func TestRoundTripNilResponseFromOut(t *testing.T) {
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	defer runtime.Stop()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// instrument all shards for simplicity
+	requests := make(chan request)
+	for i := range pool.shards {
+		pool.shards[i].requests = requests
+	}
+
+	done := make(chan int)
+	go func() {
+		res, err := pool.RoundTrip((&http.Request{
+			Header: http.Header{},
+		}).WithContext(ctx))
+		assert.NotNil(t, res)
+		assert.NoError(t, err)
+		assert.Equal(t, 200, res.StatusCode)
+		t.Log("done")
+		<-done
+	}()
+
+	r1 := <-requests
+	assert.Equal(t, 1, r1.serial)
+	assert.Equal(t, 1, r1.attempt)
+	r1.out <- nil
+
+	r2 := <-requests
+	assert.Equal(t, 1, r2.serial)
+	assert.Equal(t, 2, r2.attempt)
+	r2.out <- &http.Response{StatusCode: 200}
+	done <- 200
+}

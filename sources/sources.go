@@ -2,7 +2,6 @@ package sources
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 )
@@ -12,7 +11,7 @@ func init() {
 	Sources = append(Sources, Source{
 		ID:        8,
 		Homepage:  "https://free-proxy-list.net",
-		Frequency: 10 * time.Minute,
+		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net", "Proxy List"),
 	}, Source{
 		ID:        9,
@@ -43,11 +42,6 @@ func init() {
 		Seed:      true,
 		Feed:      theSpeedX,
 	}, Source{
-		ID:        13,
-		Homepage:  "http://proxydb.net/",
-		Frequency: 6 * time.Hour,
-		Feed:      proxyDb,
-	}, Source{
 		ID:        17,
 		name:      "jetkai",
 		Homepage:  "https://github.com/jetkai/proxy-list",
@@ -58,24 +52,24 @@ func init() {
 	}, Source{
 		ID:        18,
 		Homepage:  "https://sslproxies.org/",
-		Frequency: 10 * time.Minute,
+		Frequency: 30 * time.Minute,
 		Feed:      sslProxies,
 	}, Source{
 		ID:        19,
 		name:      "anonymous-free-proxy",
 		Homepage:  "https://free-proxy-list.net/anonymous-proxy.html",
-		Frequency: 10 * time.Minute,
+		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/anonymous-proxy.html", "Anonymous Proxy"),
 	}, Source{
 		ID:        20,
 		Homepage:  "https://us-proxy.org",
-		Frequency: 10 * time.Minute,
+		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://www.us-proxy.org", "US Proxy List"),
 	}, Source{
 		ID:        21,
 		name:      "uk-proxy",
 		Homepage:  "https://free-proxy-list.net/uk-proxy.html",
-		Frequency: 10 * time.Minute,
+		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/uk-proxy.html", "UK Proxy List"),
 	})
 }
@@ -109,19 +103,4 @@ func theSpeedX(ctx context.Context, h *http.Client) Src {
 		refresh(f("/http.txt", "http")).
 		refresh(f("/socks4.txt", "socks4")).
 		refresh(f("/socks5.txt", "socks5"))
-}
-
-func proxyDb(ctx context.Context, h *http.Client) Src {
-	tpl := "http://proxydb.net/?country=%s&anonlvl=%s&protocol=%s"
-	merged := merged()
-	for _, country := range countries {
-		for _, anonlvl := range []string{"4", "3", "2"} {
-			for _, protocol := range []string{"http", "https", "socks4", "socks5"} {
-				// it's simple enough for this horrible nesting
-				url := fmt.Sprintf(tpl, country, anonlvl, protocol)
-				merged.refresh(regexFeed(ctx, h, url, protocol, "Proxy List"))
-			}
-		}
-	}
-	return merged
 }

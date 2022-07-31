@@ -37,6 +37,22 @@ func TestThespeedx(t *testing.T) {
 	}, 4000)
 }
 
+func TestJetkai(t *testing.T) {
+	src := ByName("jetkai")
+	assert.Equal(t, "jetkai", src.Name())
+	testSource(t, func(ctx context.Context) Src {
+		return src.Feed(ctx, http.DefaultClient)
+	}, 4000)
+}
+
+func TestSslFreeProxies(t *testing.T) {
+	src := ByID(18)
+	assert.Equal(t, "sslproxies.org", src.Name())
+	testSource(t, func(ctx context.Context) Src {
+		return src.Feed(ctx, http.DefaultClient)
+	}, 100)
+}
+
 func TestProxyLists(t *testing.T) {
 	src := ByID(11)
 	assert.Equal(t, "proxylists.net", src.Name())

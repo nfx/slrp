@@ -22,7 +22,7 @@ type Pool struct {
 	work          chan work
 	serial        chan int
 	pressure      chan int
-	halt          chan int
+	halt          chan time.Duration
 	client        *http.Client
 	shards        []shard
 	workerCancels []context.CancelFunc
@@ -33,8 +33,8 @@ func NewPool(history *history.History) *Pool {
 		serial:   make(chan int),
 		work:     make(chan work, 128),
 		pressure: make(chan int),
-		halt:     make(chan int),
-		shards:   make([]shard, 32),
+		halt:     make(chan time.Duration),
+		shards:   make([]shard, 32), // TODO: make shardnum configurable
 		client: &http.Client{
 			Transport: history.Wrap(pmux.ContextualHttpTransport()),
 			Timeout:   10 * time.Second,
@@ -80,14 +80,17 @@ func (pool *Pool) worker(ctx context.Context) {
 
 func (pool *Pool) halter(ctx app.Context) {
 	var pressure int
+	// TODO: make configurable
+	slowDown := time.Minute
+	maxPressure := 32
 	log := app.Log.From(ctx.Ctx())
 	for {
 		// leaky bucket backpressure
-		if pressure > 32 {
+		if pressure > maxPressure {
 			select {
 			case <-ctx.Done():
 				return
-			case pool.halt <- 1:
+			case pool.halt <- slowDown:
 				pressure = 0
 				log.Warn().
 					Int("pressure", pressure).
@@ -126,9 +129,8 @@ func (pool *Pool) counter(ctx app.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-pool.halt:
+		case delay = <-pool.halt:
 			delayed = true
-			delay = 1 * time.Minute
 			log.Warn().Stringer("delay", delay).Msg("slowing down")
 		case <-start:
 			serial++
@@ -301,45 +303,48 @@ func (pool *Pool) RoundTrip(req *http.Request) (res *http.Response, err error) {
 	for {
 		attempt++
 		log := log.With().Int("attempt", attempt).Logger()
-		if ctx.Err() != nil {
+		select {
+		case <-ctx.Done():
+			// todo: tune error message so that it's less harsh
 			log.Info().
 				Err(ctx.Err()).
 				Dur("t", time.Since(start)).
 				Msg("original request failed")
 			return nil, ctx.Err()
+		default:
+			out := make(chan *http.Response)
+			// shard := rand.Intn(len(pool.shards))
+			// shart from the first shard to reduce the number of test attempts
+			shard := (serial - 1 + attempt - 1) % len(pool.shards)
+			log.Trace().Int("shard", shard).Msg("try")
+			// set attempt and serial for history wrapper to pick up
+			req.Header.Set("X-Proxy-Serial", fmt.Sprint(serial))
+			req.Header.Set("X-Proxy-Attempt", fmt.Sprint(attempt))
+			// send over the request to one of the shards for randomization purposes
+			pool.shards[shard].requests <- request{
+				in:      req,
+				out:     out,
+				start:   start,
+				serial:  serial,
+				attempt: attempt,
+			}
+			res := <-out
+			if res == nil {
+				continue
+			}
+			// when no response is returned or proxy pool is exhausted
+			if attempt < len(pool.shards) && res.StatusCode == 552 {
+				continue
+			}
+			// if res.StatusCode == 552 && pool.pressure != nil {
+			// 	// this could mean either no proxies left or all attempts exhausted
+			// 	s := time.Now()
+			// 	log.Warn().Msg("sending pressure")
+			// 	pool.pressure <- serial // livelock....
+			// 	log.Warn().Stringer("t", time.Since(s)).Msg("sent pressure")
+			// }
+			return res, nil
 		}
-		out := make(chan *http.Response)
-		// shard := rand.Intn(len(pool.shards))
-		// shart from the first shard to reduce the number of test attempts
-		shard := (serial - 1 + attempt - 1) % len(pool.shards)
-		log.Trace().Int("shard", shard).Msg("try")
-		// set attempt and serial for history wrapper to pick up
-		req.Header.Set("X-Proxy-Serial", fmt.Sprint(serial))
-		req.Header.Set("X-Proxy-Attempt", fmt.Sprint(attempt))
-		// send over the request to one of the shards for randomization purposes
-		pool.shards[shard].requests <- request{
-			in:      req,
-			out:     out,
-			start:   start,
-			serial:  serial,
-			attempt: attempt,
-		}
-		res := <-out
-		if res == nil {
-			continue
-		}
-		// when no response is returned or proxy pool is exhausted
-		if attempt < len(pool.shards) && res.StatusCode == 552 {
-			continue
-		}
-		// if res.StatusCode == 552 && pool.pressure != nil {
-		// 	// this could mean either no proxies left or all attempts exhausted
-		// 	s := time.Now()
-		// 	log.Warn().Msg("sending pressure")
-		// 	pool.pressure <- serial // livelock....
-		// 	log.Warn().Stringer("t", time.Since(s)).Msg("sent pressure")
-		// }
-		return res, nil
 	}
 }
 

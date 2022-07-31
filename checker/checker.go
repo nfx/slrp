@@ -149,8 +149,12 @@ func (f federated) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, 
 	return f[choice].Check(ctx, proxy)
 }
 
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type simple struct {
-	client *http.Client
+	client httpClient
 	page   string
 	valid  string
 	ip     string

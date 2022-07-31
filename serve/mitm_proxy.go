@@ -2,6 +2,7 @@ package serve
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -27,9 +28,12 @@ func NewMitmProxyServer(pool *pool.Pool, ca certWrapper) *MitmProxyServer {
 	}
 }
 
+// package-private variable, to simplify tests
+var mitmDefaultAddr = "localhost:8090"
+
 func (mps *MitmProxyServer) Configure(c app.Config) error {
 	// TODO: make sure about private interfaces only!!!
-	mps.Addr = c.StrOr("addr", "localhost:8090")
+	mps.Addr = c.StrOr("addr", mitmDefaultAddr)
 	mps.ReadTimeout = c.DurOr("read_timeout", 15*time.Second)
 	mps.IdleTimeout = c.DurOr("idle_timeout", 15*time.Second)
 	mps.WriteTimeout = c.DurOr("write_timeout", 15*time.Second)
@@ -39,12 +43,16 @@ func (mps *MitmProxyServer) Configure(c app.Config) error {
 
 func (mps *MitmProxyServer) transportProxy() func(*http.Request) (*url.URL, error) {
 	return func(r *http.Request) (*url.URL, error) {
-		if mps.Addr == "" {
-			return nil, fmt.Errorf("mitm is not configured")
+		if mps.listener == nil {
+			return nil, fmt.Errorf("mitm is not initialized")
+		}
+		addr, ok := mps.listener.Addr().(*net.TCPAddr)
+		if !ok {
+			return nil, fmt.Errorf("not a tcp listener: %v", mps.listener.Addr())
 		}
 		return &url.URL{
 			Scheme: "http",
-			Host:   mps.Addr,
+			Host:   addr.String(),
 		}, nil
 	}
 }

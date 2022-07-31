@@ -118,12 +118,12 @@ func (srv *HttpProxyServer) handleConnect(rw http.ResponseWriter, r *http.Reques
 		rw.WriteHeader(501)
 		return
 	}
-	rw.WriteHeader(200)
 	src, _, err := hijacker.Hijack()
 	if err != nil {
 		http.Error(rw, err.Error(), 471)
 		return
 	}
+	rw.WriteHeader(200)
 	// TODO: figure out context propagation
 	go func() {
 		ssl, err := srv.handleHandshake(src, r.URL.Host)

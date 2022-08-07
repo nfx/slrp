@@ -15,3 +15,5 @@ coverage.txt
 .DS_Store
 
 *.output
+
+slrp

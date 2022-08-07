@@ -4,4 +4,7 @@
     "editor.codeActionsOnSave": [
         "editor.action.organizeImports",
     ],
+    "emeraldwalk.runonsave": {
+        "commands": []
+    }
 }

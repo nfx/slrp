@@ -13,3 +13,5 @@ dist/
 
 coverage.txt
 .DS_Store
+
+*.output

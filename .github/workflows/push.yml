@@ -20,3 +20,4 @@ jobs:
       - run: make build-ui
       - run: make test
       - uses: codecov/codecov-action@v1
+        if: always()

@@ -80,8 +80,8 @@ func (s *stringSummary) Facet(n int) Facet {
 			q = fmt.Sprintf(`"%s"`, q)
 		}
 		cards = append(cards, Card{
-			Name:  name,
-			Value: cnt,
+			Name:   name,
+			Value:  cnt,
 			Filter: fmt.Sprintf("%s:%s", s.Field, q),
 		})
 	}
@@ -94,7 +94,7 @@ func (s *stringSummary) Facet(n int) Facet {
 		min = cardsLen
 	}
 	return Facet{
-		Name:   s.Name,
-		Top:    cards[0:min],
+		Name: s.Name,
+		Top:  cards[0:min],
 	}
 }

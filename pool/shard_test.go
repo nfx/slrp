@@ -19,7 +19,7 @@ func TestShardHandleReanimate(t *testing.T) {
 		},
 	}
 	s.init(make(chan work))
-	s.minute = time.NewTicker(500*time.Millisecond)
+	s.minute = time.NewTicker(500 * time.Millisecond)
 
 	ctx := app.MockCtx()
 	defer ctx.Cancel()
@@ -49,14 +49,14 @@ func TestShardHandleReply(t *testing.T) {
 	out := make(chan *http.Response)
 	s.reply <- reply{
 		r: request{
-			in: &http.Request{},
-			serial: 123,
-			out: out,
+			in:      &http.Request{},
+			serial:  123,
+			out:     out,
 			attempt: 10,
 		},
 		response: &http.Response{
 			StatusCode: 418,
-			Status: "I'm a teapot",
+			Status:     "I'm a teapot",
 		},
 		e: &entry{},
 	}

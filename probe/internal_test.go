@@ -37,9 +37,9 @@ func TestInternalScheduleSeenOtherSource(t *testing.T) {
 	}
 
 	internal.handleScheduled(verify{
-		ctx:    runtime.Context(),
-		Proxy:  proxy,
-		Source: 1,
+		ctx:     runtime.Context(),
+		Proxy:   proxy,
+		Source:  1,
 		Attempt: 1,
 	})
 
@@ -62,11 +62,11 @@ func TestInternalScheduleWasBlacklisted(t *testing.T) {
 		Attempt: 20,
 		After:   100,
 	}
-	
+
 	internal.handleScheduled(verify{
-		ctx:    runtime.Context(),
-		Proxy:  proxy,
-		Source: 1,
+		ctx:     runtime.Context(),
+		Proxy:   proxy,
+		Source:  1,
 		Attempt: 1,
 	})
 
@@ -86,7 +86,7 @@ func TestInternalScheduleInReverify(t *testing.T) {
 		Attempt: 20,
 		After:   100,
 	}
-	
+
 	internal.handleScheduled(verify{
 		ctx:    runtime.Context(),
 		Proxy:  proxy,
@@ -101,20 +101,20 @@ func TestInternalScheduleHandleReverify(t *testing.T) {
 	defer runtime.Stop()
 
 	internal := newInternal(stats, make(chan verify), 1)
-	
+
 	proxy := pmux.HttpProxy("127.0.0.2:2345")
 	internal.LastReverified[proxy] = reVerify{
 		Proxy:   proxy,
 		Attempt: 20,
 	}
-	
+
 	proxy2 := pmux.HttpProxy("127.0.0.3:2345")
 
 	internal.LastReverified[proxy2] = reVerify{
 		Proxy:   proxy,
 		Attempt: 2,
 	}
-	
+
 	internal.handleReverify(runtime.Context())
 
 	scheduled := <-internal.scheduled

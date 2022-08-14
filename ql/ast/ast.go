@@ -57,7 +57,6 @@ func (n Ident) String() string {
 	return string(n)
 }
 
-
 type String string
 
 func (n String) Transform(cb Cb) Node {

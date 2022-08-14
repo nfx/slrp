@@ -3,11 +3,15 @@ package refresher
 import (
 	"testing"
 
+	"github.com/nfx/slrp/sources"
+
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBasic(t *testing.T) {
+	sources.Sources = []sources.Source{}
+
 	ref, run, stop := start()
 	defer stop()
 	run["stats"].Spin()

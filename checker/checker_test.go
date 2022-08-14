@@ -16,25 +16,25 @@ import (
 )
 
 func TestFailure(t *testing.T) {
-	var proxy pmux.Proxy
-	defer pmux.SetupHttpProxy(&proxy)()
+	defaultClient = &staticResponseClient{
+		err: fmt.Errorf("fails"),
+	}
 	c := NewChecker()
 
 	ctx := context.Background()
-	_, err := c.Check(ctx, proxy)
-	if err == nil {
-		t.Fatal("expected error")
-	}
+	_, err := c.Check(ctx, pmux.HttpProxy("127.0.0.1:1"))
+	assert.EqualError(t, err, "fails")
 }
 
 func TestConfigurableChecker(t *testing.T) {
+	client := http.DefaultClient
 	c := configurableChecker{
-		client: http.DefaultClient,
+		client: client,
 	}
 	err := c.Configure(app.Config{})
 	assert.NoError(t, err)
 	assert.Equal(t, "simple", c.strategy)
-	assert.Equal(t, time.Second*5, c.client.Timeout)
+	assert.Equal(t, time.Second*5, client.Timeout)
 }
 
 type staticResponseClient struct {

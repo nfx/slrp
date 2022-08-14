@@ -60,28 +60,42 @@ func TestMarshallAndUnmarshall(t *testing.T) {
 	assert.Equal(t, loaded.snapshot(), pool.snapshot())
 }
 
+type staticResponseClient struct {
+	http.Response
+	err error
+}
+
+func (r staticResponseClient) Do(req *http.Request) (*http.Response, error) {
+	return &r.Response, r.err
+}
+
 func TestRoundTrip(t *testing.T) {
 	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
 	defer runtime.Stop()
 
-	var proxy pmux.Proxy
-	defer pmux.SetupHttpProxy(&proxy)()
+	pool.client = staticResponseClient{
+		Response: http.Response{
+			StatusCode: 200,
+			Header:     http.Header{},
+		},
+	}
+
+	proxy := pmux.Socks4Proxy("127.0.0.1:1")
 	ctx := context.Background()
 
 	pool.Add(ctx, proxy, 1*time.Second)
 	assert.Equal(t, 1, pool.Len())
 
 	// TODO: spin up test servers not to get to internet for no reason
-	req, _ := http.NewRequestWithContext(ctx, "GET", "http://httpbin.org/get", nil)
+	req, _ := http.NewRequestWithContext(ctx, "GET", "http://anything", nil)
 	res, err := pool.RoundTrip(req)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 200, res.StatusCode)
 }
 
-func TestSessionHistory(t *testing.T) {
-	var proxy pmux.Proxy
-	defer pmux.SetupHttpProxy(&proxy)()
+func TestSession(t *testing.T) {
+	proxy := pmux.Socks4Proxy("127.0.0.1:1")
 
 	hist := history.NewHistory()
 	pool, runtime := app.MockStartSpin(NewPool(hist), hist)
@@ -91,8 +105,15 @@ func TestSessionHistory(t *testing.T) {
 	pool.Add(ctx, proxy, 1*time.Second)
 	assert.Equal(t, 1, pool.Len())
 
-	err := pool.Session(ctx, func(ctx context.Context, c *http.Client) error {
-		req, _ := http.NewRequestWithContext(ctx, "GET", "http://httpbin.org/get", nil)
+	pool.client = staticResponseClient{
+		Response: http.Response{
+			StatusCode: 200,
+			Header:     http.Header{},
+		},
+	}
+
+	err := pool.Session(ctx, func(ctx context.Context, c httpClient) error {
+		req, _ := http.NewRequestWithContext(ctx, "GET", "http://something", nil)
 		res, err := c.Do(req)
 		if err != nil {
 			return err
@@ -101,12 +122,6 @@ func TestSessionHistory(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
-
-	res, err := hist.HttpGetByID("1", nil)
-	assert.NoError(t, err)
-	req := res.(history.Request)
-	assert.Equal(t, "GET", req.Method)
-	assert.Equal(t, "http://httpbin.org/get", req.URL)
 }
 
 func TestHttpGet(t *testing.T) {
@@ -204,7 +219,7 @@ func TestCounterOnHalt(t *testing.T) {
 	assert.Equal(t, 1, serial)
 
 	now := time.Now()
-	slowDown := time.Second*1
+	slowDown := time.Second * 1
 
 	<-pool.serial
 	pool.halt <- slowDown // <= bug

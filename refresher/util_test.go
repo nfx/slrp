@@ -16,7 +16,8 @@ import (
 	"github.com/nfx/slrp/stats"
 )
 
-func stubSource(proxy pmux.Proxy) {
+func stubSource() {
+	proxy := pmux.Socks4Proxy("127.0.0.1:0")
 	refreshDelay = 1 * time.Second
 	sources.Sources = []sources.Source{
 		{
@@ -129,9 +130,7 @@ func (f failingSrc) Len() int {
 
 func start() (*Refresher, app.MockRuntime, func()) {
 	// we might even need mutex here :(
-	var proxy pmux.Proxy
-	stopProxy := pmux.SetupHttpProxy(&proxy)
-	stubSource(proxy)
+	stubSource()
 	singletons := app.Factories{
 		"checker":   checker.NewChecker,
 		"probe":     probe.NewProbe,
@@ -142,7 +141,6 @@ func start() (*Refresher, app.MockRuntime, func()) {
 	}.Init()
 	mockRuntime := singletons.MockStart()
 	return singletons["refresher"].(*Refresher), mockRuntime, func() {
-		stopProxy()
 		mockRuntime.Stop()
 	}
 }

@@ -158,7 +158,7 @@ func (ref *Refresher) upcoming() (result []upcoming) {
 var refreshDelay = 1 * time.Minute
 
 func (ref *Refresher) checkSources(ctx context.Context, trigger time.Time) time.Time {
-	minSourceFrequency := 1 * time.Hour
+	minSourceFrequency := 60 * time.Minute
 	for _, v := range sources.Sources {
 		if v.Frequency < minSourceFrequency {
 			minSourceFrequency = v.Frequency

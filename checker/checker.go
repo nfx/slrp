@@ -44,6 +44,8 @@ var (
 	ErrNotAnonymous    = fmt.Errorf("this IP address found")
 )
 
+var defaultClient httpClient = pmux.DefaultHttpClient
+
 func NewChecker() Checker {
 	ip, err := thisIP()
 	if err != nil {
@@ -52,20 +54,16 @@ func NewChecker() Checker {
 	discardingTransport := pmux.ContextualHttpTransport()
 	discardingTransport.DisableKeepAlives = true
 	discardingTransport.MaxIdleConns = 0
-	client := &http.Client{
-		Transport: discardingTransport,
-		Timeout:   5 * time.Second,
-	}
 	return &configurableChecker{
 		ip:     ip,
-		client: client,
+		client: defaultClient,
 		strategies: map[string]Checker{
-			"twopass": newTwoPass(ip, client),
-			"simple":  newFederated(firstPass, client, ip),
+			"twopass": newTwoPass(ip, defaultClient),
+			"simple":  newFederated(firstPass, defaultClient, ip),
 			"headers": newFederated([]string{
 				"https://ifconfig.me/all",
 				"https://ifconfig.io/all.json",
-			}, client, ip),
+			}, defaultClient, ip),
 		},
 		strategy: "simple",
 	}
@@ -73,14 +71,17 @@ func NewChecker() Checker {
 
 type configurableChecker struct {
 	ip         string
-	client     *http.Client
+	client     httpClient
 	strategies map[string]Checker
 	strategy   string
 }
 
 func (cc *configurableChecker) Configure(conf app.Config) error {
 	cc.strategy = conf.StrOr("strategy", "simple")
-	cc.client.Timeout = conf.DurOr("timeout", 5*time.Second)
+	original, ok := cc.client.(*http.Client)
+	if ok {
+		original.Timeout = conf.DurOr("timeout", 5*time.Second)
+	}
 	return nil
 }
 
@@ -88,7 +89,7 @@ func (cc *configurableChecker) Check(ctx context.Context, proxy pmux.Proxy) (tim
 	return cc.strategies[cc.strategy].Check(ctx, proxy)
 }
 
-func newTwoPass(ip string, client *http.Client) twoPass {
+func newTwoPass(ip string, client httpClient) twoPass {
 	var res twoPass
 	for _, v := range firstPass {
 		res.first = append(res.first, &simple{
@@ -133,7 +134,7 @@ func (f twoPass) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, er
 
 type federated []*simple
 
-func newFederated(sites []string, client *http.Client, ip string) (out federated) {
+func newFederated(sites []string, client httpClient, ip string) (out federated) {
 	for _, v := range firstPass {
 		out = append(out, &simple{
 			client: client,

@@ -23,9 +23,13 @@ type Pool struct {
 	serial        chan int
 	pressure      chan int
 	halt          chan time.Duration
-	client        *http.Client
+	client        httpClient
 	shards        []shard
 	workerCancels []context.CancelFunc
+}
+
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 // TODO: make these values configurable
@@ -41,7 +45,7 @@ func NewPool(history *history.History) *Pool {
 		shards:   make([]shard, poolShards),
 		client: &http.Client{
 			Transport: history.Wrap(pmux.ContextualHttpTransport()),
-			Timeout:   10 * time.Second,
+			Timeout:   10 * time.Second, // TODO: make timeouts configurable
 		},
 	}
 }
@@ -85,7 +89,7 @@ func (pool *Pool) worker(ctx context.Context) {
 func (pool *Pool) halter(ctx app.Context) {
 	var pressure int
 	// TODO: make configurable
-	slowDown := time.Minute*1
+	slowDown := time.Minute * 1
 	maxPressure := 32
 	log := app.Log.From(ctx.Ctx())
 	for {
@@ -255,7 +259,7 @@ func (pool *Pool) RandomFast(ctx context.Context) context.Context {
 }
 
 // Session rotates a random proxy per entire fn(ctx, client) call
-func (pool *Pool) Session(ctx context.Context, fn func(context.Context, *http.Client) error) error {
+func (pool *Pool) Session(ctx context.Context, fn func(context.Context, httpClient) error) error {
 	snapshot := []entry{}
 	// make a copy from very fast ones, otherwise too complicated for now...
 	for _, e := range pool.snapshot() {

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,48 +63,40 @@ func TestDialProxiedConnection(t *testing.T) {
 	p := NewProxy("1.2.4.5:8731", "http")
 	r := p.MustNewGetRequest("https://ifconfig.me")
 	_, err := dialProxiedConnection(r.Context(), "tcp", "127.0.0.1:")
-	assert.EqualError(t, err, "dial tcp 127.0.0.1:0: connect: can't assign requested address")
+	assert.Error(t, err)
 }
 
 func TestDialProxiedConnection_HTTPS(t *testing.T) {
 	p := NewProxy("1.2.4.5:8731", "https")
 	r := p.MustNewGetRequest("https://ifconfig.me")
 	_, err := dialProxiedConnection(r.Context(), "tcp", "127.0.0.1:")
-	assert.EqualError(t, err, "dial https: dial tcp 127.0.0.1:0: connect: can't assign requested address")
+	assert.Error(t, err)
 }
 
 func TestDialProxiedConnection_SOCKS(t *testing.T) {
 	p := Socks5Proxy("127.0.0.1:0")
 	r := p.MustNewGetRequest("https://ifconfig.me")
 	_, err := dialProxiedConnection(r.Context(), "tcp", "127.0.0.1:")
-	assert.EqualError(t, err, "socks connect tcp: dial tcp 127.0.0.1:0: connect: can't assign requested address")
+	assert.Error(t, err)
 }
 
-func TestVerifyProxyInContext(t *testing.T) {
-	var proxy Proxy
-	defer SetupHttpProxy(&proxy)()
-	c := &http.Client{
-		Transport: &http.Transport{
-			DialContext: dialProxiedConnection,
-			Proxy:       pickHttpProxyFromContext,
-		},
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ctx = proxy.InContext(ctx)
-	get := func(url string) *http.Response {
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-		if err != nil {
-			log.Printf("[ERROR] %s", err)
-			return nil
-		}
-		res, err := c.Do(req)
-		if err != nil {
-			log.Printf("[ERROR] %s", err)
-			return nil
-		}
-		return res
-	}
-	log.Printf("HTTP: %#v", get("http://google.com"))
-	log.Printf("HTTP: %#v", get("https://ifconfig.me"))
+func TestPickProxyFromContext(t *testing.T) {
+	p := HttpProxy("127.0.0.1:0")
+	r := p.MustNewGetRequest("https://ifconfig.me")
+	u, _ := pickHttpProxyFromContext(r)
+	assert.Equal(t, u.String(), p.String())
+}
+
+func TestPickProxyFromContext_Tunnel(t *testing.T) {
+	p := Socks5Proxy("127.0.0.1:0")
+	r := p.MustNewGetRequest("https://ifconfig.me")
+	u, err := pickHttpProxyFromContext(r)
+	assert.Nil(t, u)
+	assert.NoError(t, err)
+}
+
+func TestPickProxyFromContext_NoProxy(t *testing.T) {
+	u, err := pickHttpProxyFromContext(&http.Request{})
+	assert.Nil(t, u)
+	assert.NoError(t, err)
 }

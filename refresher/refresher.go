@@ -218,7 +218,7 @@ func (ref *Refresher) refresh(ctx context.Context, client *http.Client, source s
 	for proxy := range feed.Generate(ctx) {
 		ctx := app.Log.WithStringer(ctx, "proxy", proxy)
 		if !ref.probe.Schedule(ctx, proxy, source.ID) {
-			log.Warn().Msg("failed to schedule")
+			log.Warn().Msg("failed to schedule") // TODO: this happens too often
 		}
 
 		// if proxy.Proto == pmux.HTTP {

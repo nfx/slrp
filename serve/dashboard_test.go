@@ -62,6 +62,8 @@ func TestDashboardRenders(t *testing.T) {
 	runtime["stats"].Spin()
 	runtime["pool"].Spin()
 
+	stats.Launch(0) // reverify
+
 	probe.Schedule(ctx, firstProxy, 1)
 	<-runtime["probe"].Wait
 	probe.Schedule(ctx, secondProxy, 1)

@@ -13,10 +13,30 @@ import (
 	"time"
 )
 
+func init() {
+	ca, err := NewCA()
+	if err != nil {
+		panic(err)
+	}
+	defaultCA = &ca
+}
+
+var defaultCA *certWrapper
+
 type certWrapper struct {
 	Bytes       []byte
 	Certificate *x509.Certificate
 	PrivateKey  *ecdsa.PrivateKey
+}
+
+func (c *certWrapper) Config() *tls.Config {
+	return &tls.Config{
+		Certificates: []tls.Certificate{{
+			Certificate: [][]byte{c.Bytes},
+			PrivateKey:  c.PrivateKey,
+		}},
+		NextProtos: []string{"http/1.1"},
+	}
 }
 
 func (c *certWrapper) Sign(host string) (*tls.Certificate, error) {

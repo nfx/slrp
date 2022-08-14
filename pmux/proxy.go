@@ -88,10 +88,10 @@ func (p Proxy) MarshalJSON() ([]byte, error) {
 
 type ckey int
 
-const ProxyURL ckey = iota
+const proxyURL ckey = iota
 
 func (p Proxy) InContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, ProxyURL, p)
+	return context.WithValue(ctx, proxyURL, p)
 }
 
 func (p Proxy) Valid() bool {
@@ -110,8 +110,18 @@ func (p Proxy) Bucket(buckets int) int {
 	return bucket
 }
 
+// MustNewGetRequest is a utility method for testing
+func (p Proxy) MustNewGetRequest(url string) *http.Request {
+	ctx := p.InContext(context.Background())
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		panic(err)
+	}
+	return req
+}
+
 func GetProxyFromContext(ctx context.Context) Proxy {
-	p := ctx.Value(ProxyURL)
+	p := ctx.Value(proxyURL)
 	if p == nil {
 		return 0
 	}
@@ -122,27 +132,50 @@ func GetProxyFromContext(ctx context.Context) Proxy {
 	return proxy
 }
 
+var DefaultHttpClient = &http.Client{
+	// TODO: convert other usages ContextualHttpTransport to this
+	// and harmonise parameters
+	Transport: ContextualHttpTransport(),
+	Timeout:   10 * time.Second,
+}
+
+var DefaultTlsConfig = &tls.Config{
+	InsecureSkipVerify: true,
+}
+
+var DefaultDialer = &net.Dialer{
+	// TODO: a) configure this timeout globally
+	// TODO: b) configure this per-proxy (we know their speed)
+	Timeout:   3 * time.Second,
+	KeepAlive: 0,
+}
+
 // experiment with net.Dialer.Control to bypass TCP fingerprinting
 // http://witch.valdikss.org.ru/
 // https://en.wikipedia.org/wiki/TCP/IP_stack_fingerprinting
 // https://stackoverflow.com/a/52426887/277035
 func dialProxiedConnection(ctx context.Context, network, addr string) (net.Conn, error) {
 	p := GetProxyFromContext(ctx)
-	// given the wish and time to implement a proxy chain, it should be done here
-	if p == 0 || !p.IsTunnel() {
+	switch p.Proto() {
+	case SOCKS4, SOCKS5:
+		dialer, err := proxy.FromURL(p.URL(), proxy.Direct)
+		if err != nil {
+			return nil, err
+		}
+		// TODO: socks ssl?..
+		return dialer.Dial(network, addr)
+	case HTTPS:
+		conn, err := DefaultDialer.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, fmt.Errorf("dial https: %w", err)
+		}
+		return tls.Client(conn, DefaultTlsConfig), nil
+	default:
 		// use normal connection establishment in one of two cases:
 		// a) no proxy is specified
 		// b) HTTP proxy (handled higher on the stack)
-		return (&net.Dialer{
-			Timeout:   3 * time.Second,
-			KeepAlive: 0,
-		}).DialContext(ctx, network, addr)
+		return DefaultDialer.DialContext(ctx, network, addr)
 	}
-	dialer, err := proxy.FromURL(p.URL(), proxy.Direct)
-	if err != nil {
-		return nil, err
-	}
-	return dialer.Dial(network, addr)
 }
 
 func pickHttpProxyFromContext(r *http.Request) (*url.URL, error) {
@@ -154,20 +187,19 @@ func pickHttpProxyFromContext(r *http.Request) (*url.URL, error) {
 		// handled in DialContext
 		return nil, nil
 	}
-	//return p.URL(), nil
-	return &url.URL{
-		Host:   p.Address(),
-		Scheme: "http",
-	}, nil
+	return p.URL(), nil
 }
 
 func ContextualHttpTransport() *http.Transport {
 	return &http.Transport{
-		DialContext: dialProxiedConnection,
-		Proxy:       pickHttpProxyFromContext,
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
+		// If DialTLSContext is set, the Dial and DialContext hooks are not used for HTTPS
+		// requests and the TLSClientConfig and TLSHandshakeTimeout
+		// are ignored. The returned net.Conn is assumed to already be
+		// past the TLS handshake.
+		DialTLSContext:  dialProxiedConnection,
+		DialContext:     dialProxiedConnection,
+		TLSClientConfig: DefaultTlsConfig,
+		Proxy:           pickHttpProxyFromContext,
 	}
 }
 

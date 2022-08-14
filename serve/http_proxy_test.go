@@ -2,6 +2,9 @@ package serve
 
 import (
 	"bufio"
+	"context"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -10,8 +13,158 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/nfx/slrp/internal/qa"
+	"github.com/nfx/slrp/pmux"
+
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestDebugTransparentProxy(t *testing.T) {
+	qa.RunOnlyInDebug(t)
+	httpProxy := NewTransparentProxy()
+	defer httpProxy.Close()
+	curlTmpl := "curl --verbose --proxy-insecure --proxy %s --insecure %s"
+	log.Info().Msgf(curlTmpl, httpProxy, "http://httpbin.org/get")
+	log.Info().Msgf(curlTmpl, httpProxy, "https://httpbin.org/get")
+	httpProxy.ListenAndServe()
+}
+
+func TestNewTransparentProxy_HTTP_to_HTTPS(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(217)
+	}))
+	defer srv.Close()
+
+	httpProxy := NewTransparentProxy()
+	go httpProxy.ListenAndServe()
+	defer httpProxy.Close()
+
+	log.Debug().
+		Stringer("proxy", httpProxy).
+		Str("target", srv.URL).
+		Msg("this request")
+
+	req := httpProxy.Proxy().MustNewGetRequest(srv.URL)
+	res, err := pmux.DefaultHttpClient.Do(req)
+	require.NoError(t, err)
+
+	assert.Equal(t, 217, res.StatusCode)
+}
+
+func TestNewTransparentProxy_HTTP_to_HTTPS_sing_failed(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(217)
+	}))
+	defer srv.Close()
+
+	httpProxy := NewTransparentProxy()
+	httpProxy.signer = func(host string) (*tls.Certificate, error) {
+		return nil, fmt.Errorf("nope")
+	}
+	go httpProxy.ListenAndServe()
+	defer httpProxy.Close()
+
+	log.Debug().
+		Stringer("proxy", httpProxy).
+		Str("target", srv.URL).
+		Msg("this request")
+
+	req := httpProxy.Proxy().MustNewGetRequest(srv.URL)
+	_, err := pmux.DefaultHttpClient.Do(req)
+	assert.True(t, errors.Is(err, io.EOF))
+}
+
+func TestNewTransparentProxy_HTTP_to_HTTPS_ConnectionClosed(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hijacker, _ := w.(http.Hijacker)
+		conn, _, _ := hijacker.Hijack()
+		conn.Close()
+	}))
+	defer srv.Close()
+
+	httpProxy := NewTransparentProxy()
+	go httpProxy.ListenAndServe()
+	defer httpProxy.Close()
+
+	log.Debug().
+		Stringer("proxy", httpProxy).
+		Str("target", srv.URL).
+		Msg("this request")
+
+	req := httpProxy.Proxy().MustNewGetRequest(srv.URL)
+	_, err := pmux.DefaultHttpClient.Do(req)
+	assert.True(t, errors.Is(err, io.EOF))
+}
+
+func TestNewTransparentProxy_HTTP_to_HTTPS_InvalidRequest(t *testing.T) {
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(501) // won't reach...
+	}))
+	defer srv.Close()
+
+	httpProxy := NewTransparentProxy()
+	go httpProxy.ListenAndServe()
+	defer httpProxy.Close()
+
+	log.Debug().
+		Stringer("proxy", httpProxy).
+		Str("target", srv.URL).
+		Msg("this request")
+
+	ctx := context.Background()
+	conn, err := pmux.DefaultDialer.DialContext(ctx, "tcp", httpProxy.listener.Addr().String())
+	require.NoError(t, err)
+
+	_, err = conn.Write([]byte(fmt.Sprintf("CONNECT %s HTTP/1.1\n\n", srv.Listener.Addr())))
+	require.NoError(t, err)
+
+	reader := bufio.NewReader(conn)
+	response, err := http.ReadResponse(reader, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 200, response.StatusCode)
+
+	ssl := tls.Client(conn, pmux.DefaultTlsConfig)
+	defer ssl.Close()
+
+	err = ssl.HandshakeContext(ctx)
+	require.NoError(t, err)
+
+	_, err = ssl.Write([]byte("Harmless request ...\n"))
+	require.NoError(t, err)
+
+	reader = bufio.NewReader(ssl)
+	response, err = http.ReadResponse(reader, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 472, response.StatusCode)
+
+	body, err := io.ReadAll(response.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, `read request: malformed HTTP version "..."`, string(body))
+}
+
+func TestNewTransparentProxy_HTTP_to_HTTP(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(217)
+	}))
+	defer srv.Close()
+
+	httpProxy := NewTransparentProxy()
+	go httpProxy.ListenAndServe()
+	defer httpProxy.Close()
+
+	log.Debug().
+		Stringer("proxy", httpProxy).
+		Str("target", srv.URL).
+		Msg("this request")
+
+	req := httpProxy.Proxy().MustNewGetRequest(srv.URL)
+	res, err := pmux.DefaultHttpClient.Do(req)
+	require.NoError(t, err)
+
+	assert.Equal(t, 217, res.StatusCode)
+}
 
 func TestHttpProxyServer_ListenAndServe_NoConf(t *testing.T) {
 	err := (&HttpProxyServer{}).ListenAndServe()
@@ -97,71 +250,60 @@ func TestHttpProxyServer_handleSimpleHttp_FailingReader(t *testing.T) {
 	assert.Equal(t, 201, resp.StatusCode)
 }
 
+type failingListener string
+
+func (f failingListener) Accept() (net.Conn, error) {
+	return nil, fmt.Errorf("always: %s", f)
+}
+
+func (f failingListener) Close() error {
+	return fmt.Errorf("always: %s", f)
+}
+
+func (f failingListener) Addr() net.Addr {
+	return dummyAddr(f)
+}
+
+type dummyAddr string
+
+func (d dummyAddr) Network() string {
+	return "dummy"
+}
+
+// name of the network (for example, "tcp", "udp")
+func (d dummyAddr) String() string {
+	return string(d)
+}
+
 func TestHttpProxyServer_handleConnect_NoHijack(t *testing.T) {
 	w := httptest.NewRecorder()
-
-	(&HttpProxyServer{}).handleConnect(w, dummy)
+	(&HttpProxyServer{
+		listener: failingListener(mitmDefaultAddr),
+	}).handleConnect(w, dummy)
 
 	resp := w.Result()
 	assert.Equal(t, 501, resp.StatusCode)
 }
 
-type hijackable struct {
+type failingHijackable struct {
 	*httptest.ResponseRecorder
-	*httptest.Server
-
-	server    net.Conn
-	client    net.Conn
 	hijackErr error
 }
 
-func newHijackable() *hijackable {
-	server, client := net.Pipe()
-	srv := httptest.NewTLSServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(210)
-		}))
-	return &hijackable{
-		ResponseRecorder: httptest.NewRecorder(),
-		Server:           srv,
-		server:           server,
-		client:           client,
-	}
-}
-
-func (w hijackable) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	if w.hijackErr != nil {
-		return nil, nil, w.hijackErr
-	}
-	conn, err := net.Dial("tcp", w.Listener.Addr().String())
-	return conn, nil, err
+func (w failingHijackable) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return nil, nil, w.hijackErr
 }
 
 func TestHttpProxyServer_handleConnect_CannotHijack(t *testing.T) {
-	w := hijackable{
+	w := failingHijackable{
 		ResponseRecorder: httptest.NewRecorder(),
 		hijackErr:        fmt.Errorf("nope"),
 	}
 
-	(&HttpProxyServer{}).handleConnect(w, dummy)
-
-	resp := w.Result()
-	assert.Equal(t, 471, resp.StatusCode)
-}
-
-func TestHttpProxyServer_handleConnect_Hijacked(t *testing.T) {
-	t.Skip("unfinished, pick up later")
-	w := newHijackable()
-
-	ca, _ := NewCA()
 	(&HttpProxyServer{
-		ca: ca,
+		listener: failingListener(mitmDefaultAddr),
 	}).handleConnect(w, dummy)
 
 	resp := w.Result()
 	assert.Equal(t, 200, resp.StatusCode)
-
-	var raw []byte
-	_, err := w.server.Read(raw)
-	assert.NoError(t, err)
 }

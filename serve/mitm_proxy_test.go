@@ -1,17 +1,16 @@
 package serve
 
 import (
-	"crypto/tls"
-	"fmt"
-	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/history"
+	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/pool"
-
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,82 +20,95 @@ func init() {
 	mitmDefaultAddr = "localhost:0"
 }
 
-func TestMitmWorksForHttp(t *testing.T) {
-	ca, err := NewCA()
-	assert.NoError(t, err)
-
-	proxy := NewLocalHttpProxy()
-	history := history.NewHistory()
-	pool := pool.NewPool(history)
-	mitm, runtime := app.MockStartSpin(NewMitmProxyServer(pool, ca), history, pool, proxy)
-	defer runtime.Stop()
-
-	pool.Add(runtime.Context(), proxy.Proxy(), 1*time.Second)
-	assert.Equal(t, 1, pool.Len())
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: mitm.transportProxy(),
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
+func TestFlows(t *testing.T) {
+	type proxy interface {
+		Proxy() pmux.Proxy
+	}
+	type permutation struct {
+		Name   string
+		Target func(handler http.Handler) *httptest.Server
+		Via    proxy
+	}
+	tests := []permutation{
+		{
+			Name:   "via HTTP to HTTP",
+			Via:    NewTransparentProxy(),
+			Target: httptest.NewServer,
+		},
+		{
+			Name:   "via HTTP to HTTPS",
+			Via:    NewTransparentProxy(),
+			Target: httptest.NewTLSServer,
+		},
+		{
+			Name:   "via HTTPS to HTTP",
+			Via:    NewTransparentHttpsProxy(),
+			Target: httptest.NewServer,
+		},
+		{
+			Name:   "via HTTPS to HTTPS",
+			Via:    NewTransparentHttpsProxy(),
+			Target: httptest.NewTLSServer,
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			srv := tt.Target(http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(217)
+				}))
+			defer srv.Close()
 
-	// TODO: spin up test servers not to get to internet for no reason
-	req, _ := http.NewRequestWithContext(runtime.Context(), "GET", "http://httpbin.org/get", nil)
-	res, err := client.Do(req)
-	require.NoError(t, err)
+			history := history.NewHistory()
+			pool := pool.NewPool(history)
+			mitm, runtime := app.MockStartSpin(
+				NewMitmProxyServer(pool, *defaultCA),
+				history, pool, tt.Via)
+			defer runtime.Stop()
 
-	// TODO: make it working properly
-	assert.Equal(t, 200, res.StatusCode)
+			pool.Add(runtime.Context(), tt.Via.Proxy(), 1*time.Second)
+			assert.Equal(t, 1, pool.Len())
+
+			log.Debug().
+				Stringer("mitm", mitm).
+				Stringer("proxy", tt.Via.Proxy()).
+				Str("target", srv.URL).Msg("this request")
+
+			req := mitm.Proxy().MustNewGetRequest(srv.URL)
+			res, err := pmux.DefaultHttpClient.Do(req)
+			require.NoError(t, err)
+
+			assert.Equal(t, 217, res.StatusCode)
+		})
+	}
 }
 
-func TestMitmWorksForHttps(t *testing.T) {
-	ca, err := NewCA()
-	assert.NoError(t, err)
+func TestMitm_HTTP_viaHTTP_toHTTP(t *testing.T) { // TODO: rename
+	srv := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(217)
+		}))
+	defer srv.Close()
 
-	proxy := NewLocalHttpsProxy()
+	transparentHttp := NewTransparentProxy()
 	history := history.NewHistory()
 	pool := pool.NewPool(history)
-	mitm, runtime := app.MockStartSpin(NewMitmProxyServer(pool, ca), history, pool, proxy)
+	mitm, runtime := app.MockStartSpin(
+		NewMitmProxyServer(pool, *defaultCA),
+		history, pool, transparentHttp)
 	defer runtime.Stop()
 
-	pool.Add(runtime.Context(), proxy.Proxy(), 1*time.Second)
+	pool.Add(runtime.Context(), transparentHttp.Proxy(), 1*time.Second)
 	assert.Equal(t, 1, pool.Len())
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: mitm.transportProxy(),
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
+	log.Debug().
+		Stringer("mitm", mitm).
+		Stringer("proxy", transparentHttp).
+		Str("target", srv.URL).Msg("this request")
 
-	// TODO: spin up test servers not to get to internet for no reason
-	req, _ := http.NewRequestWithContext(runtime.Context(), "GET", "https://httpbin.org/get", nil)
-	res, err := client.Do(req)
+	req := mitm.Proxy().MustNewGetRequest(srv.URL)
+	res, err := pmux.DefaultHttpClient.Do(req)
 	require.NoError(t, err)
 
-	// TODO: make it working properly
-	assert.Equal(t, 200, res.StatusCode)
-}
-
-func TestMitmTransportProxyNoInit(t *testing.T) {
-	_, err := (&MitmProxyServer{}).transportProxy()(nil)
-	assert.EqualError(t, err, "mitm is not initialized")
-}
-
-func TestMitmTransportProxyWrongListener(t *testing.T) {
-	tmp := fmt.Sprintf("%s/x", t.TempDir())
-	conn, err := net.Listen("unix", tmp)
-	assert.NoError(t, err)
-	defer conn.Close()
-	_, err = (&MitmProxyServer{
-		HttpProxyServer: HttpProxyServer{
-			listener: conn,
-		},
-	}).transportProxy()(nil)
-	assert.EqualError(t, err, fmt.Sprintf("not a tcp listener: %s", tmp))
+	assert.Equal(t, 217, res.StatusCode)
 }

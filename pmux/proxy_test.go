@@ -50,7 +50,7 @@ func TestGetProxyFromContext(t *testing.T) {
 
 func TestGetProxyFromContextInvalidType(t *testing.T) {
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, ProxyURL, "lalala")
+	ctx = context.WithValue(ctx, proxyURL, "lalala")
 	proxy := GetProxyFromContext(ctx)
 	assert.Equal(t, Proxy(0), proxy)
 }
@@ -58,6 +58,27 @@ func TestGetProxyFromContextInvalidType(t *testing.T) {
 func TestContextualHttpTransport(t *testing.T) {
 	transport := ContextualHttpTransport()
 	assert.NotNil(t, transport)
+}
+
+func TestDialProxiedConnection(t *testing.T) {
+	p := NewProxy("1.2.4.5:8731", "http")
+	r := p.MustNewGetRequest("https://ifconfig.me")
+	_, err := dialProxiedConnection(r.Context(), "tcp", "127.0.0.1:")
+	assert.EqualError(t, err, "dial tcp 127.0.0.1:0: connect: can't assign requested address")
+}
+
+func TestDialProxiedConnection_HTTPS(t *testing.T) {
+	p := NewProxy("1.2.4.5:8731", "https")
+	r := p.MustNewGetRequest("https://ifconfig.me")
+	_, err := dialProxiedConnection(r.Context(), "tcp", "127.0.0.1:")
+	assert.EqualError(t, err, "dial https: dial tcp 127.0.0.1:0: connect: can't assign requested address")
+}
+
+func TestDialProxiedConnection_SOCKS(t *testing.T) {
+	p := Socks5Proxy("127.0.0.1:0")
+	r := p.MustNewGetRequest("https://ifconfig.me")
+	_, err := dialProxiedConnection(r.Context(), "tcp", "127.0.0.1:")
+	assert.EqualError(t, err, "socks connect tcp: dial tcp 127.0.0.1:0: connect: can't assign requested address")
 }
 
 func TestVerifyProxyInContext(t *testing.T) {

@@ -372,7 +372,13 @@ func (o DefaultLimit) apply(q *Query) {
 }
 
 func Execute[T any](src *[]T, dst *[]T, query string, facets func(*[]T),
-	opts ...executeOption) error {
+	opts ...executeOption) (err error) {
+	defer func() {
+		p := recover()
+		if perr, ok := p.(error); ok {
+			err = perr
+		}
+	}()
 	q, err := parse(query)
 	if err != nil {
 		return err

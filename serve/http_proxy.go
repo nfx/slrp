@@ -59,13 +59,16 @@ func (srv *HttpProxyServer) ListenAndServe() error {
 	return srv.Serve(srv.listener)
 }
 
+func (srv *HttpProxyServer) addr() string {
+	return srv.listener.Addr().String()
+}
+
 func (srv *HttpProxyServer) Proxy() pmux.Proxy {
-	addr := srv.listener.Addr().String()
-	return pmux.HttpProxy(addr)
+	return pmux.HttpProxy(srv.addr())
 }
 
 func (srv *HttpProxyServer) String() string {
-	return srv.Proxy().String()
+	return fmt.Sprintf("http://%s", srv.addr())
 }
 
 func (srv *HttpProxyServer) Listen() (err error) {
@@ -115,7 +118,7 @@ func (srv *HttpProxyServer) handleSimpleHttp(rw http.ResponseWriter, r *http.Req
 func (srv *HttpProxyServer) handleConnect(rw http.ResponseWriter, r *http.Request) {
 	log := app.Log.From(r.Context()).With().
 		Str("connection", "HTTPS").
-		Stringer("server", srv.Proxy()).
+		Stringer("server", srv).
 		Logger()
 	hijacker, ok := rw.(http.Hijacker)
 	if !ok {

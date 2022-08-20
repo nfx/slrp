@@ -40,10 +40,9 @@ func (srv *HttpsProxyServer) ListenAndServe() error {
 }
 
 func (srv *HttpsProxyServer) Proxy() pmux.Proxy {
-	addr := srv.listener.Addr().String()
-	return pmux.HttpsProxy(addr)
+	return pmux.HttpsProxy(srv.addr())
 }
 
 func (srv *HttpsProxyServer) String() string {
-	return srv.Proxy().String()
+	return fmt.Sprintf("https://%s", srv.addr())
 }

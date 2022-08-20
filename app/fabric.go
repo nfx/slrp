@@ -5,13 +5,17 @@ import (
 	"encoding"
 	"encoding/gob"
 	"fmt"
+	"net/http"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	_ "net/http/pprof"
 )
 
 func init() {
@@ -72,6 +76,15 @@ func (f *Fabric) Start(ctx context.Context) {
 	syncTrigger := f.configuration["app"].DurOr("sync", 1*time.Minute)
 	f.syncTrigger = time.NewTicker(syncTrigger)
 	f.State = f.configuration["app"].StrOr("state", "$HOME/.$APP/data")
+
+	if f.configuration["pprof"].BoolOr("enable", false) {
+		addr := f.configuration["pprof"].StrOr("addr", "localhost:6060")
+		runtime.SetBlockProfileRate(1)
+		runtime.SetMutexProfileFraction(1)
+		f.singletons["pprof"] = &http.Server{Addr: addr}
+		log.Info().Str("addr", addr).Msg("Enabled pprof")
+	}
+
 	monitor := f.singletons.Monitor()
 
 	// treat all ListenAndServe exposing singletons as another service

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/http/pprof"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -126,10 +125,7 @@ func (s *mainServer) Configure(c Config) error {
 	timeout := c.DurOr("read_timeout", 15*time.Second)
 	s.ReadTimeout = timeout
 	s.IdleTimeout = timeout
-	s.enableProfiler = c.BoolOr("enable_profiler", false)
-	if !s.enableProfiler {
-		s.WriteTimeout = timeout
-	}
+	s.WriteTimeout = timeout
 	return nil
 }
 
@@ -137,17 +133,6 @@ func (s *mainServer) Start(ctx Context) {
 	// it's easier to lazily init serve mux,
 	// rather than tinker with DI container
 	s.initRestAPI()
-	s.initProfiler()
-}
-
-func (s *mainServer) initProfiler() {
-	if s.enableProfiler {
-		s.router.HandleFunc("/debug/pprof/", pprof.Index)
-		s.router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		s.router.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		s.router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		s.router.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	}
 }
 
 func (s *mainServer) initRestAPI() {

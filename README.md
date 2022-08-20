@@ -89,12 +89,14 @@ log:
 server:
   addr: "localhost:8089"
   read_timeout: 15s
-  enable_profiler: false
 mitm:
   addr: "localhost:8090"
   read_timeout: 15s
   idle_timeout: 15s
   write_timeout: 15s
+pprof:
+  enable: false
+  addr: "localhost:6060"
 checker:
   timeout: 5s
   strategy: simple

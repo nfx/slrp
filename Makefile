@@ -19,6 +19,21 @@ quick:
 fmt:
 	go fmt ./...
 
+profiled: quick
+	SLRP_PPROF_ENABLE=true slrp
+
+heap-profile:
+	go tool pprof http://localhost:6060/debug/pprof/heap
+
+cpu-profile:
+	go tool pprof http://localhost:6060/debug/pprof/profile?seconds=60
+
+block-profile:
+	go tool pprof http://localhost:6060/debug/pprof/block
+
+pprof: 
+	go tool pprof -http=:8080 slrp http://127.0.0.1:6060/debug/pprof/profile
+
 race:
 	GORACE="halt_on_error=1" go run -race main.go
 

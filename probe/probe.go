@@ -55,12 +55,8 @@ func (p *Probe) Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool
 		return false
 	}
 	p.stats.Update(source, stats.Scheduled)
-	select {
-	case <-ctx.Done():
-		return false
-	case p.state.scheduled <- verify{ctx, proxy, source, 0}:
-		return true
-	}
+	p.state.scheduled <- verify{ctx, proxy, source, 0}
+	return true
 }
 
 func (p *Probe) Start(ctx app.Context) {

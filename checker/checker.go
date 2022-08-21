@@ -51,9 +51,6 @@ func NewChecker() Checker {
 	if err != nil {
 		panic(fmt.Errorf("cannot get this IP: %w", err))
 	}
-	discardingTransport := pmux.ContextualHttpTransport()
-	discardingTransport.DisableKeepAlives = true
-	discardingTransport.MaxIdleConns = 0
 	return &configurableChecker{
 		ip:     ip,
 		client: defaultClient,

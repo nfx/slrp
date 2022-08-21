@@ -30,6 +30,9 @@ func TestConfigurableChecker(t *testing.T) {
 	client := http.DefaultClient
 	c := configurableChecker{
 		client: client,
+		strategies: map[string]Checker{
+			"simple": &simple{}, // just for tests
+		},
 	}
 	err := c.Configure(app.Config{})
 	assert.NoError(t, err)

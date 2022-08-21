@@ -118,6 +118,7 @@ func getConfig() (configuration, error) {
 		validLoc = loc
 		break
 	}
+	os.Stderr.WriteString(fmt.Sprintf("Loading config: %s\n", validLoc))
 	data := configuration{}
 	err = yaml.Unmarshal(raw, &data)
 	if err != nil {

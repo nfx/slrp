@@ -78,6 +78,10 @@ type configurableChecker struct {
 
 func (cc *configurableChecker) Configure(conf app.Config) error {
 	cc.strategy = conf.StrOr("strategy", "simple")
+	_, invalidStrategy := cc.strategies[cc.strategy]
+	if !invalidStrategy {
+		return fmt.Errorf("invalid strategy: %s", cc.strategy)
+	}
 	original, ok := cc.client.(*http.Client)
 	if ok {
 		original.Timeout = conf.DurOr("timeout", 5*time.Second)

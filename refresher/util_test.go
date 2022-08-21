@@ -130,7 +130,7 @@ func (f failingSrc) Len() int {
 
 func start() (*Refresher, app.MockRuntime, func()) {
 	// we might even need mutex here :(
-	stubSource()
+	stubSource() // TODO: start it in clear environment
 	singletons := app.Factories{
 		"checker":   checker.NewChecker,
 		"probe":     probe.NewProbe,

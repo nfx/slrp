@@ -2,11 +2,14 @@ package sources
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/dop251/goja"
+	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
 )
 
@@ -24,6 +27,7 @@ func init() {
 
 // Scrapes https://www.proxynova.com
 func proxyNova(ctx context.Context, h *http.Client) Src {
+	log := app.Log.From(ctx)
 	page := func(path string) func() ([]pmux.Proxy, error) {
 		return func() (found []pmux.Proxy, err error) {
 			url := proxyNovaPrefix + path
@@ -31,13 +35,35 @@ func proxyNova(ctx context.Context, h *http.Client) Src {
 			if err != nil {
 				return
 			}
+			vm := goja.New() // TODO: implement atob() in go
+			_, err = vm.RunString(`
+			var document = {
+				write: function(str) {
+					return str;
+				}
+			};`)
+			if err != nil {
+				return nil, err
+			}
 			err = p.Each2("Proxy IP", "Proxy Port", func(ip, port string) {
 				if !strings.Contains(ip, "document") {
 					return
 				}
-				ip = ip[16 : len(ip)-3]
-				ip = strings.ReplaceAll(ip, "' + '", "")
+				var proxy string
+				v, err := vm.RunString(ip)
+				if err != nil {
+					log.Err(err).Str("src", ip).Msg("failed to execute javascript")
+					return
+				}
+				err = vm.ExportTo(v, &proxy)
+				if err != nil {
+					return
+				}
+				if proxy == "" {
+					return
+				}
 				port = strings.ReplaceAll(port, ".0", "")
+				ip = strings.ReplaceAll(proxy, "' + '", "")
 				found = append(found, pmux.HttpProxy(ip+":"+port))
 			})
 			if err != nil {

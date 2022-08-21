@@ -170,8 +170,11 @@ func dialProxiedConnection(ctx context.Context, network, addr string) (net.Conn,
 		if err != nil {
 			return nil, err
 		}
-		// TODO: socks ssl?..
-		return dialer.Dial(network, addr)
+		conn, err := dialer.Dial(network, addr)
+		if err != nil {
+			return nil, fmt.Errorf("dial socks: %w", err)
+		}
+		return tls.Client(conn, DefaultTlsConfig), nil
 	case HTTPS:
 		conn, err := DefaultDialer.DialContext(ctx, network, addr)
 		if err != nil {

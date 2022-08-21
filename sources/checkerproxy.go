@@ -19,6 +19,7 @@ func init() {
 		ID:        1,
 		Homepage:  "https://checkerproxy.net/",
 		Frequency: 6 * time.Hour,
+		Seed:      true,
 		Feed:      simpleGen(checkerProxy),
 	})
 }

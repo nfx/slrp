@@ -232,7 +232,7 @@ func (i *internal) handleTimeout(f failure) {
 	i.LastReverified[f.v.Proxy] = reVerify{
 		Proxy:   f.v.Proxy,
 		Attempt: f.v.Attempt + 1,
-		After:   time.Now().Add(1 * time.Hour).Unix(),
+		After:   time.Now().Add(30 * time.Minute).Unix(),
 	}
 	log := app.Log.From(f.v.ctx)
 	log.Trace().Msg("verify timeout")
@@ -245,7 +245,7 @@ func (i *internal) handleReverify(ctx context.Context) {
 		log.Info().Msg("reverify is running")
 		return
 	}
-	now := time.Now().Unix()
+	// now := time.Now().Unix()
 	reverify := make(map[pmux.Proxy]reVerify, len(i.LastReverified))
 	for k, v := range i.LastReverified {
 		if v.Attempt > maxReverifies {
@@ -261,9 +261,9 @@ func (i *internal) handleReverify(ctx context.Context) {
 			})
 			continue
 		}
-		if v.After > now {
-			continue
-		}
+		// if v.After > now {
+		// 	continue
+		// }
 		reverify[k] = v
 	}
 	if len(reverify) == 0 {

@@ -90,7 +90,7 @@ func TestConfigResolvesFromSlrpYamlError(t *testing.T) {
 	testdata, _ := filepath.Abs("testdata")
 	defer envm{
 		"APP":      "slrp",
-		"PWD":     fmt.Sprintf("%s/d", testdata),
+		"PWD":      fmt.Sprintf("%s/d", testdata),
 		"SLRP_A_B": "1",
 	}.restore()()
 

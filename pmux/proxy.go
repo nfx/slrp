@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -154,7 +155,7 @@ var DefaultTlsConfig = &tls.Config{
 var DefaultDialer = &net.Dialer{
 	// TODO: a) configure this timeout globally
 	// TODO: b) configure this per-proxy (we know their speed)
-	Timeout:   3 * time.Second,
+	Timeout:   5 * time.Second,
 	KeepAlive: 0,
 }
 
@@ -173,6 +174,11 @@ func dialProxiedConnection(ctx context.Context, network, addr string) (net.Conn,
 		conn, err := dialer.Dial(network, addr)
 		if err != nil {
 			return nil, fmt.Errorf("dial socks: %w", err)
+		}
+		if strings.HasSuffix(addr, ":80") {
+			// this is HTTP connection, no need to TLS it
+			// TODO: figure out a better way of determining this
+			return conn, nil
 		}
 		return tls.Client(conn, DefaultTlsConfig), nil
 	case HTTPS:
@@ -207,10 +213,12 @@ func ContextualHttpTransport() *http.Transport {
 		// requests and the TLSClientConfig and TLSHandshakeTimeout
 		// are ignored. The returned net.Conn is assumed to already be
 		// past the TLS handshake.
-		DialTLSContext:  dialProxiedConnection,
-		DialContext:     dialProxiedConnection,
-		TLSClientConfig: DefaultTlsConfig,
-		Proxy:           pickHttpProxyFromContext,
+		DialTLSContext:      dialProxiedConnection,
+		TLSClientConfig:     DefaultTlsConfig,
+		TLSHandshakeTimeout: DefaultDialer.Timeout,
+		Proxy:               pickHttpProxyFromContext,
+		DisableKeepAlives:   true,
+		MaxIdleConns:        0,
 	}
 }
 

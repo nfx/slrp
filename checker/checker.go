@@ -46,6 +46,13 @@ var (
 
 var defaultClient httpClient = pmux.DefaultHttpClient
 
+func init() {
+	defaultClient = &http.Client{
+		Transport: pmux.ContextualHttpTransport(),
+		Timeout:   5 * time.Second,
+	}
+}
+
 func NewChecker() Checker {
 	ip, err := thisIP()
 	if err != nil {

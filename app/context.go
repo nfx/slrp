@@ -66,9 +66,11 @@ func (a *mockCtx) Spin() {
 func (a *mockCtx) Ctx() context.Context {
 	return a.ctx
 }
+
 func (a *mockCtx) Done() <-chan struct{} {
-	return a.ctx.Done()
+	return a.Ctx().Done()
 }
+
 func (a *mockCtx) Heartbeat() {
 	if a.spin {
 		return

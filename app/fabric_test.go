@@ -11,55 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type serviceA struct {
-	state   chan []byte
-	loaded  chan error
-	flushed chan error
-	Number  int
-}
-
-func (a *serviceA) Start(ctx Context) {
-	// immediately update a state
-	go ctx.Heartbeat()
-}
-
-func (a *serviceA) UnmarshalBinary(raw []byte) error {
-	log.Info().Msg("waiting to assert state A")
-	a.state <- raw
-	log.Info().Msg("waiting to load A")
-	return <-a.loaded
-}
-
-func (a *serviceA) MarshalBinary() ([]byte, error) {
-	log.Info().Msg("waiting to flush A")
-	return []byte{1}, <-a.flushed
-}
-
-func (a *serviceA) HttpGet(*http.Request) (interface{}, error) {
-	return 1, nil
-}
-
-func (a *serviceA) HttpGetByID(id string, r *http.Request) (interface{}, error) {
-	return id, nil
-}
-
-func (a *serviceA) HttpDeletetByID(id string, r *http.Request) (interface{}, error) {
-	switch id {
-	case "error":
-		return nil, fmt.Errorf("just error: %s", id)
-	case "not-found":
-		return nil, NotFound("no ID found")
-	case "soft":
-		panic(InternalError{fmt.Errorf("panic with error: %s", id)})
-	default:
-		panic("panic with string")
-	}
-}
 
 func TestFabricStartAndLoadFromBackup(t *testing.T) {
 	home := t.TempDir()
@@ -67,12 +21,7 @@ func TestFabricStartAndLoadFromBackup(t *testing.T) {
 	err := os.MkdirAll(data, 0o700)
 	require.NoError(t, err)
 
-	a := &serviceA{
-		state:   make(chan []byte),
-		loaded:  make(chan error),
-		flushed: make(chan error),
-		Number:  100500,
-	}
+	a := newServiceA()
 
 	// emulate some persisted backed up state
 	aState, err := os.OpenFile(fmt.Sprintf("%s/a.bak", data),

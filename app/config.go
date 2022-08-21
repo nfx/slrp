@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -61,7 +62,7 @@ func (c Config) DurOr(key string, def time.Duration) time.Duration {
 		return def
 	}
 	d, err := ParseDuration(v)
-	if err != nil {
+	if err != nil || d == 0 {
 		log.Warn().Err(err).Str("key", key).Msg("cannot parse duration")
 		return def
 	}
@@ -108,16 +109,19 @@ func getConfig() (configuration, error) {
 		path.Clean(expandEnv("$PWD/config.yml")),
 		path.Clean(expandEnv("$HOME/.$APP/config.yml")),
 	}
+	validLoc := ""
 	for _, loc := range locs {
 		raw, err = ioutil.ReadFile(loc)
 		if os.IsNotExist(err) {
 			continue
 		}
+		validLoc = loc
+		break
 	}
 	data := configuration{}
 	err = yaml.Unmarshal(raw, &data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid config in %s: %w", validLoc, err)
 	}
 	if data == nil {
 		// when there's no config

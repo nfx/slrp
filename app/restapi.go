@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -33,6 +34,12 @@ type httpResource struct {
 	deleteByID httpDeleteByID
 }
 
+type InternalError struct{ error }
+
+func (i InternalError) Unwrap() error {
+	return i.error
+}
+
 type NotFound string
 
 func (nf NotFound) Error() string {
@@ -41,6 +48,8 @@ func (nf NotFound) Error() string {
 
 func (hr *httpResource) err(rw http.ResponseWriter, err error) {
 	switch err.(type) {
+	case InternalError:
+		rw.WriteHeader(500)
 	case NotFound:
 		rw.WriteHeader(404)
 	default:
@@ -54,14 +63,16 @@ func (hr *httpResource) recover(rw http.ResponseWriter) {
 	p := recover()
 	if err, ok := p.(error); ok {
 		log.Err(err).Str("service", hr.service).Msg("panic")
-		hr.err(rw, err)
+		hr.err(rw, InternalError{err})
 		return
 	}
 	if p != nil {
-		log.Panic().
+		hr.err(rw, InternalError{fmt.Errorf("very wrong error")})
+		log.Error().
 			Interface("panic", p).
 			Str("service", hr.service).
-			Msg("very wrong!")
+			Msg("very wrong panic!")
+		return
 	}
 }
 
@@ -102,31 +113,42 @@ func (hr *httpResource) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 type mainServer struct {
 	http.Server
-	fabric         *Fabric
-	router         *mux.Router
-	enableProfiler bool
-	onInit         []func(router *mux.Router)
+	listener net.Listener
+	fabric   *Fabric
+	router   *mux.Router
+	onInit   []func(router *mux.Router)
 }
 
 func newServer(fabric *Fabric) *mainServer {
 	router := mux.NewRouter()
 	return &mainServer{
-		enableProfiler: true,
-		fabric:         fabric,
-		router:         router,
+		fabric: fabric,
+		router: router,
 		Server: http.Server{
 			Handler: router,
 		},
 	}
 }
 
-func (s *mainServer) Configure(c Config) error {
+func (s *mainServer) Configure(c Config) (err error) {
 	s.Addr = c.StrOr("addr", "localhost:8089")
 	timeout := c.DurOr("read_timeout", 15*time.Second)
 	s.ReadTimeout = timeout
 	s.IdleTimeout = timeout
 	s.WriteTimeout = timeout
-	return nil
+	s.listener, err = net.Listen("tcp", s.Addr)
+	return err
+}
+
+func (s *mainServer) url() string {
+	return fmt.Sprintf("http://%s", s.listener.Addr())
+}
+
+func (s *mainServer) ListenAndServe() error {
+	// this method is required for unit testing mode to be able to
+	// listen on a random localhost port during assertiong
+	log.Info().Str("endpoint", s.url()).Msg("started REST API")
+	return s.Serve(s.listener)
 }
 
 func (s *mainServer) Start(ctx Context) {

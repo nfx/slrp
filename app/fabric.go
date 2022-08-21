@@ -78,6 +78,9 @@ func (f *Fabric) Start(ctx context.Context) {
 	f.State = f.configuration["app"].StrOr("state", "$HOME/.$APP/data")
 
 	if f.configuration["pprof"].BoolOr("enable", false) {
+		// See [Diagnostics] to get an overview of troubleshooting
+		//
+		// [Diagnostics]: https://go.dev/doc/diagnostics
 		addr := f.configuration["pprof"].StrOr("addr", "localhost:6060")
 		runtime.SetBlockProfileRate(1)
 		runtime.SetMutexProfileFraction(1)
@@ -98,6 +101,10 @@ func (f *Fabric) Start(ctx context.Context) {
 
 	// wait for all servers to stop
 	monitor.Wait()
+}
+
+func (f *Fabric) Url() string {
+	return f.singletons["server"].(*mainServer).url()
 }
 
 func (f *Fabric) initLogging() {
@@ -230,6 +237,7 @@ func (h *Fabric) sync(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			h.syncTrigger.Stop()
 			return
 		case resp := <-h.askStats:
 			s := stats{}

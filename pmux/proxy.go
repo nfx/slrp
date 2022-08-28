@@ -150,6 +150,7 @@ var DefaultHttpClient = &http.Client{
 
 var DefaultTlsConfig = &tls.Config{
 	InsecureSkipVerify: true,
+	NextProtos:         []string{"http/1.1"},
 }
 
 var DefaultDialer = &net.Dialer{

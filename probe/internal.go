@@ -265,6 +265,20 @@ func (i *internal) handleReverify(ctx context.Context) {
 		// 	continue
 		// }
 		reverify[k] = v
+		if v.Proxy.Proto() == pmux.HTTP {
+			reverify[k] = reVerify{
+				Proxy:   pmux.HttpsProxy(v.Proxy.Address()),
+				Attempt: v.Attempt,
+				After:   v.After,
+			}
+		}
+		if v.Proxy.Proto() == pmux.HTTPS {
+			reverify[k] = reVerify{
+				Proxy:   pmux.HttpProxy(v.Proxy.Address()),
+				Attempt: v.Attempt,
+				After:   v.After,
+			}
+		}
 	}
 	if len(reverify) == 0 {
 		return

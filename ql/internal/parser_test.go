@@ -193,3 +193,54 @@ func TestParsing(t *testing.T) {
 		})
 	}
 }
+
+func TestYyErrorMessageNotVerbose(t *testing.T) {
+	prev := yyErrorVerbose
+	yyErrorVerbose = false
+	assert.Equal(t, "syntax error", yyErrorMessage(0, 0))
+	yyErrorVerbose = prev
+}
+
+func TestYyErrorMessageCoverage_001(t *testing.T) {
+	prev := yyErrorVerbose
+	yyErrorVerbose = true
+
+	state := 1
+	yyPactPrev := yyPact[state]
+	yyDefPrev := yyDef[state]
+	yyExcaPrev := yyExca
+	yyExca = [...]int8{
+		0, -100,
+		-1, int8(state),
+		-1, 0,
+	}
+	yyDef[state] = -2
+	yyPact[state] = -100
+	assert.Equal(t, "syntax error: unexpected tok-0", yyErrorMessage(state, 0))
+	yyErrorVerbose = prev
+	yyDef[state] = yyDefPrev
+	yyPact[state] = yyPactPrev
+	yyExca = yyExcaPrev
+}
+
+func TestYyErrorMessageCoverage_002(t *testing.T) {
+	prev := yyErrorVerbose
+	yyErrorVerbose = true
+
+	state := 1
+	yyPactPrev := yyPact[state]
+	yyDefPrev := yyDef[state]
+	yyExcaPrev := yyExca
+	yyExca = [...]int8{
+		0, -100,
+		-1, int8(state),
+		-1, 0,
+	}
+	yyDef[state] = -2
+	yyPact[state] = -100
+	assert.Equal(t, "syntax error: unexpected tok-0", yyErrorMessage(state, 0))
+	yyErrorVerbose = prev
+	yyDef[state] = yyDefPrev
+	yyPact[state] = yyPactPrev
+	yyExca = yyExcaPrev
+}

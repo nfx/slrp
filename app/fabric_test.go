@@ -183,3 +183,30 @@ func TestFabricStartAndLoadFromBackup(t *testing.T) {
 		})
 	}
 }
+
+func TestFlushCannotMkdir(t *testing.T) {
+	fabric := &Fabric{State: "/dev/null"}
+	fabric.flush("x")
+}
+
+func TestFlushCannotRename(t *testing.T) {
+	fabric := &Fabric{
+		State: t.TempDir(),
+	}
+	f, err := os.OpenFile(filepath.Join(fabric.State, "x"), os.O_WRONLY|os.O_CREATE, 0o600)
+	assert.NoError(t, err)
+	f.WriteString("abc")
+	f.Close()
+
+	err = os.Mkdir(filepath.Join(fabric.State, "x.bak"), 0o600)
+	assert.NoError(t, err)
+
+	fabric.flush("x")
+}
+
+func TestFlushCannotCreate(t *testing.T) {
+	fabric := &Fabric{
+		State: t.TempDir(),
+	}
+	fabric.flush("dev/👺")
+}

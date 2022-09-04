@@ -310,10 +310,10 @@ func (h *Fabric) flush(service string) {
 		log.Warn().Err(err).Str("service", service).Msg("cannot sync")
 		return
 	}
-	gob.NewEncoder(f).Encode(h.services[service])
+	defer f.Close()
+	err = gob.NewEncoder(f).Encode(h.services[service])
 	if err != nil {
 		log.Warn().Err(err).Str("service", service).Msg("cannot sync backup")
 	}
-	f.Close()
 	log.Info().Str("file", db).Str("service", service).Msg("synced state")
 }

@@ -102,13 +102,13 @@ func TestInternalScheduleHandleReverify(t *testing.T) {
 
 	internal := newInternal(stats, make(chan verify), 1)
 
-	proxy := pmux.HttpProxy("127.0.0.2:2345")
+	proxy := pmux.Socks4Proxy("127.0.0.2:2345")
 	internal.LastReverified[proxy] = reVerify{
 		Proxy:   proxy,
 		Attempt: 20,
 	}
 
-	proxy2 := pmux.HttpProxy("127.0.0.3:2345")
+	proxy2 := pmux.Socks5Proxy("127.0.0.3:2345")
 
 	internal.LastReverified[proxy2] = reVerify{
 		Proxy:   proxy,

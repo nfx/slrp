@@ -1,0 +1,39 @@
+match: Proxy Server List
+records: <table class="table" id="tbl_proxy_list">
+  <thead>
+    <tr>
+      <th>Proxy IP</th>
+      <th>Proxy Port</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="left">
+        <abbr title="..">
+          <script>document.write(atob("!@#$%"));</script>
+        </abbr>
+      </td>
+      <td align="left">
+        <a href="#">85</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="left">
+        noise
+      </td>
+      <td align="left">
+        <a href="#">86</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="left">
+        <abbr title="..">
+          <script>document.write("127" + ".0" + "." + "0." + "6");</script>
+        </abbr>
+      </td>
+      <td align="left">
+        <a href="#">86</a>
+      </td>
+    </tr>
+  </tbody>
+</table>

@@ -2,6 +2,7 @@ package sources
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,6 +25,26 @@ func init() {
 	})
 }
 
+func documentWriteInJsVm(ctx context.Context, script string) (string, error) {
+	vm := goja.New()
+	vm.GlobalObject().Set("atob", func(in string) (string, error) {
+		dec, err := base64.StdEncoding.DecodeString(in)
+		return string(dec), err
+	})
+	vm.RunString(`var document = {
+		write: function(str) {
+			return str;
+		}
+	};`)
+	var wrote string
+	v, err := vm.RunString(script)
+	if err != nil {
+		return "", err
+	}
+	err = vm.ExportTo(v, &wrote)
+	return wrote, err
+}
+
 // Scrapes https://www.proxynova.com
 func proxyNova(ctx context.Context, h *http.Client) Src {
 	log := app.Log.From(ctx)
@@ -34,36 +55,18 @@ func proxyNova(ctx context.Context, h *http.Client) Src {
 			if err != nil {
 				return
 			}
-			vm := goja.New() // TODO: implement atob() in go
-			_, err = vm.RunString(`
-			var document = {
-				write: function(str) {
-					return str;
-				}
-			};`)
-			if err != nil {
-				return nil, err
-			}
-			err = p.Each2("Proxy IP", "Proxy Port", func(ip, port string) {
+			err = p.Each2("Proxy IP", "Proxy Port", func(ip, port string) error {
 				if !strings.Contains(ip, "document") {
-					return
+					return nil
 				}
-				var proxy string
-				v, err := vm.RunString(ip)
-				if err != nil {
-					log.Err(err).Str("src", ip).Msg("failed to execute javascript")
-					return
-				}
-				err = vm.ExportTo(v, &proxy)
-				if err != nil {
-					return
-				}
+				proxy, err := documentWriteInJsVm(ctx, ip)
 				if proxy == "" {
-					return
+					log.Err(err).Str("src", ip).Msg("failed to execute javascript")
+					return err
 				}
 				port = strings.ReplaceAll(port, ".0", "")
-				ip = strings.ReplaceAll(proxy, "' + '", "")
-				found = append(found, pmux.HttpProxy(ip+":"+port))
+				found = append(found, pmux.HttpProxy(proxy+":"+port))
+				return nil
 			})
 			if err != nil {
 				err = skipErr(err, intEC{"serial", serial}, strEC{"url", url})

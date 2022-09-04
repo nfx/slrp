@@ -204,7 +204,7 @@ func (page *Page) Each(a string, f func(a string)) error {
 	return nil
 }
 
-func (page *Page) Each2(a, b string, f func(a, b string)) error {
+func (page *Page) Each2(a, b string, f func(a, b string) error) error {
 	table, err := page.FindWithColumns(a, b)
 	if err != nil {
 		return err
@@ -215,7 +215,10 @@ func (page *Page) Each2(a, b string, f func(a, b string)) error {
 	}
 	_1, _2 := offsets[a], offsets[b]
 	for _, row := range table.rows {
-		f(row[_1], row[_2])
+		err = f(row[_1], row[_2])
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

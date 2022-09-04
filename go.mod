@@ -13,7 +13,7 @@ require (
 	github.com/maxmind/mmdbwriter v0.0.0-20220606140952-b99976ab4826
 	github.com/microcosm-cc/bluemonday v1.0.19
 	github.com/oschwald/maxminddb-golang v1.10.0
-	github.com/rs/zerolog v1.27.0
+	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.8.0
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e

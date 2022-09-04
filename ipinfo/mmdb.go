@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path"
@@ -92,7 +93,11 @@ func (i *Lookup) ensureDownloaded(c app.Config, edition string) (*mmdb.Reader, e
 	reader, err := mmdb.Open(loc)
 	if err == nil {
 		// file existed, everything is fine
-		return reader, err
+		return reader, nil
+	}
+	if _, ok := err.(*fs.PathError); err != nil && !ok {
+		// ignore only fs errors
+		return nil, err
 	}
 	license := c.StrOr("license", "")
 	if license == "" {
@@ -104,8 +109,9 @@ func (i *Lookup) ensureDownloaded(c app.Config, edition string) (*mmdb.Reader, e
 	}
 	err = os.MkdirAll(path.Dir(loc), 0700)
 	if err != nil {
-		return nil, fmt.Errorf("cannot mkdir %s: %s", edition, err)
+		return nil, fmt.Errorf("cannot mkdir for %s: %s", edition, err)
 	}
+	// error on this is almost impossible to happen
 	file, err := os.Create(loc)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create %s: %s", edition, err)

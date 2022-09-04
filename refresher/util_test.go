@@ -6,59 +6,98 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/nfx/slrp/app"
-	"github.com/nfx/slrp/checker"
-	"github.com/nfx/slrp/history"
 	"github.com/nfx/slrp/pmux"
-	"github.com/nfx/slrp/pool"
-	"github.com/nfx/slrp/probe"
 	"github.com/nfx/slrp/sources"
 	"github.com/nfx/slrp/stats"
 )
 
-func stubSource() {
-	proxy := pmux.Socks4Proxy("127.0.0.1:0")
-	refreshDelay = 1 * time.Second
-	sources.Sources = []sources.Source{
-		{
-			ID:        1,
-			Frequency: 1 * time.Hour,
-			Seed:      true,
-		},
-		{
-			ID:        2,
-			Frequency: 1 * time.Hour,
-			Feed: func(_ context.Context, _ *http.Client) sources.Src {
-				time.Sleep(refreshDelay)
-				return proxyArraySrc{proxy}
-			},
-		},
-		{
-			ID:        3,
-			Frequency: 1 * time.Hour,
-			Seed:      true,
-			Feed: func(_ context.Context, _ *http.Client) sources.Src {
-				time.Sleep(refreshDelay)
-				return proxyArraySrc{proxy}
-			},
-		},
-		{
-			ID:        4,
-			Frequency: 1 * time.Hour,
-			Seed:      true,
-			Feed: func(_ context.Context, _ *http.Client) sources.Src {
-				return failingSrc("always failing")
-			},
-		},
-		{
-			ID:        5,
-			Frequency: 1 * time.Second,
-			Seed:      true,
-			Feed: func(_ context.Context, _ *http.Client) sources.Src {
-				return sleepingSrc(300)
-			},
-		},
+type nilPool struct{}
+
+func (n nilPool) RandomFast(ctx context.Context) context.Context {
+	return ctx
+}
+
+type counterProbe map[int]int
+
+func (c counterProbe) Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool {
+	c[source] += 1
+	return true
+}
+
+type mockStats map[int]*stats.Stat
+
+func (m mockStats) Launch(source int) {
+	m[source].State = stats.Running
+}
+
+func (m mockStats) Finish(source int, err error) {
+	if err == nil {
+		m[source].State = stats.Idle
+		return
 	}
+	m[source].State = stats.Failed
+	m[source].Failure = err.Error()
+}
+
+func (m mockStats) Snapshot() stats.Sources {
+	s := stats.Sources{}
+	for k, v := range m {
+		s[k] = *v
+	}
+	return s
+}
+
+func withStats(ref *Refresher) *Refresher {
+	m := mockStats{}
+	for _, v := range ref.sources() {
+		m[v.ID] = &stats.Stat{}
+	}
+	ref.stats = m
+	return ref
+}
+
+// var refreshDelay = 1 * time.Second
+var stubProxy = pmux.Socks4Proxy("127.0.0.1:0")
+
+var stubSource = []sources.Source{
+	{
+		ID:        1,
+		Frequency: 15 * time.Minute,
+		Seed:      true,
+	},
+	{
+		ID:        2,
+		Seed:      true,
+		Frequency: 1 * time.Hour,
+		Feed: func(_ context.Context, _ *http.Client) sources.Src {
+			return proxyArraySrc{stubProxy}
+		},
+	},
+	{
+		ID:        3,
+		Frequency: 1 * time.Hour,
+		Seed:      true,
+		Session:   true,
+		Feed: func(_ context.Context, _ *http.Client) sources.Src {
+			return proxyArraySrc{stubProxy}
+		},
+	},
+	{
+		ID:        4,
+		Frequency: 1 * time.Hour,
+		Seed:      true,
+		Feed: func(_ context.Context, _ *http.Client) sources.Src {
+			return failingSrc("always failing")
+		},
+	},
+	{
+		ID:        5,
+		Frequency: 1 * time.Second,
+		Seed:      true,
+		Feed: func(_ context.Context, _ *http.Client) sources.Src {
+			return sleepingSrc(300)
+		},
+	},
 }
 
 type proxyArraySrc []pmux.Proxy
@@ -126,21 +165,4 @@ func (f failingSrc) Err() error {
 
 func (f failingSrc) Len() int {
 	return 100500
-}
-
-func start() (*Refresher, app.MockRuntime, func()) {
-	// we might even need mutex here :(
-	stubSource() // TODO: start it in clear environment
-	singletons := app.Factories{
-		"checker":   checker.NewChecker,
-		"probe":     probe.NewProbe,
-		"stats":     stats.NewStats,
-		"pool":      pool.NewPool,
-		"refresher": NewRefresher,
-		"history":   history.NewHistory,
-	}.Init()
-	mockRuntime := singletons.MockStart()
-	return singletons["refresher"].(*Refresher), mockRuntime, func() {
-		mockRuntime.Stop()
-	}
 }

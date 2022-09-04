@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/nfx/slrp/app"
+	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/pool"
 	"github.com/nfx/slrp/probe"
 	"github.com/nfx/slrp/sources"
@@ -31,14 +32,29 @@ type progress struct {
 type plan map[int]time.Duration
 
 type Refresher struct {
-	probe    *probe.Probe
-	pool     *pool.Pool
-	stats    *stats.Stats
+	probe    probeContract
+	pool     poolContract
+	stats    statsContract
 	client   *http.Client
 	next     atomic.Value
 	progress chan progress
 	snapshot chan chan plan
+	sources  func() []sources.Source
 	plan     plan
+}
+
+type probeContract interface {
+	Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool
+}
+
+type poolContract interface {
+	RandomFast(ctx context.Context) context.Context
+}
+
+type statsContract interface {
+	Launch(source int)
+	Finish(source int, err error)
+	Snapshot() stats.Sources
 }
 
 func NewRefresher(stats *stats.Stats, pool *pool.Pool, probe *probe.Probe) *Refresher {
@@ -49,6 +65,9 @@ func NewRefresher(stats *stats.Stats, pool *pool.Pool, probe *probe.Probe) *Refr
 		progress: make(chan progress, 1),
 		snapshot: make(chan chan plan),
 		plan:     plan{},
+		sources:  func() []sources.Source {
+			return sources.Sources
+		},
 		client: &http.Client{
 			Transport: pool,
 		},
@@ -118,7 +137,7 @@ func (ref *Refresher) upcoming() (result []upcoming) {
 	if !ok {
 		next = time.Now()
 	}
-	for _, s := range sources.Sources {
+	for _, s := range ref.sources() {
 		if s.Feed == nil {
 			continue
 		}
@@ -159,15 +178,14 @@ var refreshDelay = 1 * time.Minute
 
 func (ref *Refresher) checkSources(ctx context.Context, trigger time.Time) time.Time {
 	minSourceFrequency := 60 * time.Minute
-	for _, v := range sources.Sources {
+	for _, v := range ref.sources() {
 		if v.Frequency < minSourceFrequency {
 			minSourceFrequency = v.Frequency
 		}
 	}
 	nextTrigger := time.Now().Add(minSourceFrequency)
 	snapshot := ref.stats.Snapshot()
-	// poolSize := ref.pool.Len()
-	for _, s := range sources.Sources {
+	for _, s := range ref.sources() {
 		sctx := app.Log.WithStr(ctx, "source", s.Name())
 		log := app.Log.From(sctx)
 		if s.Feed == nil {
@@ -204,7 +222,7 @@ func (ref *Refresher) checkSources(ctx context.Context, trigger time.Time) time.
 		go ref.refresh(sctx, client, s)
 	}
 	// TODO: maybe bring back nextTrigger someday
-	return time.Now().Add(1 * time.Minute)
+	return trigger.Add(1 * time.Minute)
 }
 
 func (ref *Refresher) refresh(ctx context.Context, client *http.Client, source sources.Source) {
@@ -242,5 +260,6 @@ func (ref *Refresher) refresh(ctx context.Context, client *http.Client, source s
 	}
 	// TODO: maybe update failed state from a secong goroutine?...
 	ref.stats.Finish(source.ID, feed.Err())
+	log.Info().Msg("finished refresh")
 	ref.progress <- progress{ctx, feed.Err()}
 }

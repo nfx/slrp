@@ -75,11 +75,32 @@ func TestToStructSlice(t *testing.T) {
 	}
 }
 
+func TestEach(t *testing.T) {
+	page, err := NewFromString(fixture)
+	assert.NoError(t, err)
+	err = page.Each("a", func(a string) error {
+		log.Printf("[INFO] %s", a)
+		return nil
+	})
+	assert.NoError(t, err)
+}
+
+func TestEach2(t *testing.T) {
+	page, err := NewFromString(fixture)
+	assert.NoError(t, err)
+	err = page.Each2("b", "c", func(b, c string) error {
+		log.Printf("[INFO] %s %s", b, c)
+		return nil
+	})
+	assert.NoError(t, err)
+}
+
 func TestEach3(t *testing.T) {
 	page, err := NewFromString(fixture)
 	assert.NoError(t, err)
-	err = page.Each3("b", "c", "d", func(b, c, d string) {
+	err = page.Each3("b", "c", "d", func(b, c, d string) error {
 		log.Printf("[INFO] %s %s %s", b, c, d)
+		return nil
 	})
 	assert.NoError(t, err)
 }

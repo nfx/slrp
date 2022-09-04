@@ -189,7 +189,7 @@ func (page *Page) FindWithColumns(columns ...string) (*Table, error) {
 	return page.Tables[found], nil
 }
 
-func (page *Page) Each(a string, f func(a string)) error {
+func (page *Page) Each(a string, f func(a string) error) error {
 	table, err := page.FindWithColumns(a)
 	if err != nil {
 		return err
@@ -199,7 +199,10 @@ func (page *Page) Each(a string, f func(a string)) error {
 		offsets[header] = idx
 	}
 	for _, row := range table.rows {
-		f(row[offsets[a]])
+		err = f(row[offsets[a]])
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -223,7 +226,7 @@ func (page *Page) Each2(a, b string, f func(a, b string) error) error {
 	return nil
 }
 
-func (page *Page) Each3(a, b, c string, f func(a, b, c string)) error {
+func (page *Page) Each3(a, b, c string, f func(a, b, c string) error) error {
 	table, err := page.FindWithColumns(a, b, c)
 	if err != nil {
 		return err
@@ -234,7 +237,10 @@ func (page *Page) Each3(a, b, c string, f func(a, b, c string)) error {
 	}
 	_1, _2, _3 := offsets[a], offsets[b], offsets[c]
 	for _, row := range table.rows {
-		f(row[_1], row[_2], row[_3])
+		err = f(row[_1], row[_2], row[_3])
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

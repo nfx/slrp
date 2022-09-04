@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
 )
 
@@ -44,24 +43,24 @@ func init() {
 func freeProxyCz(ctx context.Context, h *http.Client) Src {
 	b64 := base64.StdEncoding
 	//look for "Web Proxy List"
-	log := app.Log.From(ctx)
 	fetch := func(url string) func() ([]pmux.Proxy, error) {
 		return func() (found []pmux.Proxy, err error) {
 			p, serial, err := newTablePage(ctx, h, url, "Web Proxy List")
 			if err != nil {
 				return
 			}
-			err = p.Each3("IP address", "Port", "Protocol", func(a, b, c string) {
+			err = p.Each3("IP address", "Port", "Protocol", func(a, b, c string) error {
 				enc := strings.Split(a, `"`)
 				if len(enc) != 3 {
-					return
+					return fmt.Errorf("mangled address: %s", a)
 				}
 				addr, err := b64.DecodeString(enc[1])
 				if err != nil {
-					log.Warn().Err(err).Msg("cannot demangle ip")
+					return err
 				}
 				proxy := pmux.NewProxy(fmt.Sprintf("%s:%s", addr, b), strings.ToLower(c))
 				found = append(found, proxy)
+				return nil
 			})
 			if err != nil {
 				err = skipErr(err, intEC{"serial", serial}, strEC{"url", url})

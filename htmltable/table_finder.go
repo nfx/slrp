@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -15,7 +14,7 @@ import (
 )
 
 type Page struct {
-	Tables        []*Table
+	Tables        []*tableData
 	StartHeaderAt int
 	ctx           context.Context
 }
@@ -28,8 +27,11 @@ func New(ctx context.Context, r io.Reader) (*Page, error) {
 	return tc, err
 }
 
+// mock for tests
+var goqueryNewDocumentFromReader = goquery.NewDocumentFromReader
+
 func (tc *Page) Init(r io.Reader) error {
-	document, err := goquery.NewDocumentFromReader(r)
+	document, err := goqueryNewDocumentFromReader(r)
 	if err != nil {
 		return err
 	}
@@ -55,7 +57,7 @@ func (re *ResponseError) Error() string {
 	return re.Inner.Error()
 }
 
-func NewFromHttpResponse(resp *http.Response) (*Page, error) {
+func NewFromResponse(resp *http.Response) (*Page, error) {
 	page, err := New(resp.Request.Context(), resp.Body)
 	if err != nil {
 		// wrap error with http response
@@ -81,7 +83,7 @@ func intAttrOr(s *goquery.Selection, attr string, default_ int) int {
 	return val
 }
 
-func (page *Page) parseTable(table *goquery.Selection) *Table {
+func (page *Page) parseTable(table *goquery.Selection) *tableData {
 	rows := table.Find("tr")
 	// some strange anti-scrapping techniques may happen
 	header := rows.Eq(page.StartHeaderAt)
@@ -89,7 +91,7 @@ func (page *Page) parseTable(table *goquery.Selection) *Table {
 		return nil
 	}
 	data := rows.Slice(page.StartHeaderAt+1, rows.Length())
-	nt := &Table{}
+	nt := &tableData{}
 
 	rowSpans := map[string]int{}
 	colSpans := map[string]int{}
@@ -134,7 +136,6 @@ func (page *Page) parseTable(table *goquery.Selection) *Table {
 				continue
 			}
 			newHeader = append(newHeader, text)
-
 		}
 		nt.header = newHeader
 	}
@@ -156,7 +157,7 @@ func (page *Page) parseTable(table *goquery.Selection) *Table {
 	return nt
 }
 
-func (page *Page) FindWithColumns(columns ...string) (*Table, error) {
+func (page *Page) FindWithColumns(columns ...string) (*tableData, error) {
 	// realistic page won't have this much
 	found := 0xfffffff
 	for idx, table := range page.Tables {
@@ -245,62 +246,11 @@ func (page *Page) Each3(a, b, c string, f func(a, b, c string) error) error {
 	return nil
 }
 
-func (page *Page) Fill(dst interface{}) error {
-	vc := reflect.ValueOf(dst)
-	if vc.Kind() != reflect.Chan {
-		return fmt.Errorf("channel expected, got %v", dst)
-	}
-	elem := vc.Type().Elem()
-	if elem.Kind() != reflect.Struct {
-		return fmt.Errorf("channel of structs expected, got %v", elem.Name())
-	}
-	headers := []string{}
-	fields := map[string]int{}
-	for i := 0; i < elem.NumField(); i++ {
-		field := elem.Field(i)
-		header := field.Tag.Get("header")
-		if header == "" {
-			continue
-		}
-		if field.Type.Kind() != reflect.String {
-			return fmt.Errorf("only strings are supported, got %v", field.Type.Name())
-		}
-		fields[header] = i
-		headers = append(headers, header)
-	}
-	table, err := page.FindWithColumns(headers...)
-	if err != nil {
-		return err
-	}
-	headerToStructField := map[int]int{}
-	for idx, header := range table.header {
-		field, ok := fields[header]
-		if !ok {
-			continue
-		}
-		headerToStructField[idx] = field
-	}
-	go func() {
-		// start a goroutine in background and wait for it to be consumed
-		// TODO: add context for early stop
-		for _, row := range table.rows {
-			item := reflect.New(elem).Elem()
-			for idx, field := range headerToStructField {
-				// remember, we work only with strings now
-				item.Field(field).SetString(row[idx])
-			}
-			vc.Send(item)
-		}
-		vc.Close()
-	}()
-	return nil
-}
-
-type Table struct {
+type tableData struct {
 	header []string
 	rows   [][]string
 }
 
-func (table *Table) String() string {
+func (table *tableData) String() string {
 	return fmt.Sprintf("Table[%s] (%d rows)", strings.Join(table.header, ", "), len(table.rows))
 }

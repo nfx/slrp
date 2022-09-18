@@ -157,17 +157,25 @@ func prepare(filename, forType string) (*Meta, error) {
 						tags[split[0]] = strings.Trim(split[1], `"`)
 					}
 				}
-				fieldType := x.Type.(*ast.Ident).Name
-				for _, f := range x.Names {
-					if !f.IsExported() {
-						continue
+				switch t := x.Type.(type) {
+				case *ast.Ident:
+					fieldType := t.Name
+					for _, f := range x.Names {
+						if !f.IsExported() {
+							continue
+						}
+						metas = append(metas, FieldMeta{
+							Source: forType,
+							Name:   f.Name,
+							Type:   fieldType,
+							Tags:   tags,
+						})
 					}
-					metas = append(metas, FieldMeta{
-						Source: forType,
-						Name:   f.Name,
-						Type:   fieldType,
-						Tags:   tags,
-					})
+				case *ast.SelectorExpr:
+					panic(fmt.Errorf("expr: %s, selector: %s", t.X, t.Sel))
+					// TODO: parse import
+				default:
+					panic(fmt.Errorf("dunno: %v (%T)", x.Type, x.Type))
 				}
 			}
 			return true

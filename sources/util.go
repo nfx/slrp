@@ -14,7 +14,7 @@ import (
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
 
-	"github.com/nfx/slrp/htmltable"
+	"github.com/nfx/go-htmltable"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -191,6 +191,17 @@ func (r req) Do(ctx context.Context, h httpClient) ([]byte, int, error) {
 			intEC{"serial", serial}, strEC{"expect", r.ExpectInResponse})
 	}
 	return body, serial, err
+}
+
+func init() {
+	htmltable.Logger = func(ctx context.Context, msg string, fields ...any) {
+		m := map[string]any{}
+		for i := 0; i < len(fields); i += 2 {
+			m[fmt.Sprint(fields[i])] = fields[i+1]
+		}
+		logger := app.Log.From(ctx)
+		logger.Trace().Fields(m).Msg(msg)
+	}
 }
 
 func newTablePage(ctx context.Context, h httpClient, url, expect string) (*htmltable.Page, int, error) {

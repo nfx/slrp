@@ -12,12 +12,13 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/maxmind/mmdbwriter v0.0.0-20220606140952-b99976ab4826
 	github.com/microcosm-cc/bluemonday v1.0.20
+	github.com/nfx/go-htmltable v0.2.1
 	github.com/oschwald/maxminddb-golang v1.10.0
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.8.0
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
+	golang.org/x/net v0.0.0-20220909164309-bea034e7d591
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 

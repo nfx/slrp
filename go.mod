@@ -3,7 +3,7 @@ module github.com/nfx/slrp
 go 1.18
 
 require (
-	github.com/Bogdan-D/go-socks4 v1.0.0
+	github.com/bdandy/go-socks4 v1.2.3-0.20211105172803-1ab52369f281
 	github.com/alecthomas/participle/v2 v2.0.0-alpha10
 	github.com/corpix/uarand v0.2.0
 	github.com/dop251/goja v0.0.0-20220124171016-cfb079cdc7b4
@@ -25,6 +25,7 @@ require (
 	github.com/BurntSushi/toml v1.0.0 // indirect
 	github.com/apex/log v1.9.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/bdandy/go-errors v1.2.2 // indirect
 	github.com/c4milo/unpackit v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect

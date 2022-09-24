@@ -15,7 +15,7 @@ import (
 	"github.com/nfx/slrp/sources"
 	"github.com/nfx/slrp/stats"
 
-	_ "github.com/Bogdan-D/go-socks4"
+	_ "github.com/bdandy/go-socks4"
 )
 
 type verify struct {

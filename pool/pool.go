@@ -15,7 +15,7 @@ import (
 	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/ql"
 
-	_ "github.com/Bogdan-D/go-socks4"
+	_ "github.com/bdandy/go-socks4"
 )
 
 type Pool struct {

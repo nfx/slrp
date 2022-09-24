@@ -3,20 +3,20 @@ module github.com/nfx/slrp
 go 1.18
 
 require (
-	github.com/bdandy/go-socks4 v1.2.3-0.20211105172803-1ab52369f281
 	github.com/alecthomas/participle/v2 v2.0.0-alpha10
+	github.com/bdandy/go-socks4 v1.2.3-0.20211105172803-1ab52369f281
 	github.com/corpix/uarand v0.2.0
-	github.com/dop251/goja v0.0.0-20220124171016-cfb079cdc7b4
+	github.com/dop251/goja v0.0.0-20220915101355-d79e1b125a30
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.8.0
-	github.com/maxmind/mmdbwriter v0.0.0-20220606140952-b99976ab4826
+	github.com/maxmind/mmdbwriter v0.0.0-20220830183856-fffdfa44ff0b
 	github.com/microcosm-cc/bluemonday v1.0.20
 	github.com/nfx/go-htmltable v0.2.1
 	github.com/oschwald/maxminddb-golang v1.10.0
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.8.0
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
-	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
+	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
 	golang.org/x/net v0.0.0-20220909164309-bea034e7d591
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
@@ -28,7 +28,7 @@ require (
 	github.com/bdandy/go-errors v1.2.2 // indirect
 	github.com/c4milo/unpackit v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect
+	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
@@ -46,6 +46,7 @@ require (
 	github.com/tj/go-update v2.2.4+incompatible
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
+	go4.org/netipx v0.0.0-20220812043211-3cc044ffd68d // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20211027215541-db492cf91b37 // indirect
 	golang.org/x/sys v0.0.0-20220804214406-8e32c043e418 // indirect
 	golang.org/x/text v0.3.7 // indirect

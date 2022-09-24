@@ -15,8 +15,8 @@ import (
 	"github.com/nfx/slrp/pmux"
 
 	"github.com/nfx/go-htmltable"
-
-	"github.com/PuerkitoBio/goquery"
+	
+	"golang.org/x/net/html"
 )
 
 var countries = []string{
@@ -85,22 +85,37 @@ func findLinksWithOn(ctx context.Context, h *http.Client, with, page string) (li
 }
 
 func findLinksWithInBytes(body io.Reader, serial int, with, page string) (links []string, err error) {
-	document, err := goquery.NewDocumentFromReader(body)
+	root, err := html.Parse(body)
 	if err != nil {
-		return nil, wrapError(err, intEC{"serial", serial})
+		return nil, wrapError(fmt.Errorf("find links: %w", err), intEC{"serial", serial}) 
 	}
-	document.Find("a").Each(func(i int, s *goquery.Selection) {
-		href := s.AttrOr("href", "#")
-		if !strings.Contains(href, with) {
+	var parse func(*html.Node)
+	parse = func(n *html.Node) {
+		if n == nil {
 			return
 		}
-		if href[0] == '/' {
-			url, _ := url.Parse(page)
-			// we skip the username/password for now
-			href = fmt.Sprintf("%s://%s%s", url.Scheme, url.Host, href)
+		if n.Data == "a" {
+			for _, a := range n.Attr {
+				if a.Key != "href" {
+					continue
+				}
+				href := a.Val
+				if !strings.Contains(href, with) {
+					return
+				}
+				if href[0] == '/' {
+					url, _ := url.Parse(page)
+					// we skip the username/password for now
+					href = fmt.Sprintf("%s://%s%s", url.Scheme, url.Host, href)
+				}
+				links = append(links, href)
+			}
 		}
-		links = append(links, href)
-	})
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			parse(c)
+		}
+	}
+	parse(root)
 	return
 }
 

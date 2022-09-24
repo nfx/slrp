@@ -15,7 +15,7 @@ import (
 	"github.com/nfx/slrp/pmux"
 
 	"github.com/nfx/go-htmltable"
-	
+
 	"golang.org/x/net/html"
 )
 
@@ -87,7 +87,7 @@ func findLinksWithOn(ctx context.Context, h *http.Client, with, page string) (li
 func findLinksWithInBytes(body io.Reader, serial int, with, page string) (links []string, err error) {
 	root, err := html.Parse(body)
 	if err != nil {
-		return nil, wrapError(fmt.Errorf("find links: %w", err), intEC{"serial", serial}) 
+		return nil, wrapError(err, intEC{"serial", serial})
 	}
 	var parse func(*html.Node)
 	parse = func(n *html.Node) {

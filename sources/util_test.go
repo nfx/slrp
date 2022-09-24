@@ -46,7 +46,7 @@ func (f failingReader) Read(p []byte) (n int, err error) {
 
 func Test_findLinksWithInBytes_FailingReader(t *testing.T) {
 	_, err := findLinksWithInBytes(failingReader("nope"), 1, "..", "..")
-	assert.EqualError(t, err, "find links: nope serial=1")
+	assert.EqualError(t, err, "nope serial=1")
 }
 
 func Test_findLinksWithInBytes_noLinksWith(t *testing.T) {

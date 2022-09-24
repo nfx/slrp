@@ -46,13 +46,29 @@ func (f failingReader) Read(p []byte) (n int, err error) {
 
 func Test_findLinksWithInBytes_FailingReader(t *testing.T) {
 	_, err := findLinksWithInBytes(failingReader("nope"), 1, "..", "..")
-	assert.EqualError(t, err, "nope serial=1")
+	assert.EqualError(t, err, "find links: nope serial=1")
 }
 
 func Test_findLinksWithInBytes_noLinksWith(t *testing.T) {
 	links, err := findLinksWithInBytes(bytes.NewBufferString("<a>b</a>"), 1, "..", "..")
 	assert.NoError(t, err)
 	assert.Len(t, links, 0)
+}
+
+func Test_findLinksWithInBytes_some(t *testing.T) {
+	links, err := findLinksWithInBytes(bytes.NewBufferString(`
+	<b>lorem ipsum<a href="/amet/flag">first</a></b>
+	<a href="/new">second</a>
+	<div>
+		<!-- some -->
+		<i><a href="/amet/twe">second</a>
+	</dir>
+	`), 1, "amet", "https://localhost:23412")
+	assert.NoError(t, err)
+	assert.Equal(t, []string{
+		"https://localhost:23412/amet/flag",
+		"https://localhost:23412/amet/twe",
+	}, links)
 }
 
 type staticResponseClient struct {

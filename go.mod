@@ -14,7 +14,7 @@ require (
 	github.com/nfx/go-htmltable v0.2.1
 	github.com/oschwald/maxminddb-golang v1.10.0
 	github.com/rs/zerolog v1.28.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
 	golang.org/x/net v0.0.0-20220909164309-bea034e7d591
@@ -45,12 +45,9 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tj/go-update v2.2.4+incompatible
 	github.com/ulikunitz/xz v0.5.10 // indirect
-	go4.org/intern v0.0.0-20211027215823-ae77deb06f29 // indirect
 	go4.org/netipx v0.0.0-20220812043211-3cc044ffd68d // indirect
-	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/sys v0.0.0-20220915200043-7b5979e65e41 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	inet.af/netaddr v0.0.0-20220811202034-502d2d690317 // indirect
 )

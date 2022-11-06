@@ -51,7 +51,7 @@ func ByID(id int) Source {
 
 func ByName(name string) Source {
 	for _, s := range Sources {
-		if s.name != name {
+		if s.Name() != name {
 			continue
 		}
 		return s

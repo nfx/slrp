@@ -8,6 +8,7 @@ import (
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/history"
+	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/pool"
 	"github.com/rs/zerolog/log"
@@ -60,7 +61,9 @@ func TestFlows(t *testing.T) {
 			defer srv.Close()
 
 			history := history.NewHistory()
-			pool := pool.NewPool(history)
+			pool := pool.NewPool(history, ipinfo.NoopIpInfo{
+				Country: "Zimbabwe",
+			})
 			mitm, runtime := app.MockStartSpin(
 				NewMitmProxyServer(pool, *defaultCA),
 				history, pool, tt.Via)
@@ -92,7 +95,9 @@ func TestMitm_HTTP_viaHTTP_toHTTP(t *testing.T) { // TODO: rename
 
 	transparentHttp := NewTransparentProxy()
 	history := history.NewHistory()
-	pool := pool.NewPool(history)
+	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	})
 	mitm, runtime := app.MockStartSpin(
 		NewMitmProxyServer(pool, *defaultCA),
 		history, pool, transparentHttp)

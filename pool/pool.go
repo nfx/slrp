@@ -12,6 +12,7 @@ import (
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/history"
+	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/ql"
 
@@ -19,6 +20,7 @@ import (
 )
 
 type Pool struct {
+	ipLookup      ipinfo.IpInfoGetter
 	work          chan work
 	serial        chan int
 	pressure      chan int
@@ -36,8 +38,9 @@ type httpClient interface {
 var poolWorkSize = 128
 var poolShards = 32
 
-func NewPool(history *history.History) *Pool {
+func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter) *Pool {
 	return &Pool{
+		ipLookup: ipLookup,
 		serial:   make(chan int),
 		work:     make(chan work, poolWorkSize),
 		pressure: make(chan int),
@@ -181,23 +184,59 @@ func (pool *Pool) snapshot() (entries []entry) {
 // TODO: think of rather type Facet struct { Name, Field string; Values []string }
 type Card struct {
 	Name  string
-	Value interface{}
+	Value any
 }
 
 type PoolStats struct {
 	Total   int
 	Cards   []Card
-	Entries []entry
+	Entries []ApiEntry
 }
 
-func (pool *Pool) HttpGet(r *http.Request) (interface{}, error) {
+type ApiEntry struct {
+	Proxy          pmux.Proxy
+	FirstSeen      int64
+	LastSeen       int64
+	ReanimateAfter time.Time
+	Ok             bool
+	Speed          time.Duration
+	Seen           int
+	Timeouts       int
+	Offered        int
+	Reanimated     int
+	Succeed        int
+	HourOffered    [24]int
+	HourSucceed    [24]int
+	Country        string
+}
+
+func (pool *Pool) HttpGet(r *http.Request) (any, error) {
 	filter := r.FormValue("filter")
 	if filter == "" {
 		filter = "Offered > 1 ORDER BY LastSeen DESC"
 	}
+	var tmp []ApiEntry
+	for _, v := range pool.snapshot() {
+		info := pool.ipLookup.Get(v.Proxy)
+		tmp = append(tmp, ApiEntry{
+			Proxy:          v.Proxy,
+			FirstSeen:      v.FirstSeen,
+			LastSeen:       v.LastSeen,
+			ReanimateAfter: v.ReanimateAfter,
+			Ok:             v.Ok,
+			Speed:          v.Speed,
+			Seen:           v.Seen,
+			Timeouts:       v.Timeouts,
+			Offered:        v.Offered,
+			Reanimated:     v.Reanimated,
+			Succeed:        v.Succeed,
+			HourOffered:    v.HourOffered,
+			HourSucceed:    v.HourSucceed,
+			Country:        info.Country,
+		})
+	}
 	result := PoolStats{}
-	snapshot := pool.snapshot()
-	err := ql.Execute(&snapshot, &result.Entries, filter, func(all *[]entry) {
+	err := ql.Execute(&tmp, &result.Entries, filter, func(all *[]ApiEntry) {
 		var http, https, socks4, socks5, alive, offered, succeeded int
 		result.Total = len(*all)
 		for _, v := range *all {

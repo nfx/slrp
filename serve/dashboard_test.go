@@ -8,6 +8,7 @@ import (
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/history"
+	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/pool"
 	"github.com/nfx/slrp/probe"
@@ -43,7 +44,9 @@ func TestDashboardRenders(t *testing.T) {
 
 	stats := stats.NewStats()
 	history := history.NewHistory()
-	pool := pool.NewPool(history)
+	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	})
 	probe := probe.NewProbe(stats, pool, checker)
 	refresher := refresher.NewRefresher(stats, pool, probe)
 	dashboard := NewDashboard(refresher, probe, stats)

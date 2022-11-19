@@ -79,8 +79,11 @@ func (deps dependencies) resolve(k string, inst instances) (reflect.Value, error
 	args := []reflect.Value{}
 	for _, in := range t.In {
 		found := false
+		isInIface := in.Kind() == reflect.Interface
 		for other_key, other_type := range deps {
-			if other_type.Out != in {
+			inImplsType := isInIface && other_type.Out.Implements(in)
+			inEqualsType := other_type.Out == in
+			if !inImplsType && !inEqualsType {
 				continue
 			}
 			dep, err := deps.resolve(other_key, inst)

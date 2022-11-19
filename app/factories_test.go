@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,4 +50,18 @@ func TestCannotFindDependency(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = deps.resolve("a", instances{})
 	assert.EqualError(t, err, "cannot find *app.serviceA for a")
+}
+
+func TestInterfaceDependency(t *testing.T) {
+	deps, err := Factories{
+		"a": func(b io.Reader) *mainServer {
+			return nil
+		},
+		"b": func() *strings.Reader {
+			return strings.NewReader("abc")
+		},
+	}.dependencies()
+	assert.NoError(t, err)
+	_, err = deps.resolve("a", instances{})
+	assert.NoError(t, err)
 }

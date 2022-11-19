@@ -16,3 +16,4 @@ coverage.txt
 *.output
 
 slrp
+package-lock.json 

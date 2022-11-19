@@ -23,7 +23,9 @@ func TestBlacklist(t *testing.T) {
 
 	stats := stats.NewStats()
 	history := history.NewHistory()
-	pool := pool.NewPool(history)
+	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	})
 	probe := NewProbe(stats, pool, checker)
 
 	runtime := app.Singletons{

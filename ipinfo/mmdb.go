@@ -156,6 +156,10 @@ func (i *Lookup) Available() bool {
 	return i.city != nil
 }
 
+type IpInfoGetter interface {
+	Get(p pmux.Proxy) Info
+}
+
 func (i *Lookup) Get(p pmux.Proxy) (info Info) {
 	if !i.Available() {
 		return info
@@ -169,4 +173,10 @@ func (i *Lookup) Get(p pmux.Proxy) (info Info) {
 	info.Country = mm.Country.ISOCode
 	info.City = mm.City.Names.English
 	return info
+}
+
+type NoopIpInfo Info
+
+func (i NoopIpInfo) Get(_ pmux.Proxy) Info {
+	return Info(i)
 }

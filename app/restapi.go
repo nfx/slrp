@@ -12,15 +12,15 @@ import (
 )
 
 type httpGet interface {
-	HttpGet(*http.Request) (interface{}, error)
+	HttpGet(*http.Request) (any, error)
 }
 
 type httpGetByID interface {
-	HttpGetByID(string, *http.Request) (interface{}, error)
+	HttpGetByID(string, *http.Request) (any, error)
 }
 
 type httpDeleteByID interface {
-	HttpDeletetByID(string, *http.Request) (interface{}, error)
+	HttpDeletetByID(string, *http.Request) (any, error)
 }
 
 type errorBody struct {
@@ -78,7 +78,7 @@ func (hr *httpResource) recover(rw http.ResponseWriter) {
 
 func (hr *httpResource) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	defer hr.recover(rw)
-	var response interface{}
+	var response any
 	var err error
 	if hr.get != nil {
 		response, err = hr.get.HttpGet(r)

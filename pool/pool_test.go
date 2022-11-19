@@ -14,6 +14,7 @@ import (
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/history"
 	"github.com/nfx/slrp/internal/qa"
+	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pmux"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,7 +25,9 @@ func init() {
 }
 
 func TestSimpleAddAndRemove(t *testing.T) {
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer runtime.Stop()
 
 	ctx := context.Background()
@@ -38,7 +41,9 @@ func TestSimpleAddAndRemove(t *testing.T) {
 
 func TestMarshallAndUnmarshall(t *testing.T) {
 	history := history.NewHistory()
-	pool, first := app.MockStartSpin(NewPool(history))
+	pool, first := app.MockStartSpin(NewPool(history, ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer first.Stop()
 
 	ctx := context.Background()
@@ -49,7 +54,9 @@ func TestMarshallAndUnmarshall(t *testing.T) {
 	raw, err := pool.MarshalBinary()
 	assert.NoError(t, err)
 
-	loaded := NewPool(history)
+	loaded := NewPool(history, ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	})
 	err = loaded.UnmarshalBinary(raw)
 	assert.NoError(t, err)
 
@@ -70,7 +77,9 @@ func (r staticResponseClient) Do(req *http.Request) (*http.Response, error) {
 }
 
 func TestRoundTrip(t *testing.T) {
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer runtime.Stop()
 
 	pool.client = staticResponseClient{
@@ -98,7 +107,9 @@ func TestSession(t *testing.T) {
 	proxy := pmux.Socks4Proxy("127.0.0.1:1")
 
 	hist := history.NewHistory()
-	pool, runtime := app.MockStartSpin(NewPool(hist), hist)
+	pool, runtime := app.MockStartSpin(NewPool(hist, ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}), hist)
 	defer runtime.Stop()
 
 	ctx := context.Background()
@@ -125,7 +136,9 @@ func TestSession(t *testing.T) {
 }
 
 func TestHttpGet(t *testing.T) {
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer runtime.Stop()
 
 	ctx := context.Background()
@@ -141,6 +154,7 @@ func TestHttpGet(t *testing.T) {
 	assert.NoError(t, err)
 	stats := res.(PoolStats)
 	assert.Equal(t, 1, stats.Total)
+	assert.Equal(t, "Zimbabwe", stats.Entries[0].Country)
 }
 
 func load(t *testing.T) *Pool {
@@ -150,7 +164,9 @@ func load(t *testing.T) *Pool {
 		t.Fatal(err)
 	}
 	dec := gob.NewDecoder(f)
-	pool := NewPool(history.NewHistory())
+	pool := NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	})
 	dec.Decode(pool)
 	return pool
 }
@@ -200,7 +216,9 @@ func TestSelection(t *testing.T) {
 }
 
 func TestReceiveHalt(t *testing.T) {
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer runtime.Stop()
 
 	for i := 0; i < 33; i++ {
@@ -212,7 +230,9 @@ func TestReceiveHalt(t *testing.T) {
 }
 
 func TestCounterOnHalt(t *testing.T) {
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer runtime.Stop()
 
 	serial := <-pool.serial
@@ -234,7 +254,9 @@ func TestCounterOnHalt(t *testing.T) {
 }
 
 func TestRandomFast(t *testing.T) {
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer runtime.Stop()
 
 	x := pmux.HttpProxy("127.0.0.1:1024")
@@ -250,7 +272,9 @@ func TestRandomFast(t *testing.T) {
 }
 
 func TestRoundTripCtxErr(t *testing.T) {
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer runtime.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -264,7 +288,9 @@ func TestRoundTripCtxErr(t *testing.T) {
 }
 
 func TestRoundTripNilResponseFromOut(t *testing.T) {
-	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory()))
+	pool, runtime := app.MockStartSpin(NewPool(history.NewHistory(), ipinfo.NoopIpInfo{
+		Country: "Zimbabwe",
+	}))
 	defer runtime.Stop()
 
 	ctx, cancel := context.WithCancel(context.Background())

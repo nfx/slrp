@@ -12,6 +12,14 @@ tr.probe-running {
   background-repeat: no-repeat;
 }
 
+.col-provider a {
+  width: 150px;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .probes table {
   margin-bottom: 0;
 }
@@ -78,11 +86,20 @@ a {
   font-family: var(--bs-font-monospace)!important;
 }
 
-@media screen and (max-width: 500px) {
-  .size { display:none;}
-  .proxy { display:none;}
-  .took { display:none; }
+@media screen and (max-width: 1000px) {
+  .col-provider { display: none; }
+  .col-rate { display: none; }
+}
 
+@media screen and (max-width: 780px) {
+  .col-offered { display:none; }
+  .text-muted { display: none; }
+}
+
+@media screen and (max-width: 500px) {
+  .size { display: none;}
+  .proxy { display: none;}
+  .took { display: none; }
   .col-Exclusive { display: none; }
   .col-Dirty { display: none; }
   .col-Contribution { display: none; }

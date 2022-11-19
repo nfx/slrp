@@ -208,6 +208,8 @@ type ApiEntry struct {
 	HourOffered    [24]int
 	HourSucceed    [24]int
 	Country        string
+	Provider       string
+	ASN            uint16
 }
 
 func (pool *Pool) HttpGet(r *http.Request) (any, error) {
@@ -233,6 +235,8 @@ func (pool *Pool) HttpGet(r *http.Request) (any, error) {
 			HourOffered:    v.HourOffered,
 			HourSucceed:    v.HourSucceed,
 			Country:        info.Country,
+			Provider:       info.Provider,
+			ASN:            info.ASN,
 		})
 	}
 	result := PoolStats{}

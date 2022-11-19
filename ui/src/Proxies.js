@@ -1,4 +1,5 @@
 import { Card, LiveFilter, TimeDiff, http, IconHeader, useTitle } from './util'
+import { Countries } from './countries';
 import { useState } from 'react';
 
 export default function Proxies() {
@@ -15,12 +16,14 @@ export default function Proxies() {
         <thead>
           <tr className="text-uppercase text-muted">
             <th>Proxy</th>
+            <IconHeader col="country" icon="flag country" title="Country" />
+            <IconHeader col="provider" icon="hdd-network provider" title="Provider" />
             <IconHeader icon='speedometer2' title='Speed' />
             <IconHeader icon='check2-circle' title='Ok' />
-            <IconHeader icon='activity' title='Rate' />
-            <th>Offered</th>
-            <th>Succeed</th>
-            <th />
+            <IconHeader col="rate" icon='activity' title='Rate' />
+            <th className='col-offered'>Offered</th>
+            <th className='col-succeed'>Succeed</th>
+            <th className='col-remove' />
           </tr>
         </thead>
         <tbody>
@@ -42,7 +45,7 @@ function timeTook(duration) {
 
 function Entry(props) {
   const proxy = props.Proxy
-  const {FirstSeen, LastSeen, Timeouts, Ok, ReanimateAfter, Speed} = props
+  const {FirstSeen, LastSeen, Timeouts, Ok, ReanimateAfter, Speed, Country, Provider, ASN} = props
   const removeProxy = e => {
     http.delete(`/probe/${proxy.replace("//", '')}`)
     return false
@@ -56,6 +59,12 @@ function Entry(props) {
         {proxy}
       </a> <TimeDiff ts={FirstSeen*1000} title='First seen' />
     </td>
+    <td className='col-country' 
+      title={Countries[Country]?.name}>{Countries[Country]?.flag}</td>
+    <td className='col-provider text-muted'>
+      <a href={`https://ipasn.com/asn-downstreams/${ASN}`} 
+        title={Provider} rel='noreferrer' target='_blank'>{Provider}</a>
+    </td>
     <td>{timeTook(Speed)}</td>
     <td>
       {Ok && <i className='link-success bi bi-check2-circle' />}
@@ -63,13 +72,13 @@ function Entry(props) {
         <i className="link-warning bi bi-alarm" /> <TimeDiff ts={ReanimateAfter} title='Reanimate after' />
       </span>}
     </td>
-    <td>
+    <td className='col-rate'>
       <HourSuccessRate {...props} />
     </td>
-    <td>{props.Offered} {Timeouts > 0 && 
+    <td className='col-offered'>{props.Offered} {Timeouts > 0 && 
       <sup className='text-muted'><i className='bi bi-hourglass' />{Timeouts}</sup>}</td>
-    <td>{props.Succeed} <TimeDiff ts={LastSeen*1000} title='Last seen' /></td>
-    <td>
+    <td className='col-succeed'>{props.Succeed} <TimeDiff ts={LastSeen*1000} title='Last seen' /></td>
+    <td className='col-remove'>
       <a href='#remove' onClick={removeProxy}>x</a>
     </td>
   </tr>

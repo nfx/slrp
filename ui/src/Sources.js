@@ -79,7 +79,7 @@ function tinyNum(n) {
 }
 
 function Probe(props) {
-  let {Name, State, Progress, Failure, Updated, EstFinish, NextRefresh, UrlPrefix, Homepage} = props
+  let {Name, State, Progress, Failure, EstFinish, NextRefresh, UrlPrefix, Homepage} = props
   let style = {}
   let rowClass = ""
   let running = State === "running"

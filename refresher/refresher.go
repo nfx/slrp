@@ -25,11 +25,60 @@ func init() {
 }
 
 type progress struct {
-	ctx context.Context
-	Err error
+	Source int
+	Len    int
 }
 
-type plan map[int]time.Duration
+type finish struct {
+	Source int
+	ctx    context.Context
+	Err    error
+}
+
+type status struct {
+	Delay   time.Duration
+	Started time.Time
+	Adds    [15]time.Time
+	Added   int
+	Len     int
+}
+
+func (s *status) Progress() int {
+	if s.Len == 0 {
+		return 0
+	}
+	return int(100 * float32(s.Added) / float32(s.Len))
+}
+
+func (s *status) EstFinish(queued int) time.Time {
+	now := time.Now()
+	var measures int
+	var maxTime time.Time
+	var totalDur time.Duration
+	for i := 0; i < len(s.Adds)-1; i++ {
+		a := s.Adds[i]
+		b := s.Adds[i+1]
+		if a.After(b) || a.Equal(b) {
+			continue
+		}
+		if b.After(maxTime) {
+			maxTime = b
+		}
+		totalDur += b.Sub(a)
+		measures++
+	}
+	durPerItem := 0*time.Minute
+	if s.Added > 0 && measures > 0 {
+		recentDurPerItem := totalDur / time.Duration(measures)
+		allDurPerItem := now.Sub(s.Started) / time.Duration(s.Added)
+		durPerItem = (recentDurPerItem + allDurPerItem) / 2
+	}
+	remaining := queued + s.Len - s.Added
+	padding := now.Sub(maxTime)
+	return now.Add(durPerItem * time.Duration(remaining)).Add(padding)
+}
+
+type plan map[int]*status
 
 type Refresher struct {
 	probe    probeContract
@@ -38,6 +87,7 @@ type Refresher struct {
 	client   *http.Client
 	next     atomic.Value
 	progress chan progress
+	finish   chan finish
 	snapshot chan chan plan
 	sources  func() []sources.Source
 	plan     plan
@@ -62,10 +112,11 @@ func NewRefresher(stats *stats.Stats, pool *pool.Pool, probe *probe.Probe) *Refr
 		probe:    probe,
 		pool:     pool,
 		stats:    stats,
-		progress: make(chan progress, 1),
+		finish:   make(chan finish, 1),
+		progress: make(chan progress),
 		snapshot: make(chan chan plan),
 		plan:     plan{},
-		sources:  func() []sources.Source {
+		sources: func() []sources.Source {
 			return sources.Sources
 		},
 		client: &http.Client{
@@ -99,7 +150,27 @@ func (ref *Refresher) main(ctx app.Context) {
 				snapshot[k] = v
 			}
 			res <- snapshot
-		case f := <-ref.progress:
+		case p := <-ref.progress:
+			s, ok := ref.plan[p.Source]
+			if !ok {
+				s = &status{}
+				ref.plan[p.Source] = s
+			}
+			if p.Len == 0 {
+				s.Started = time.Now()
+				s.Adds = [15]time.Time{}
+				s.Added = 0
+			}
+			s.Len = p.Len
+			s.Adds[s.Added%len(s.Adds)] = time.Now()
+			s.Added++
+			ctx.Heartbeat()
+		case f := <-ref.finish:
+			s, ok := ref.plan[f.Source]
+			if ok {
+				s.Added = 0
+				s.Len = 0
+			}
 			log := app.Log.From(f.ctx)
 			log.Info().Err(f.Err).Msg("finished refresh")
 			ctx.Heartbeat()
@@ -207,7 +278,11 @@ func (ref *Refresher) checkSources(ctx context.Context, trigger time.Time) time.
 		}
 		if nextSourceUpdate.After(trigger) {
 			delay := nextSourceUpdate.Sub(trigger)
-			ref.plan[s.ID] = delay
+			_, ok := ref.plan[s.ID]
+			if !ok {
+				ref.plan[s.ID] = &status{}
+			}
+			ref.plan[s.ID].Delay = delay // FIXME: data race?..
 			log.Trace().
 				Stringer("wait", delay).
 				Msg("still have to wait")
@@ -233,11 +308,13 @@ func (ref *Refresher) refresh(ctx context.Context, client *http.Client, source s
 	}
 	ref.stats.Launch(source.ID)
 	feed := source.Feed(ctx, client)
+	ref.progress <- progress{source.ID, 0}
 	for proxy := range feed.Generate(ctx) {
 		ctx := app.Log.WithStringer(ctx, "proxy", proxy)
 		if !ref.probe.Schedule(ctx, proxy, source.ID) {
 			log.Warn().Msg("failed to schedule") // TODO: this happens too often
 		}
+		ref.progress <- progress{source.ID, feed.Len()}
 
 		// if proxy.Proto == pmux.HTTP {
 		// 	if !ref.probe.Schedule(ctx, pmux.Proxy{
@@ -261,5 +338,5 @@ func (ref *Refresher) refresh(ctx context.Context, client *http.Client, source s
 	// TODO: maybe update failed state from a secong goroutine?...
 	ref.stats.Finish(source.ID, feed.Err())
 	log.Info().Msg("finished refresh")
-	ref.progress <- progress{ctx, feed.Err()}
+	ref.finish <- finish{source.ID, ctx, feed.Err()}
 }

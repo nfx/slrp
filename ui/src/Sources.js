@@ -79,7 +79,7 @@ function tinyNum(n) {
 }
 
 function Probe(props) {
-  let {Name, State, Progress, Failure, Updated, NextRefresh, UrlPrefix, Homepage} = props
+  let {Name, State, Progress, Failure, Updated, EstFinish, NextRefresh, UrlPrefix, Homepage} = props
   let style = {}
   let rowClass = ""
   let running = State === "running"
@@ -89,7 +89,7 @@ function Probe(props) {
     style.backgroundImage = lg
   }
   let refresh = running 
-    ? <TimeDiff ts={Updated} title='Updated' />
+    ? <TimeDiff ts={EstFinish} title='Estimated finish' />
     : <TimeDiff ts={NextRefresh} title='Next Refresh' />
   let icons = {
     'running': <i className="spinner-border spinner-border-sm text-success" />,

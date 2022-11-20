@@ -58,6 +58,7 @@ type src struct {
 	Blacklisted  int
 	Ignored      int
 	Updated      time.Time
+	EstFinish    time.Time
 	NextRefresh  time.Time
 }
 
@@ -120,6 +121,15 @@ func (d *dashboard) HttpGet(_ *http.Request) (interface{}, error) {
 			urlPrefix = s.Homepage
 		}
 		stat := stats[s.ID]
+		var progress int
+		var delay time.Duration
+		estFinish := time.Now()
+		status, ok := plan[s.ID]
+		if ok {
+			delay = status.Delay
+			progress = status.Progress()
+			estFinish = status.EstFinish(stat.Scheduled + stat.New + stat.Probing)
+		}
 		srcs = append(srcs, src{
 			Name:         s.Name(),
 			Homepage:     s.Homepage,
@@ -130,7 +140,7 @@ func (d *dashboard) HttpGet(_ *http.Request) (interface{}, error) {
 			Exclusive:    exclusive[s.ID],
 			State:        string(stat.State),
 			Failure:      stat.Failure,
-			Progress:     stat.Progress,
+			Progress:     progress,
 			Scheduled:    stat.Scheduled,
 			New:          stat.New,
 			Probing:      stat.Probing,
@@ -139,7 +149,8 @@ func (d *dashboard) HttpGet(_ *http.Request) (interface{}, error) {
 			Blacklisted:  stat.Blacklisted,
 			Ignored:      stat.Ignored,
 			Updated:      stat.Updated,
-			NextRefresh:  stat.Updated.Add(plan[s.ID]),
+			EstFinish:    estFinish,
+			NextRefresh:  stat.Updated.Add(delay),
 		})
 	}
 	reverify, ok := stats[0]

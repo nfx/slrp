@@ -39,7 +39,7 @@ type Probe struct {
 }
 
 func NewProbe(stats *stats.Stats, p *pool.Pool, c checker.Checker) *Probe {
-	buffer := 64 // let's try unbuffered channels to find bugs quicker
+	buffer := 512 // TODO: make configurable
 	probing := make(chan verify, buffer)
 	return &Probe{
 		pool:    p,
@@ -61,7 +61,7 @@ func (p *Probe) Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool
 
 func (p *Probe) Start(ctx app.Context) {
 	go p.state.main(ctx)
-	workers := 16
+	workers := 128 // TODO: make configurable
 	for w := 0; w < workers; w++ {
 		go p.worker(ctx.Ctx())
 	}

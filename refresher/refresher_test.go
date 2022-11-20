@@ -35,7 +35,9 @@ func TestSnapshotForDashboard(t *testing.T) {
 	ref := withStats(&Refresher{
 		snapshot: make(chan chan plan),
 		plan: plan{
-			1: 10 * time.Second,
+			1: &status{
+				Delay: 10 * time.Second,
+			},
 		},
 		sources: func() []sources.Source {
 			// we don't need any sources for this test
@@ -45,16 +47,18 @@ func TestSnapshotForDashboard(t *testing.T) {
 	defer app.MockStart(ref)()
 
 	plan := ref.Snapshot()
-	assert.Equal(t, 10*time.Second, plan[1])
+	assert.Equal(t, 10*time.Second, plan[1].Delay)
 }
 
 func TestSourcSomeFeeds(t *testing.T) {
 	counter := counterProbe{}
-	progress := make(chan progress)
+	finish := make(chan finish)
 	ref := withStats(&Refresher{
 		probe:    counter,
-		progress: progress,
+		finish:   finish,
+		progress: make(chan progress),
 		snapshot: make(chan chan plan),
+		plan:     plan{},
 		sources: func() []sources.Source {
 			return []sources.Source{
 				stubSource[0],
@@ -63,14 +67,14 @@ func TestSourcSomeFeeds(t *testing.T) {
 		},
 	})
 	defer app.MockStart(ref)()
-
-	<-progress
+	<-finish
 	assert.Equal(t, 1, counter[2])
 }
 
 func TestProgressPicksUp(t *testing.T) {
 	ref := withStats(&Refresher{
 		progress: make(chan progress),
+		finish:   make(chan finish),
 		pool:     nilPool{},
 		snapshot: make(chan chan plan),
 		sources: func() []sources.Source {
@@ -79,12 +83,11 @@ func TestProgressPicksUp(t *testing.T) {
 	})
 	defer app.MockStart(ref)()
 
-	ref.progress <- progress{
+	ref.finish <- finish{
 		ctx: context.Background(),
 		Err: nil,
 	}
 }
-
 
 func TestUpcomingDetails(t *testing.T) {
 	ref := withStats(&Refresher{
@@ -156,10 +159,12 @@ func TestUpcomingNewSourceAppeared(t *testing.T) {
 }
 
 func TestCheckSourcesUnrunSchedules(t *testing.T) {
+	finish := make(chan finish)
 	progress := make(chan progress)
 	counter := counterProbe{}
 	ref := withStats(&Refresher{
 		probe:    counter,
+		finish:   finish,
 		progress: progress,
 		snapshot: make(chan chan plan),
 		sources: func() []sources.Source {
@@ -172,8 +177,9 @@ func TestCheckSourcesUnrunSchedules(t *testing.T) {
 	trigger := time.Now()
 	next := ref.checkSources(context.Background(), trigger)
 	assert.Equal(t, trigger.Add(1*time.Minute), next)
-
 	<-progress
+	<-progress
+	<-finish
 	assert.Equal(t, 1, counter[2])
 }
 
@@ -213,10 +219,12 @@ func TestCheckSourcesFailed(t *testing.T) {
 }
 
 func TestRefreshSessionSource(t *testing.T) {
+	finish := make(chan finish)
 	progress := make(chan progress)
 	counter := counterProbe{}
 	ref := withStats(&Refresher{
 		probe:    counter,
+		finish:   finish,
 		progress: progress,
 		pool:     nilPool{},
 		snapshot: make(chan chan plan),
@@ -228,7 +236,8 @@ func TestRefreshSessionSource(t *testing.T) {
 	})
 	trigger := time.Now()
 	ref.checkSources(context.Background(), trigger)
-
 	<-progress
+	<-progress
+	<-finish
 	assert.Equal(t, 1, counter[3])
 }

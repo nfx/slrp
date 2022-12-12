@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/alecthomas/participle/v2 v2.0.0-alpha10
-	github.com/bdandy/go-socks4 v1.2.3-0.20211105172803-1ab52369f281
+	github.com/bdandy/go-socks4 v1.2.3-0.20221207085910-2a872f4251f8
 	github.com/corpix/uarand v0.2.0
 	github.com/dop251/goja v0.0.0-20220915101355-d79e1b125a30
 	github.com/ghodss/yaml v1.0.0

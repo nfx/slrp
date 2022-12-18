@@ -9,10 +9,14 @@ import (
 )
 
 type Source struct {
-	ID           int
-	name         string
-	Frequency    time.Duration
-	Seed         bool
+	ID        int
+	name      string
+	Frequency time.Duration
+
+	// Seed sources use http.DefaultClient to retrieve data,
+	// all other sources use proxy pool to fetch pages.
+	Seed bool
+
 	Session      bool
 	Homepage     string
 	UrlPrefix    string

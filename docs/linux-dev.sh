@@ -33,3 +33,7 @@ mitm:
   idle_timeout: 15s
   write_timeout: 15s
 EOF
+
+# https://community.torproject.org/relay/setup/bridge/debian-ubuntu/
+# See more: https://github.com/kevoreilly/CAPEv2/blob/master/installer/cape2.sh#L783-L802
+sudo apt-get install tor -y

@@ -6,7 +6,6 @@ import (
 	"time"
 )
 
-// TODO: make source name from domain name by default and refer to source by ID in state
 func init() {
 	Sources = append(Sources, Source{
 		ID:        8,
@@ -33,22 +32,6 @@ func init() {
 		Frequency: 3 * time.Hour,
 		Seed:      true,
 		Feed:      proxylists,
-	}, Source{
-		ID:        12,
-		name:      "speedx",
-		Homepage:  "https://github.com/TheSpeedX/PROXY-List",
-		UrlPrefix: "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List",
-		Frequency: 3 * time.Hour,
-		Seed:      true,
-		Feed:      theSpeedX,
-	}, Source{
-		ID:        17,
-		name:      "jetkai",
-		Homepage:  "https://github.com/jetkai/proxy-list",
-		UrlPrefix: "https://raw.githubusercontent.com/jetkai/proxy-list",
-		Frequency: 2 * time.Hour,
-		Seed:      true,
-		Feed:      jetkaiProxyBuilder,
 	}, Source{
 		ID:        18,
 		Homepage:  "https://sslproxies.org/",
@@ -79,28 +62,10 @@ func sslProxies(ctx context.Context, h *http.Client) Src {
 	return merged().refresh(f("/", "https"))
 }
 
-func jetkaiProxyBuilder(ctx context.Context, h *http.Client) Src {
-	// aggregated by https://github.com/jetkai/proxy-builder-2
-	f := regexFeedBase(ctx, h, "https://raw.githubusercontent.com/jetkai/proxy-list", ":")
-	return merged().
-		refresh(f("/main/online-proxies/txt/proxies-http.txt", "http")).
-		refresh(f("/main/online-proxies/txt/proxies-https.txt", "https")).
-		refresh(f("/main/online-proxies/txt/proxies-socks4.txt", "socks4")).
-		refresh(f("/main/online-proxies/txt/proxies-socks5.txt", "socks5"))
-}
-
 func proxylists(ctx context.Context, h *http.Client) Src {
 	f := regexFeedBase(ctx, h, "http://proxylists.net", ":")
 	return merged().
 		refresh(f("/http_highanon.txt", "http")).
-		refresh(f("/socks4.txt", "socks4")).
-		refresh(f("/socks5.txt", "socks5"))
-}
-
-func theSpeedX(ctx context.Context, h *http.Client) Src {
-	f := regexFeedBase(ctx, h, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master", ":")
-	return merged().
-		refresh(f("/http.txt", "http")).
 		refresh(f("/socks4.txt", "socks4")).
 		refresh(f("/socks5.txt", "socks5"))
 }

@@ -72,11 +72,11 @@ func init() {
 		regexSource(64, "https://www.juproxy.com", ":", map[string]string{
 			"http": "/free_api",
 		}, true, 1*time.Hour),
-		regexSource(65, "https://www.proxyscan.io/", ":", map[string]string{
-			"http":   "download?type=http",
-			"https":  "download?type=https",
-			"socks4": "download?type=socks4",
-			"socks5": "download?type=socks5",
+		regexSource(65, "https://www.proxyscan.io", ":", map[string]string{
+			"http":   "/download?type=http",
+			"https":  "/download?type=https",
+			"socks4": "/download?type=socks4",
+			"socks5": "/download?type=socks5",
 		}, true, 1*time.Hour),
 	)
 }

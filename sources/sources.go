@@ -1,18 +1,11 @@
 package sources
 
 import (
-	"context"
-	"net/http"
 	"time"
 )
 
 func init() {
 	Sources = append(Sources, Source{
-		ID:        8,
-		Homepage:  "https://free-proxy-list.net",
-		Frequency: 30 * time.Minute,
-		Feed:      httpProxyRegexFeed("https://free-proxy-list.net", "Proxy List"),
-	}, Source{
 		ID:        9,
 		Homepage:  "http://foxtools.ru/",
 		UrlPrefix: "http://api.foxtools.ru",
@@ -27,75 +20,16 @@ func init() {
 		Seed:      true,
 		Feed:      httpProxyRegexFeed("https://sunny9577.github.io/proxy-scraper/proxies.txt", ":"),
 	}, Source{
-		ID:        11,
-		Homepage:  "http://proxylists.net",
-		Frequency: 3 * time.Hour,
-		Seed:      true,
-		Feed:      proxylists,
-	}, Source{
-		ID:        18,
-		Homepage:  "https://sslproxies.org/",
-		Frequency: 30 * time.Minute,
-		Feed:      sslProxies,
-	}, Source{
 		ID:        19,
 		name:      "anonymous-free-proxy",
 		Homepage:  "https://free-proxy-list.net/anonymous-proxy.html",
 		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/anonymous-proxy.html", "Anonymous Proxy"),
 	}, Source{
-		ID:        20,
-		Homepage:  "https://us-proxy.org",
-		Frequency: 30 * time.Minute,
-		Feed:      httpProxyRegexFeed("https://www.us-proxy.org", "US Proxy List"),
-	}, Source{
 		ID:        21,
 		name:      "uk-proxy",
 		Homepage:  "https://free-proxy-list.net/uk-proxy.html",
 		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/uk-proxy.html", "UK Proxy List"),
-	}, Source{
-		ID:        55,
-		Homepage:  "https://www.proxy-list.download/",
-		Frequency: 3 * time.Hour,
-		Seed:      true,
-		Feed:      proxyListDownload,
-	}, Source{
-		ID:        56,
-		Homepage:  "https://www.freeproxychecker.com",
-		Frequency: 12 * time.Hour,
-		Seed:      true,
-		Feed:      freeproxychecker,
-
 	})
-}
-
-func sslProxies(ctx context.Context, h *http.Client) Src {
-	f := regexFeedBase(ctx, h, "http://sslproxies.org/", "SSL Proxy List")
-	return merged().refresh(f("/", "https"))
-}
-
-func proxylists(ctx context.Context, h *http.Client) Src {
-	f := regexFeedBase(ctx, h, "http://proxylists.net", ":")
-	return merged().
-		refresh(f("/http_highanon.txt", "http")).
-		refresh(f("/socks4.txt", "socks4")).
-		refresh(f("/socks5.txt", "socks5"))
-}
-
-func proxyListDownload(ctx context.Context, h *http.Client) Src {
-	f := regexFeedBase(ctx, h, "https://www.proxy-list.download/api/v1/get?type=", ":")
-	return merged().
-		refresh(f("http", "http")).
-		refresh(f("https", "https")).
-		refresh(f("socks4", "socks4")).
-		refresh(f("socks5", "socks5"))
-}
-
-func freeproxychecker(ctx context.Context, h *http.Client) Src {
-	f := regexFeedBase(ctx, h, "https://www.freeproxychecker.com/result/", ":")
-	return merged().
-		refresh(f("socks4_proxies.txt", "socks4")).
-		refresh(f("socks5_proxies.txt", "socks5")).
-		refresh(f("http_proxies.txt", "http"))
 }

@@ -31,7 +31,7 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 
 	resp, err := h.Get(megaproxylistUrl)
 	if err != nil {
-		fmt.Println(err)
+        log.Error().Msg(err.Error())
 		return
 	}
 	if resp.Body == nil {

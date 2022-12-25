@@ -15,7 +15,7 @@ import (
 
 func init() {
 	Sources = append(Sources, Source{
-		ID:        69,
+		ID:        65,
 		Homepage:  "https://www.megaproxylist.net",
 		Frequency: 24 * time.Hour,
 		Seed:      true,
@@ -38,6 +38,7 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 
 	resp, err := http.Get(megaproxylistUrl)
 	if err != nil {
+        fmt.Println(err)
 		return
 	}
 	if resp.Body == nil {
@@ -72,7 +73,6 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 			country:   record[2],
 			reability: record[3],
 		}
-		fmt.Println(fmt.Sprintf("%s:%s", proxy.address, proxy.port))
 		found = append(found,
 			pmux.NewProxy(fmt.Sprintf("%s:%s", proxy.address, proxy.port),
 				"http"))

@@ -9,13 +9,10 @@ import (
 )
 
 func TestMegaproxylist(t *testing.T) {
-	server := httptest.NewServer(http.FileServer(http.Dir(
-		fmt.Sprintf("./testdata/megaproxylist/test.zip"),
-	)))
+	server := httptest.NewServer(http.FileServer(http.Dir("./testdata/megaproxylist")))
 	defer server.Close()
-	megaproxylistUrl = fmt.Sprintf("%s/page", server.URL)
-	fmt.Println(megaproxylistUrl)
+	megaproxylistUrl = fmt.Sprintf("%s/test.zip", server.URL)
 	testSource(t, func(ctx context.Context) Src {
-		return ByID(69).Feed(ctx, http.DefaultClient)
+		return ByID(65).Feed(ctx, http.DefaultClient)
 	}, 3) // 3 is fake
 }

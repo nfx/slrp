@@ -31,12 +31,10 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 
 	resp, err := h.Get(megaproxylistUrl)
 	if err != nil {
-        log.Error().Msg(err.Error())
-		return
+		return nil, err
 	}
 	if resp.Body == nil {
-		log.Error().Msg("Empty body")
-		return found, nil
+		return nil, fmt.Errorf("empty body")
 	}
 	defer resp.Body.Close()
 	csvData := unzipInMemory(ctx, resp)
@@ -46,7 +44,7 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 
     // trick to skip header
 	if _, err := r.Read(); err != nil {
-		return found, nil
+		return nil, err
 	}
 
 	for {

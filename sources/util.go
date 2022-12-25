@@ -248,7 +248,6 @@ func mustParseInt(value string) int {
 var accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
 
 func unzipInMemory(ctx context.Context, resp *http.Response) []byte {
-	// log := app.Log.From(ctx)
 	body, err := ioutil.ReadAll(resp.Body)
 	/*
 	   if err != nil {
@@ -262,10 +261,9 @@ func unzipInMemory(ctx context.Context, resp *http.Response) []byte {
 	}
 	// Read all the files from zip archive
 	for _, zipFile := range zipReader.File {
-		fmt.Println("Reading file:", zipFile.Name)
 		unzippedFileBytes, err := readZipFile(zipFile)
 		if err != nil {
-			fmt.Println(err)
+            //log.Error(err)
 			continue
 		}
 

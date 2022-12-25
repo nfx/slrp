@@ -34,9 +34,9 @@ var megaproxylistUrl = fmt.Sprintf("https://www.megaproxylist.net/download/megap
 
 // Scrapes https://www.megaproxylist.net
 func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error) {
-	log.Info().Msg("Loading proxy checker database")
+	log.Info().Msg("Loading proxy Megaproxy database")
 
-	resp, err := http.Get(megaproxylistUrl)
+	resp, err := h.Get(megaproxylistUrl)
 	if err != nil {
         fmt.Println(err)
 		return
@@ -45,14 +45,14 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 		return nil, fmt.Errorf("body is nil")
 	}
 	defer resp.Body.Close()
-	csv_data := unzipInMemory(ctx, resp)
-	r := csv.NewReader(bytes.NewBuffer(csv_data))
+	csvData := unzipInMemory(ctx, resp)
+	r := csv.NewReader(bytes.NewBuffer(csvData))
 	r.Comma = ';'
 	r.TrimLeadingSpace = true
 
 	// trick to skip header
 	if _, err := r.Read(); err != nil {
-		panic(err)
+		return found, nil
 	}
 
 	for {

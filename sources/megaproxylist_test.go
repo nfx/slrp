@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 func TestMegaproxylist(t *testing.T) {
 	server := httptest.NewServer(http.FileServer(http.Dir(
-		fmt.Sprintf("./testdata/megaproxylist/megaproxylist-csv-%s_SDACH.zip", time.Now().Format("20060102")),
+		fmt.Sprintf("./testdata/megaproxylist/test.zip"),
 	)))
 	defer server.Close()
 	megaproxylistUrl = fmt.Sprintf("%s/page", server.URL)

@@ -42,7 +42,7 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 	r.Comma = ';'
 	r.TrimLeadingSpace = true
 
-    // trick to skip header
+	// trick to skip header
 	if _, err := r.Read(); err != nil {
 		return nil, err
 	}

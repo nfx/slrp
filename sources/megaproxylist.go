@@ -19,7 +19,7 @@ func init() {
 		Homepage:  "https://www.megaproxylist.net",
 		Frequency: 24 * time.Hour,
 		Seed:      true,
-		Feed:      simpleGen(checkerProxy),
+		Feed:      simpleGen(Megaproxylist),
 	})
 }
 

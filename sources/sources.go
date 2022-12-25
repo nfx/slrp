@@ -63,7 +63,7 @@ func init() {
 	}, Source{
 		ID:        56,
 		Homepage:  "https://www.freeproxychecker.com",
-		Frequency: 3 * time.Hour,
+		Frequency: 12 * time.Hour,
 		Seed:      true,
 		Feed:      freeproxychecker,
 	})

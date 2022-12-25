@@ -43,7 +43,6 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 	r := csv.NewReader(bytes.NewBuffer(csvData))
 	r.Comma = ';'
 	r.TrimLeadingSpace = true
-
 	// trick to skip header
 	if _, err := r.Read(); err != nil {
 		return found, nil

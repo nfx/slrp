@@ -23,13 +23,6 @@ func init() {
 	})
 }
 
-type megaproxylistLine struct {
-	address   string
-	port      string
-	country   string
-	reability string
-}
-
 var megaproxylistUrl = fmt.Sprintf("https://www.megaproxylist.net/download/megaproxylist-csv-%s_SDACH.zip", time.Now().Format("20060102"))
 
 // Scrapes https://www.megaproxylist.net
@@ -38,11 +31,12 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 
 	resp, err := h.Get(megaproxylistUrl)
 	if err != nil {
-        fmt.Println(err)
+		fmt.Println(err)
 		return
 	}
 	if resp.Body == nil {
-		return nil, fmt.Errorf("body is nil")
+		log.Error().Msg("Empty body")
+		return found, nil
 	}
 	defer resp.Body.Close()
 	csvData := unzipInMemory(ctx, resp)
@@ -60,21 +54,9 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 		if err == io.EOF {
 			break
 		}
-		/*
-			        if err != nil {
-						log.Fatal(err)
-					}
-		*/
-		fmt.Println(record)
 
-		proxy := megaproxylistLine{
-			address:   record[0],
-			port:      record[1],
-			country:   record[2],
-			reability: record[3],
-		}
 		found = append(found,
-			pmux.NewProxy(fmt.Sprintf("%s:%s", proxy.address, proxy.port),
+			pmux.NewProxy(fmt.Sprintf("%s:%s", record[0], record[1]),
 				"http"))
 	}
 

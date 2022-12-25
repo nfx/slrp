@@ -29,14 +29,6 @@ func testSource(t *testing.T, cb func(context.Context) Src, atLeast int) {
 	assert.NoError(t, err)
 }
 
-func TestThespeedx(t *testing.T) {
-	src := ByName("speedx")
-	assert.Equal(t, "speedx", src.Name())
-	testSource(t, func(ctx context.Context) Src {
-		return src.Feed(ctx, http.DefaultClient)
-	}, 4000)
-}
-
 func TestJetkai(t *testing.T) {
 	src := ByName("jetkai")
 	assert.Equal(t, "jetkai", src.Name())

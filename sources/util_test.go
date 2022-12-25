@@ -183,6 +183,12 @@ func Test_mustParseInt(t *testing.T) {
 	assert.Equal(t, 0, mustParseInt(".."))
 }
 
+func Test_unzipInMemory(t *testing.T) {
+	rFile, _ := os.ReadFile("./testdata/megaproxylist/test.zip")
+	data, _ := unzipInMemory(context.Background(), rFile)
+	assert.Equal(t, 100, len(data))
+}
+
 func Test_readZipFile(t *testing.T) {
 	rFile, _ := os.ReadFile("./testdata/megaproxylist/test.zip")
 	zipReader, _ := zip.NewReader(bytes.NewReader(rFile), int64(len(rFile)))

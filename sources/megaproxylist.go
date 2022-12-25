@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -37,7 +38,11 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 		return nil, fmt.Errorf("empty body")
 	}
 	defer resp.Body.Close()
-	csvData := unzipInMemory(ctx, resp)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	csvData, _ := unzipInMemory(ctx, []byte(body))
 	r := csv.NewReader(bytes.NewBuffer(csvData))
 	r.Comma = ';'
 	r.TrimLeadingSpace = true

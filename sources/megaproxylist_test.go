@@ -14,5 +14,5 @@ func TestMegaproxylist(t *testing.T) {
 	megaproxylistUrl = fmt.Sprintf("%s/test.zip", server.URL)
 	testSource(t, func(ctx context.Context) Src {
 		return ByID(65).Feed(ctx, http.DefaultClient)
-	}, 3) // 3 is fake
+	}, 3)
 }

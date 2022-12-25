@@ -28,6 +28,11 @@ func init() {
 			"socks4": "/api/v1/get?type=socks4",
 			"socks5": "/api/v1/get?type=socks5",
 		}, true, 3*time.Hour),
+		regexSource(55, "https://www.freeproxychecker.com/result", ":", map[string]string{
+			"http":   "/socks4_proxies.txt",
+			"socks4": "/socks4_proxies.txt",
+			"socks5": "/socks5_proxies.txt",
+		}, true, 12*time.Hour),
 	)
 }
 

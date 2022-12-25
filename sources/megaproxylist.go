@@ -78,5 +78,5 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 				"http"))
 	}
 
-	return
+	return found, nil
 }

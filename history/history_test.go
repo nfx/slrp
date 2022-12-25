@@ -11,24 +11,24 @@ import (
 )
 
 func TestRequestToString(t *testing.T) {
-		repr := Request{
-			Method: "GET",
-			URL: "http://localhost",
-			StatusCode: 200,
-			Status: "OK",
-			Serial: 1,
-			Attempt: 1,
-			Proxy: pmux.HttpProxy("127.0.0.1:80"),
-			Took: 10*time.Second,
-			InHeaders: map[string]string{
-				"A": "b",
-			},
-			OutHeaders: map[string]string{
-				"A": "b",
-			},
-			OutBody: []byte("abc"),
-		}.String()
-		assert.NotEmpty(t, repr)
+	repr := Request{
+		Method:     "GET",
+		URL:        "http://localhost",
+		StatusCode: 200,
+		Status:     "OK",
+		Serial:     1,
+		Attempt:    1,
+		Proxy:      pmux.HttpProxy("127.0.0.1:80"),
+		Took:       10 * time.Second,
+		InHeaders: map[string]string{
+			"A": "b",
+		},
+		OutHeaders: map[string]string{
+			"A": "b",
+		},
+		OutBody: []byte("abc"),
+	}.String()
+	assert.NotEmpty(t, repr)
 }
 
 func TestRecordNotFound(t *testing.T) {

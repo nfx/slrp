@@ -28,6 +28,50 @@ func init() {
 			"socks4": "/api/v1/get?type=socks4",
 			"socks5": "/api/v1/get?type=socks5",
 		}, true, 3*time.Hour),
+		regexSource(56, "https://freeproxychecker.com", ":", map[string]string{
+			"http":   "/result/socks4_proxies.txt",
+			"socks4": "/result/socks4_proxies.txt",
+			"socks5": "/result/socks5_proxies.txt",
+		}, true, 12*time.Hour),
+		regexSource(57, "https://openproxylist.xyz", ":", map[string]string{
+			"http":   "/http.txt",
+			"socks4": "/socks4.txt",
+			"socks5": "/socks5.txt",
+		}, true, 1*time.Hour),
+		regexSource(58, "https://api.proxyscrape.com/v2/?request=getproxies&protocol=", ":", map[string]string{
+			"http":   "http",
+			"socks4": "socks4",
+			"socks5": "socks5",
+		}, true, 1*time.Hour),
+		regexSource(59, "https://proxyspace.pro", ":", map[string]string{
+			"http":   "/http.txt",
+			"https":  "/https.txt",
+			"socks4": "/socks4.txt",
+			"socks5": "/socks5.txt",
+		}, true, 1*time.Hour),
+		regexSource(60, "https://api.good-proxies.ru/getfree.php", ":", map[string]string{
+			"http":   "?type%5Bhttp%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
+			"https":  "?type%5Bhttps%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
+			"socks4": "?type%5Bsocks4%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
+			"socks5": "?type%5Bsocks5%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
+		}, true, 1*time.Hour),
+		regexSource(61, "https://sheesh.rip/", ":", map[string]string{
+			"http":   "http",
+			"socks4": "socks4",
+			"socks5": "socks5",
+		}, true, 1*time.Hour),
+		regexSource(62, "https://rootjazz.com/proxies", ":", map[string]string{
+			"http": "/proxies.txt",
+		}, true, 1*time.Hour),
+		regexSource(63, "https://proxyscan.io/download?type=", ":", map[string]string{
+			"http":   "http",
+			"https":  "https",
+			"socks4": "socks4",
+			"socks5": "socks5",
+		}, true, 1*time.Hour),
+		regexSource(64, "https://www.juproxy.com", ":", map[string]string{
+			"http": "/free_api",
+		}, true, 1*time.Hour),
 	)
 }
 

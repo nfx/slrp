@@ -148,15 +148,16 @@ func init() {
 
 func github(id int, repo string, files map[string]string, freq time.Duration) Source {
 	ownerSplit := strings.Split(repo, "/")
+	prefix := fmt.Sprintf("https://raw.githubusercontent.com/%s", repo)
 	return Source{
 		ID:        id,
 		name:      ownerSplit[0],
 		Homepage:  fmt.Sprintf("https://github.com/%s", repo),
-		UrlPrefix: fmt.Sprintf("https://raw.githubusercontent.com/%s", repo),
+		UrlPrefix: prefix,
 		Frequency: freq,
 		Seed:      true,
 		Feed: func(ctx context.Context, h *http.Client) Src {
-			f := regexFeedBase(ctx, h, fmt.Sprintf("https://raw.githubusercontent.com/%s", repo), ":")
+			f := regexFeedBase(ctx, h, prefix, ":")
 			m := merged()
 			for t, loc := range files {
 				m.refresh(f(loc, t))

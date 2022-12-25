@@ -28,11 +28,48 @@ func init() {
 			"socks4": "/api/v1/get?type=socks4",
 			"socks5": "/api/v1/get?type=socks5",
 		}, true, 3*time.Hour),
-		regexSource(55, "https://www.freeproxychecker.com/result", ":", map[string]string{
+		regexSource(56, "https://freeproxychecker.com/result", ":", map[string]string{
 			"http":   "/socks4_proxies.txt",
 			"socks4": "/socks4_proxies.txt",
 			"socks5": "/socks5_proxies.txt",
 		}, true, 12*time.Hour),
+		regexSource(57, "https://openproxylist.xyz", ":", map[string]string{
+			"http":   "/http.txt",
+			"socks4": "/socks4.txt",
+			"socks5": "/socks5.txt",
+		}, true, 1*time.Hour),
+		regexSource(58, "https://api.proxyscrape.com/v2/?request=getproxies&protocol=", ":", map[string]string{
+			"http":   "http",
+			"socks4": "socks4",
+			"socks5": "socks5",
+		}, true, 1*time.Hour),
+		regexSource(59, "https://proxyspace.pro", ":", map[string]string{
+			"http":   "/http.txt",
+			"https": "/https.txt",
+			"socks4": "/socks4.txt",
+			"socks5": "/socks5.txt",
+		}, true, 1*time.Hour),
+		regexSource(60, "https://api.good-proxies.ru/getfree.php", ":", map[string]string{
+			// ToDo add support for the rest of types, 2 requests per 5 minuts on api
+			"http":   "?count=1000&ping=8000&time=600&works=500&key=freeprox",
+		}, true, 1*time.Hour),
+		regexSource(61, "https://sheesh.rip/", ":", map[string]string{
+			"http":   "http",
+			"socks4": "socks4",
+			"socks5": "socks5",
+		}, true, 1*time.Hour),
+		regexSource(62, "https://rootjazz.com/proxies", ":", map[string]string{
+			"http":   "/proxies.txt",
+		}, true, 1*time.Hour),
+		regexSource(63, "https://proxyscan.io/download?type=", ":", map[string]string{
+			"http":   "http",
+			"https":   "https",
+			"socks4": "socks4",
+			"socks5": "socks5",
+		}, true, 1*time.Hour),
+		regexSource(64, "https://www.juproxy.com", ":", map[string]string{
+			"http":   "/free_api",
+		}, true, 1*time.Hour),
 	)
 }
 

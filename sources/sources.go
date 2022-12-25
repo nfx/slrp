@@ -66,6 +66,7 @@ func init() {
 		Frequency: 12 * time.Hour,
 		Seed:      true,
 		Feed:      freeproxychecker,
+
 	})
 }
 

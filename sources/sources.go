@@ -54,6 +54,12 @@ func init() {
 		Homepage:  "https://free-proxy-list.net/uk-proxy.html",
 		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/uk-proxy.html", "UK Proxy List"),
+	}, Source{
+		ID:        55,
+		Homepage:  "https://www.proxy-list.download/",
+		Frequency: 3 * time.Hour,
+		Seed:      true,
+		Feed:      proxyListDownload,
 	})
 }
 
@@ -68,4 +74,13 @@ func proxylists(ctx context.Context, h *http.Client) Src {
 		refresh(f("/http_highanon.txt", "http")).
 		refresh(f("/socks4.txt", "socks4")).
 		refresh(f("/socks5.txt", "socks5"))
+}
+
+func proxyListDownload(ctx context.Context, h *http.Client) Src {
+	f := regexFeedBase(ctx, h, "https://www.proxy-list.download/api/v1/get?type=", ":")
+	return merged().
+		refresh(f("http", "http")).
+		refresh(f("https", "https")).
+		refresh(f("socks4", "socks4")).
+		refresh(f("socks5", "socks5"))
 }

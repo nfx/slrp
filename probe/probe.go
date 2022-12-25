@@ -130,7 +130,14 @@ func (p *Probe) HttpGet(_ *http.Request) (interface{}, error) {
 	exclusive := map[string]int{}
 	dirty := map[string]int{}
 	contribution := map[string]int{}
-	names := make([]string, len(sources.Sources)+2) // deleting last source is bad...
+	// now that we have gaps...
+	var maxId int
+	for _, v := range sources.Sources {
+		if v.ID > maxId {
+			maxId = v.ID
+		}
+	}
+	names := make([]string, maxId+2) // deleting last source is bad...
 	names[0] = "reverify"
 	for _, v := range sources.Sources {
 		names[v.ID] = v.Name()

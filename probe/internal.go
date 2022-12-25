@@ -1,11 +1,11 @@
-/**
+/*
+*
 
-Per source, we can have the following state transitions
-
-
+# Per source, we can have the following state transitions
 
 ```mermaid # https://mermaid.live/
 stateDiagram
+
 	direction LR
 	Idle --> Running
 	Running --> Failed
@@ -25,6 +25,7 @@ stateDiagram
 		Found --> [*]
 		Blacklisted --> [*]
 	}
+
 ````
 */
 package probe

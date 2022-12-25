@@ -67,7 +67,7 @@ func (s *status) EstFinish(queued int) time.Time {
 		totalDur += b.Sub(a)
 		measures++
 	}
-	durPerItem := 0*time.Minute
+	durPerItem := 0 * time.Minute
 	if s.Added > 0 && measures > 0 {
 		recentDurPerItem := totalDur / time.Duration(measures)
 		allDurPerItem := now.Sub(s.Started) / time.Duration(s.Added)

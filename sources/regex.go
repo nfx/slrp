@@ -55,11 +55,12 @@ func init() {
 			"socks4": "?type%5Bsocks4%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
 			"socks5": "?type%5Bsocks5%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
 		}, true, 1*time.Hour),
-		regexSource(61, "https://sheesh.rip/", ":", map[string]string{
-			"http":   "http",
-			"socks4": "socks4",
-			"socks5": "socks5",
-		}, true, 1*time.Hour),
+		// https://sheesh.rip looks too shady
+		// regexSource(61, "https://sheesh.rip/", ":", map[string]string{
+		// 	"http":   "http",
+		// 	"socks4": "socks4",
+		// 	"socks5": "socks5",
+		// }, true, 1*time.Hour),
 		regexSource(62, "https://rootjazz.com/proxies", ":", map[string]string{
 			"http": "/proxies.txt",
 		}, true, 1*time.Hour),

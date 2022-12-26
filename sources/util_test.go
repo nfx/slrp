@@ -1,13 +1,11 @@
 package sources
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/nfx/slrp/pmux"
@@ -181,17 +179,4 @@ func Test_newTablePage_NoTablesFound(t *testing.T) {
 
 func Test_mustParseInt(t *testing.T) {
 	assert.Equal(t, 0, mustParseInt(".."))
-}
-
-func Test_unzipInMemory(t *testing.T) {
-	rFile, _ := os.ReadFile("./testdata/megaproxylist/test.zip")
-	data, _ := unzipInMemory(context.Background(), rFile)
-	assert.Equal(t, 100, len(data))
-}
-
-func Test_readZipFile(t *testing.T) {
-	rFile, _ := os.ReadFile("./testdata/megaproxylist/test.zip")
-	zipReader, _ := zip.NewReader(bytes.NewReader(rFile), int64(len(rFile)))
-	fmt.Println(zipReader)
-	assert.Equal(t, zipReader.File[0].Name, "test.csv", "Testing unzip in memory")
 }

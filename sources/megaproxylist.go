@@ -1,6 +1,7 @@
 package sources
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/csv"
@@ -26,6 +27,37 @@ func init() {
 
 var megaproxylistUrl = fmt.Sprintf("https://www.megaproxylist.net/download/megaproxylist-csv-%s_SDACH.zip", time.Now().Format("20060102"))
 
+func unzipInMemory(body []byte) ([]byte, error) {
+	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file as zip file: %w", err)
+	}
+
+	// Read all the files from zip archive
+	for _, zipFile := range zipReader.File {
+		if zipFile.Name != "megaproxylist.csv" {
+			continue
+		}
+
+		unzippedFileBytes, err := readZipFile(zipFile)
+		if err != nil {
+			return nil, fmt.Errorf("zip: can't read desire file")
+		}
+		return unzippedFileBytes, nil
+
+	}
+	return nil, fmt.Errorf("zip: empty file")
+}
+
+func readZipFile(zf *zip.File) ([]byte, error) {
+	f, err := zf.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ioutil.ReadAll(f)
+}
+
 // Scrapes https://www.megaproxylist.net
 func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error) {
 	log.Info().Msg("Loading proxy Megaproxy database")
@@ -40,22 +72,26 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
-	csvData, _ := unzipInMemory(ctx, []byte(body))
+	csvData, _ := unzipInMemory(body)
 	r := csv.NewReader(bytes.NewBuffer(csvData))
 	r.Comma = ';'
 	r.TrimLeadingSpace = true
 
 	// trick to skip header
 	if _, err := r.Read(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read header: %w", err)
 	}
 
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
 			break
+		}
+
+		if len(record) != 4 {
+			continue
 		}
 
 		found = append(found,

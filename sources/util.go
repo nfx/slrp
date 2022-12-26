@@ -1,12 +1,10 @@
 package sources
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -246,32 +244,3 @@ func mustParseInt(value string) int {
 }
 
 var accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-
-func unzipInMemory(ctx context.Context, body []byte) ([]byte, error) {
-	log := app.Log.From(ctx)
-	zipReader, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
-	if err != nil {
-		log.Error().Msg(err.Error())
-		return nil, err
-	}
-
-	// Read all the files from zip archive
-	for _, zipFile := range zipReader.File {
-		unzippedFileBytes, err := readZipFile(zipFile)
-		if err != nil {
-			log.Error().Msg(err.Error())
-			continue
-		}
-		return unzippedFileBytes, nil
-	}
-	return nil, nil
-}
-
-func readZipFile(zf *zip.File) ([]byte, error) {
-	f, err := zf.Open()
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return ioutil.ReadAll(f)
-}

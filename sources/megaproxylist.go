@@ -21,7 +21,6 @@ func init() {
 		ID:        65,
 		Homepage:  "https://www.megaproxylist.net",
 		Frequency: 24 * time.Hour,
-		Seed:      true,
 		Feed:      simpleGen(megaproxylist),
 	})
 }

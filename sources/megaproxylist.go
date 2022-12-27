@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 
@@ -21,7 +22,7 @@ func init() {
 		Homepage:  "https://www.megaproxylist.net",
 		Frequency: 24 * time.Hour,
 		Seed:      true,
-		Feed:      simpleGen(Megaproxylist),
+		Feed:      simpleGen(megaproxylist),
 	})
 }
 
@@ -58,8 +59,22 @@ func readZipFile(zf *zip.File) ([]byte, error) {
 	return ioutil.ReadAll(f)
 }
 
+func getIpAddr(address string) (string, error) {
+	var addr string
+	if net.ParseIP(address) == nil {
+		addrs, err := net.LookupAddr(address)
+		if err != nil {
+			return "", fmt.Errorf("Failed to resolve domain %s: %w", address, err)
+		}
+		addr = addrs[0]
+	} else {
+		addr = address
+	}
+	return addr, nil
+}
+
 // Scrapes https://www.megaproxylist.net
-func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error) {
+func megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err error) {
 	log.Info().Msg("Loading proxy Megaproxy database")
 
 	resp, err := h.Get(megaproxylistUrl)
@@ -98,8 +113,13 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 			continue
 		}
 
+		addr, err := getIpAddr(record[0])
+		if err != nil {
+			continue
+		}
+
 		found = append(found,
-			pmux.NewProxy(fmt.Sprintf("%s:%s", record[0], record[1]),
+			pmux.NewProxy(fmt.Sprintf("%s:%s", addr, record[1]),
 				"http"))
 	}
 

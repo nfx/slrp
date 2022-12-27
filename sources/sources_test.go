@@ -32,5 +32,5 @@ func TestJetkai(t *testing.T) {
 	assert.Equal(t, "jetkai", src.Name())
 	testSource(t, func(ctx context.Context) Src {
 		return src.Feed(ctx, http.DefaultClient)
-	}, 1989)
+	}, 1000)
 }

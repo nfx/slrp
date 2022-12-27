@@ -54,7 +54,7 @@ func init() {
 			"https":  "?type%5Bhttps%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
 			"socks4": "?type%5Bsocks4%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
 			"socks5": "?type%5Bsocks5%5D=on&anon%5B%27transparent%27%5D=on&anon%5B%27anonymous%27%5D=on&anon%5B%27elite%27%5D=on&count=100&ping=8000&time=600&works=50&key=freeproxy",
-		}, true, 1*time.Hour),
+		}, false, 1*time.Hour),
 		// https://sheesh.rip looks too shady
 		// regexSource(61, "https://sheesh.rip/", ":", map[string]string{
 		// 	"http":   "http",
@@ -73,12 +73,17 @@ func init() {
 		regexSource(64, "https://www.juproxy.com", ":", map[string]string{
 			"http": "/free_api",
 		}, true, 1*time.Hour),
-		regexSource(65, "https://www.proxyscan.io", ":", map[string]string{
+		regexSource(66, "https://www.proxyscan.io", ":", map[string]string{
 			"http":   "/download?type=http",
 			"https":  "/download?type=https",
 			"socks4": "/download?type=socks4",
 			"socks5": "/download?type=socks5",
 		}, true, 1*time.Hour),
+		regexSource(67, "https://openproxy.space", "Proxy List", map[string]string{
+			"http":   "/list/http",
+			"socks4": "/list/socks4",
+			"socks5": "/list/socks5",
+		}, false, 24*time.Hour),
 	)
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -34,7 +35,7 @@ func (s Source) Name() string {
 		if err != nil {
 			return fmt.Sprintf("src:%d", s.ID)
 		}
-		return page.Host
+		return strings.TrimPrefix(page.Host, "www.")
 	}
 	return fmt.Sprintf("src:%d", s.ID)
 }

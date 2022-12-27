@@ -60,17 +60,14 @@ func readZipFile(zf *zip.File) ([]byte, error) {
 }
 
 func getIpAddr(address string) (string, error) {
-	var addr string
-	if net.ParseIP(address) == nil {
-		addrs, err := net.LookupIP(address)
-		if err != nil {
-			return "", fmt.Errorf("Failed to resolve domain %s: %w", address, err)
-		}
-		addr = addrs[0].String()
-	} else {
-		addr = address
+	if net.ParseIP(address) != nil {
+		return address, nil
 	}
-	return addr, nil
+	addrs, err := net.LookupIP(address)
+	if err != nil {
+		return "", fmt.Errorf("Failed to resolve domain %s: %w", address, err)
+	}
+	return addrs[0].String(), nil
 }
 
 // Scrapes https://www.megaproxylist.net

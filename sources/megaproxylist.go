@@ -46,7 +46,7 @@ func unzipInMemory(body []byte) ([]byte, error) {
 		return unzippedFileBytes, nil
 
 	}
-	return nil, fmt.Errorf("zip: empty file")
+	return nil, fmt.Errorf("zip: can't find desired file")
 }
 
 func readZipFile(zf *zip.File) ([]byte, error) {
@@ -74,7 +74,11 @@ func Megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
-	csvData, _ := unzipInMemory(body)
+	csvData, err := unzipInMemory(body)
+	if err != nil {
+		return nil, err
+	}
+
 	r := csv.NewReader(bytes.NewBuffer(csvData))
 	r.Comma = ';'
 	r.TrimLeadingSpace = true

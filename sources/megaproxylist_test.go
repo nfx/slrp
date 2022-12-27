@@ -40,10 +40,6 @@ func Test_getIpAddr(t *testing.T) {
 		input    string
 		expected string
 	}{
-		`empty`: {
-			input:    "",
-			expected: "",
-		},
 		`localhost`: {
 			input:    "localhost",
 			expected: "127.0.0.1",
@@ -55,9 +51,9 @@ func Test_getIpAddr(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, _ := getIpAddr(tt.input)
+			got, _ := getIpAddr(context.Background(), tt.input)
 			if got != tt.expected {
-				t.Errorf("Got: %s, expected: %s", got, tt.expected)
+				t.Errorf("Test: %s, got: %s, expected: %s", name, got, tt.expected)
 			}
 		})
 	}

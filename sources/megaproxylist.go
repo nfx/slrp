@@ -59,11 +59,11 @@ func readZipFile(zf *zip.File) ([]byte, error) {
 	return ioutil.ReadAll(f)
 }
 
-func getIpAddr(address string) (string, error) {
+func getIpAddr(ctx context.Context, address string) (string, error) {
 	if net.ParseIP(address) != nil {
 		return address, nil
 	}
-	addrs, err := net.LookupIP(address)
+	addrs, err := net.DefaultResolver.LookupIP(ctx, "ip4", address)
 	if err != nil {
 		return "", fmt.Errorf("Failed to resolve domain %s: %w", address, err)
 	}
@@ -110,7 +110,7 @@ func megaproxylist(ctx context.Context, h *http.Client) (found []pmux.Proxy, err
 			continue
 		}
 
-		addr, err := getIpAddr(record[0])
+		addr, err := getIpAddr(ctx, record[0])
 		if err != nil {
 			continue
 		}

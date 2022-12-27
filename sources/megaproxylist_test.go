@@ -37,19 +37,19 @@ func Test_readZipFile(t *testing.T) {
 
 func Test_getIpAddr(t *testing.T) {
 	tests := map[string]struct {
-		input string
+		input    string
 		expected string
 	}{
 		`empty`: {
-			input: "",
+			input:    "",
 			expected: "",
 		},
 		`localhost`: {
-			input: "localhost",
+			input:    "localhost",
 			expected: "127.0.0.1",
 		},
 		`localhostAsIp`: {
-			input: "127.0.0.1",
+			input:    "127.0.0.1",
 			expected: "127.0.0.1",
 		},
 	}

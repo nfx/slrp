@@ -21,6 +21,7 @@ func init() {
 		Feed:      httpProxyRegexFeed("https://sunny9577.github.io/proxy-scraper/proxies.txt", ":"),
 	}, Source{
 		ID:        19,
+		Seed:      true,
 		name:      "anonymous-free-proxy",
 		Homepage:  "https://free-proxy-list.net/anonymous-proxy.html",
 		Frequency: 30 * time.Minute,
@@ -28,6 +29,7 @@ func init() {
 	}, Source{
 		ID:        21,
 		name:      "uk-proxy",
+		Seed:      true,
 		Homepage:  "https://free-proxy-list.net/uk-proxy.html",
 		Frequency: 30 * time.Minute,
 		Feed:      httpProxyRegexFeed("https://free-proxy-list.net/uk-proxy.html", "UK Proxy List"),

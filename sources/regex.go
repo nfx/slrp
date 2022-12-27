@@ -10,7 +10,7 @@ func init() {
 	Sources = append(Sources,
 		regexSource(8, "https://free-proxy-list.net", "Proxy List", map[string]string{
 			"http": "/",
-		}, false, 30*time.Minute),
+		}, true, 30*time.Minute),
 		regexSource(11, "http://proxylists.net", ":", map[string]string{
 			"http":   "/http_highanon.txt",
 			"socks4": "/socks4.txt",
@@ -18,10 +18,10 @@ func init() {
 		}, true, 3*time.Hour),
 		regexSource(18, "https://sslproxies.org", "SSL Proxy List", map[string]string{
 			"https": "/",
-		}, false, 30*time.Minute),
+		}, true, 30*time.Minute),
 		regexSource(20, "https://us-proxy.org", "US Proxy List", map[string]string{
 			"http": "/",
-		}, false, 30*time.Minute),
+		}, true, 30*time.Minute),
 		regexSource(55, "https://proxy-list.download", ":", map[string]string{
 			"http":   "/api/v1/get?type=http",
 			"https":  "/api/v1/get?type=https",
@@ -80,7 +80,7 @@ func init() {
 		}, false, 24*time.Hour),
 		regexSource(68, "https://proxypedia.org", "Proxy List", map[string]string{
 			"http": "/",
-		}, false, 10*time.Minute),
+		}, true, 10*time.Minute),
 	)
 }
 

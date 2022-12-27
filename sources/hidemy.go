@@ -18,6 +18,7 @@ func init() {
 		Homepage:  "https://hidemy.name",
 		Frequency: 1 * time.Hour,
 		Feed:      hidemyName,
+		Seed:      true,
 	})
 	// https://hidemy.name/en/proxy-list/?anon=34
 	hidemyNamePages = []string{}

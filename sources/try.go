@@ -61,6 +61,13 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 	var delay time.Duration
 	log := app.Log.From(ctx)
 	defer log.Debug().Msg("done simple forwarding")
+	defer func() {
+		// in case something really unforeseen happens within the source
+		p := recover()
+		if p != nil {
+			log.Error().Msgf("panic: %v", p)
+		}
+	}()
 	for {
 		now := time.Now()
 		if next.After(now) {

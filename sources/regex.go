@@ -84,6 +84,9 @@ func init() {
 			"socks4": "/list/socks4",
 			"socks5": "/list/socks5",
 		}, false, 24*time.Hour),
+		regexSource(68, "https://proxypedia.org", "Proxy List", map[string]string{
+			"http": "/",
+		}, false, 10*time.Minute),
 	)
 }
 

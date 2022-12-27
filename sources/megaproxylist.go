@@ -41,7 +41,7 @@ func unzipInMemory(body []byte) ([]byte, error) {
 
 		unzippedFileBytes, err := readZipFile(zipFile)
 		if err != nil {
-			return nil, fmt.Errorf("zip: can't read desire file")
+			return nil, fmt.Errorf("zip: can't read megaproxylist.csv")
 		}
 		return unzippedFileBytes, nil
 

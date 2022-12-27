@@ -62,11 +62,11 @@ func readZipFile(zf *zip.File) ([]byte, error) {
 func getIpAddr(address string) (string, error) {
 	var addr string
 	if net.ParseIP(address) == nil {
-		addrs, err := net.LookupAddr(address)
+		addrs, err := net.LookupIP(address)
 		if err != nil {
 			return "", fmt.Errorf("Failed to resolve domain %s: %w", address, err)
 		}
-		addr = addrs[0]
+		addr = addrs[0].String()
 	} else {
 		addr = address
 	}

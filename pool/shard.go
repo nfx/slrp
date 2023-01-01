@@ -3,6 +3,8 @@ package pool
 import (
 	"context"
 	"fmt"
+	"gonum.org/v1/gonum/floats"
+	"gonum.org/v1/gonum/stat/distuv"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -178,10 +180,39 @@ func (pool *shard) firstAvailableProxy(r request) *entry {
 	return nil
 }
 
+func (pool *shard) BanditSuccessRateProxy() *entry {
+
+	//ctx = app.Log.WithStringer(ctx, "proxy", entry.Proxy)
+	size := len(pool.Entries)
+	if size == 0 {
+		return nil
+	}
+	if size == 1 {
+		return &pool.Entries[0]
+	}
+	//inspired by https://cybernetist.com/2019/01/24/random-weighted-draws-in-go/
+	cdf := make([]float64, size)
+	weights := make([]float64, size)
+	const explorationRate = 0.04
+	for idx := range pool.Entries {
+		weights[idx] = float64(pool.Entries[idx].SuccessRate() + explorationRate)
+	}
+	floats.CumSum(cdf, weights)
+	val := distuv.UnitUniform.Rand() * cdf[len(cdf)-1]
+	bandi := sort.Search(len(cdf), func(i int) bool { return cdf[i] > val })
+
+	//fmt.Printf("pool %v (%v/%v)\n", &pool, bandi, size)
+	if bandi == size {
+		bandi -= 1
+	}
+	return &pool.Entries[bandi]
+}
+
 func (pool *shard) handleRequest(r request) {
 	// log := app.Log.From(r.in.Context())
 	r.in.Header.Set("User-Agent", uarand.GetRandom())
-	entry := pool.firstAvailableProxy(r)
+	entry := pool.BanditSuccessRateProxy()
+	//entry := pool.firstAvailableProxy(r)
 	if entry == nil {
 		// this pool has no entries, try next one
 		headers := http.Header{}

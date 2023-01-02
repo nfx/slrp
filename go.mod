@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/maxmind/mmdbwriter v0.0.0-20220830183856-fffdfa44ff0b
 	github.com/microcosm-cc/bluemonday v1.0.21
-	github.com/nfx/go-htmltable v0.3.0
+	github.com/nfx/go-htmltable v0.4.0
 	github.com/oschwald/maxminddb-golang v1.10.0
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.8.1
@@ -51,4 +51,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-

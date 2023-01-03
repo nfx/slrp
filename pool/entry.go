@@ -26,6 +26,9 @@ type entry struct { // todo: package private
 	Succeed        int
 	HourOffered    [24]int
 	HourSucceed    [24]int
+	actions        int
+	rewards        int
+	fails          int
 }
 
 func (e *entry) MarkSeen() {
@@ -36,6 +39,7 @@ func (e *entry) MarkSeen() {
 func (e *entry) MarkSuccess() {
 	now := now()
 	hour := now.Hour()
+	e.rewards += 1
 	if (e.Succeed + 1) < e.Offered {
 		e.HourSucceed[hour]++
 		e.Succeed++
@@ -54,11 +58,16 @@ func (e *entry) MarkFailure(err error) {
 	t, ok := err.(interface {
 		Timeout() bool
 	})
+
 	e.Ok = false
+
 	// TODO: mark configurable
 	e.ReanimateAfter = now().Add(1 * time.Minute)
 	if ok && t.Timeout() {
 		e.Timeouts++
+		e.fails += 1
+	} else {
+		e.fails += 1
 	}
 }
 

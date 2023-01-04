@@ -3,6 +3,8 @@ package pool
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
 	"net/http"
@@ -49,20 +51,23 @@ type removal struct {
 }
 
 type shard struct {
-	Entries      []entry
-	incoming     chan incoming
-	remove       chan removal
-	requests     chan request
-	snapshot     chan chan []entry
-	reanimate    chan bool
-	reply        chan reply
-	work         chan work //todo channel in pool
-	minute       *time.Ticker
-	ticks        int
-	randomSource *rand.Rand
+	Entries          []entry
+	incoming         chan incoming
+	remove           chan removal
+	requests         chan request
+	snapshot         chan chan []entry
+	reanimate        chan bool
+	reply            chan reply
+	work             chan work //todo channel in pool
+	minute           *time.Ticker
+	ticks            int
+	randomSource     *rand.Rand
+	proxyCountGauge  prometheus.Gauge
+	successRateGauge prometheus.Gauge
 }
 
 func (pool *shard) init(work chan work) {
+
 	pool.work = work
 	pool.incoming = make(chan incoming)
 	pool.remove = make(chan removal)
@@ -72,6 +77,16 @@ func (pool *shard) init(work chan work) {
 	pool.reply = make(chan reply)
 	pool.minute = time.NewTicker(1 * time.Minute)
 	pool.randomSource = rand.New(rand.NewSource(uint64(now().Unix())))
+
+	pool.proxyCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "slrp_pool_proxy_total",
+		Help: "The total number of proxies in a pool",
+	})
+	pool.successRateGauge = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "slrp_success_rate",
+		Help: "The total number of proxies in a pool",
+	})
+
 }
 
 func (pool *shard) main(ctx app.Context) {
@@ -97,7 +112,8 @@ func (pool *shard) main(ctx app.Context) {
 
 			}
 			nt = nt / float64(100)
-			fmt.Printf("\n\n\n\nAVERAGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE  %.5f\n\n\n\n", nt)
+			pool.successRateGauge.Set(nt)
+			//fmt.Printf("\n\n\n\nAVERAGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE  %.5f\n\n\n\n", nt)
 		case <-pool.reanimate:
 			pool.forceReanimate()
 		case v := <-pool.remove:
@@ -147,6 +163,7 @@ func (pool *shard) removeProxy(r removal) {
 	if found {
 		log := app.Log.From(context.TODO())
 		log.Info().Stringer("proxy", r.proxy).Msg("removed")
+
 	}
 	r.reply <- found
 }
@@ -167,6 +184,7 @@ func (pool *shard) add(v incoming) {
 	})
 	log := app.Log.From(v.ctx)
 	log.Info().Stringer("proxy", v.Proxy).Dur("speed", v.Speed).Msg("added")
+
 }
 
 func (pool *shard) firstAvailableProxy(r request) *entry {
@@ -213,10 +231,10 @@ func (pool *shard) ThompsonBandit() *entry {
 		nt += float64(e.SuccessRate())
 	}
 
-	weights, bandi, b := pool.sampleProxy()
+	_, _, b := pool.sampleProxy()
 	b.Offered += 1
-	fmt.Printf("pool %v\t%v\t(%v/%v) \t%v \t %v \t%v \t%.4f\t SR:%.4f\n", &pool, b.Proxy.IP(), bandi, size, weights[bandi], b.Offered, b.Succeed, float64(b.SuccessRate()/100), float64(nt)/float64(size))
-
+	//fmt.Printf("pool %v\t%v\t(%v/%v) \t%v \t %v \t%v \t%.4f\t SR:%.4f\n", &pool, b.Proxy.IP(), bandi, size, weights[bandi], b.Offered, b.Succeed, float64(b.SuccessRate()/100), float64(nt)/float64(size))
+	pool.successRateGauge.Set(nt / float64(size))
 	return b
 }
 
@@ -224,7 +242,7 @@ func (pool *shard) sampleProxy() ([]float64, int, *entry) {
 	mv := float64(-1)
 	weights := make([]float64, len(pool.Entries))
 	bandi := 0
-	const punishFactor = 10
+	const punishFactor = 1
 	for idx, e := range pool.Entries {
 
 		a := e.Offered
@@ -247,22 +265,10 @@ func (pool *shard) sampleProxy() ([]float64, int, *entry) {
 func (pool *shard) handleRequest(r request) {
 	// log := app.Log.From(r.in.Context())
 	r.in.Header.Set("User-Agent", uarand.GetRandom())
-
 	var entry *entry
-	if pool.ticks < 100 {
-		entry = pool.firstAvailableProxy(r)
+	pool.proxyCountGauge.Set(float64(len(pool.Entries)))
+	entry = pool.ThompsonBandit()
 
-	} else {
-		//for i := 0; i < 100; i++ {
-		entry = pool.ThompsonBandit()
-
-		//	if entry != nil && entry.ReanimateAfter.After(now()) {
-		//		continue
-		//	}
-		//	break
-		//}
-
-	}
 	pool.ticks += 1
 	if entry == nil {
 		// this pool has no entries, try next one

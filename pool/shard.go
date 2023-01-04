@@ -4,10 +4,7 @@ import (
 	"context"
 	"fmt"
 	"golang.org/x/exp/rand"
-	"gonum.org/v1/gonum/floats"
 	"gonum.org/v1/gonum/stat/distuv"
-	"math"
-
 	"net/http"
 	"sort"
 	"time"
@@ -52,17 +49,17 @@ type removal struct {
 }
 
 type shard struct {
-	Entries   []entry
-	incoming  chan incoming
-	remove    chan removal
-	requests  chan request
-	snapshot  chan chan []entry
-	reanimate chan bool
-	reply     chan reply
-	work      chan work //todo channel in pool
-	minute    *time.Ticker
-	ticks     int
-	src       *rand.Rand
+	Entries      []entry
+	incoming     chan incoming
+	remove       chan removal
+	requests     chan request
+	snapshot     chan chan []entry
+	reanimate    chan bool
+	reply        chan reply
+	work         chan work //todo channel in pool
+	minute       *time.Ticker
+	ticks        int
+	randomSource *rand.Rand
 }
 
 func (pool *shard) init(work chan work) {
@@ -74,7 +71,7 @@ func (pool *shard) init(work chan work) {
 	pool.snapshot = make(chan chan []entry)
 	pool.reply = make(chan reply)
 	pool.minute = time.NewTicker(1 * time.Minute)
-	pool.src = rand.New(rand.NewSource(uint64(now().Unix())))
+	pool.randomSource = rand.New(rand.NewSource(uint64(now().Unix())))
 }
 
 func (pool *shard) main(ctx app.Context) {
@@ -92,10 +89,10 @@ func (pool *shard) main(ctx app.Context) {
 			if pool.handleReanimate() {
 				ctx.Heartbeat()
 			}
-			nt := float64(0.0)
+			var nt float64
 
 			for i := 0; i < 100; i++ {
-				e := pool.ThompsonBandit()
+				_, _, e := pool.sampleProxy()
 				nt += float64(e.SuccessRate())
 
 			}
@@ -104,10 +101,13 @@ func (pool *shard) main(ctx app.Context) {
 		case <-pool.reanimate:
 			pool.forceReanimate()
 		case v := <-pool.remove:
+
 			pool.removeProxy(v)
 			ctx.Heartbeat()
 		case v := <-pool.incoming:
+
 			pool.add(v)
+
 			ctx.Heartbeat()
 		case r := <-pool.requests:
 			pool.handleRequest(r)
@@ -194,87 +194,8 @@ func (pool *shard) firstAvailableProxy(r request) *entry {
 	return nil
 }
 
-func (pool *shard) BanditSuccessRateProxy() *entry {
-
-	//ctx = app.Log.WithStringer(ctx, "proxy", entry.Proxy)
-	size := len(pool.Entries)
-	if size == 0 {
-		return nil
-	}
-	if size == 1 {
-		return &pool.Entries[0]
-	}
-	//inspired by https://cybernetist.com/2019/01/24/random-weighted-draws-in-go/
-	cdf := make([]float64, size)
-	weights := make([]float64, size)
-	const explorationRate = 0.04
-	for idx, e := range pool.Entries {
-		weights[idx] = float64(e.SuccessRate())
-	}
-	floats.CumSum(cdf, weights)
-	val := distuv.UnitUniform.Rand() * cdf[len(cdf)-1]
-	bandi := sort.Search(len(cdf), func(i int) bool { return cdf[i] > val })
-
-	//fmt.Printf("pool %v (%v/%v)\n", &pool, bandi, size)
-	if bandi == size {
-		bandi -= 1
-	}
-	return &pool.Entries[bandi]
-}
-
-func (pool *shard) BanditUCBProxy() *entry {
-
-	//ctx = app.Log.WithStringer(ctx, "proxy", entry.Proxy)
-	size := len(pool.Entries)
-	if size == 0 {
-		return nil
-	}
-	if size == 1 {
-		return &pool.Entries[0]
-	}
-	//inspired by https://cybernetist.com/2019/01/24/random-weighted-draws-in-go/
-	//cdf := make([]float64, size)
-	weights := make([]float64, size)
-	const explorationRate = 0.005
-	bandi := 0
-
-	nt := 1
-	for _, e := range pool.Entries {
-		nt += e.actions
-	}
-	explore := false
-	sucesses := 0
-	maxv := float64(-1)
-	if rand.Float64() < 0.01 {
-		bandi = rand.Intn(size)
-		explore = true
-	} else {
-		for idx, e := range pool.Entries {
-			sq := math.Sqrt(math.Log(float64(nt))/float64(e.actions+1)) * explorationRate
-			qa := float64(e.SuccessRate() / 100)
-			wall := sq + qa //+ rand.Float64()*0.0000001
-			sucesses += e.Succeed
-			weights[idx] = wall
-			if wall > maxv {
-				maxv = wall
-				bandi = idx
-			}
-		}
-	}
-	//cdf := make([]float64, size)
-	//floats.CumSum(cdf, weights)
-	//val := distuv.UnitUniform.Rand() * cdf[len(cdf)-1]
-	//bandi = sort.Search(len(cdf), func(i int) bool { return cdf[i] > val })
-
-	if bandi == size {
-		bandi -= 1
-	}
-	b := pool.Entries[bandi]
-	fmt.Printf("pool %v %v %.3f \t %v \t(%v/%v) \t%.3f  sel: %v of: %v, suc:%v \t suc/nt%.4f\n", &pool, b.Proxy.IP(), b.SuccessRate(), explore, bandi, size, weights[bandi], b.actions, b.Offered, b.Succeed, float64(b.actions)/float64(nt))
-
-	pool.Entries[bandi].actions += 1
-	return &pool.Entries[bandi]
-}
+// ThompsonBandit if implemented correctly should be close to optimal
+// https://auai.org/uai2016/proceedings/papers/20.pdf
 func (pool *shard) ThompsonBandit() *entry {
 
 	//ctx = app.Log.WithStringer(ctx, "proxy", entry.Proxy)
@@ -285,56 +206,42 @@ func (pool *shard) ThompsonBandit() *entry {
 	if size == 1 {
 		return &pool.Entries[0]
 	}
-	//inspired by https://cybernetist.com/2019/01/24/random-weighted-draws-in-go/
-	//cdf := make([]float64, size)
-	weights := make([]float64, size)
-	const explorationRate = 50
-	bandi := 0
 
-	nt := float64(0.1)
-	sucesses := 0
+	var nt float64
+
 	for _, e := range pool.Entries {
 		nt += float64(e.SuccessRate())
-
 	}
-	//explore := false
 
+	weights, bandi, b := pool.sampleProxy()
+	b.Offered += 1
+	fmt.Printf("pool %v\t%v\t(%v/%v) \t%v \t %v \t%v \t%.4f\t SR:%.4f\n", &pool, b.Proxy.IP(), bandi, size, weights[bandi], b.Offered, b.Succeed, float64(b.SuccessRate()/100), float64(nt)/float64(size))
+
+	return b
+}
+
+func (pool *shard) sampleProxy() ([]float64, int, *entry) {
 	mv := float64(-1)
-
+	weights := make([]float64, len(pool.Entries))
+	bandi := 0
+	const punishFactor = 10
 	for idx, e := range pool.Entries {
-		//sq := math.Sqrt(math.Log(float64(nt))/float64(e.actions+1)) * explorationRate
-		//qa := float64(e.SuccessRate() / 100)
-		//wall := sq + qa //+ rand.Float64()*0.0000001
-		//sucesses += e.Succeed
-		//if e.ConsiderSkip(r.in.Context()) {
-		//	continue
-		//}
-		e.Offered += 1
-		a := e.Offered
-		sucesses += a
-		b := e.Offered - e.Succeed
 
-		bet := distuv.Beta{Alpha: float64(a + 1), Beta: float64(b + 1), Src: pool.src}
+		a := e.Offered
+		b := e.Offered - e.Succeed
+		// we use punish factor to penalize the failed attempts more
+		// allows to move dead proxies out of equation faster
+		bet := distuv.Beta{Alpha: float64(a + 1), Beta: float64(b*punishFactor + 1), Src: pool.randomSource}
 		weights[idx] = bet.Rand()
 		if weights[idx] > mv {
 			bandi = idx
 			mv = weights[idx]
 		}
+
 	}
 
-	//cdf := make([]float64, size)
-	//floats.CumSum(cdf, weights)
-	//val := distuv.UnitUniform.Rand() * cdf[len(cdf)-1]
-	//bandi = sort.Search(len(cdf), func(i int) bool { return cdf[i] > val })
-
-	if bandi == size {
-		bandi -= 1
-	}
 	b := &pool.Entries[bandi]
-	b.actions += 1
-	fmt.Printf("pool %v %v \t(%v/%v) \t%v \t %v \t%v \t%.4f\t SR:%.4f\n", &pool, b.Proxy.IP(), bandi, size, weights[bandi], b.Offered, b.Succeed, float64(b.SuccessRate()/100), float64(nt)/float64(size))
-
-	return b
+	return weights, bandi, b
 }
 
 func (pool *shard) handleRequest(r request) {
@@ -342,7 +249,7 @@ func (pool *shard) handleRequest(r request) {
 	r.in.Header.Set("User-Agent", uarand.GetRandom())
 
 	var entry *entry
-	if pool.ticks < 10000 {
+	if pool.ticks < 100 {
 		entry = pool.firstAvailableProxy(r)
 
 	} else {
@@ -369,7 +276,7 @@ func (pool *shard) handleRequest(r request) {
 		}
 		return
 	}
-	entry.actions += 1
+
 	// log.Debug().
 	// 	Stringer("url", req.URL).
 	// 	Stringer("proxy", entry.Proxy).

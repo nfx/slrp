@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/netip"
@@ -112,7 +113,7 @@ func (p Proxy) IsTunnel() bool {
 }
 
 func (p Proxy) Bucket(buckets int) int {
-	bucket := int(p) % buckets
+	bucket := rand.Intn(buckets)
 	if bucket < 0 {
 		return bucket * -1
 	}

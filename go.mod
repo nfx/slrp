@@ -13,6 +13,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.21
 	github.com/nfx/go-htmltable v0.3.0
 	github.com/oschwald/maxminddb-golang v1.10.0
+	github.com/prometheus/client_golang v1.14.0
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.8.1
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
@@ -27,7 +28,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect

@@ -231,7 +231,7 @@ func (pool *shard) ThompsonBandit() *entry {
 	weights, bandi, b := pool.sampleProxy()
 	pool.parent.successRateClick.WithLabelValues(pool.id).Set(weights[bandi])
 	b.Offered += 1
-	fmt.Printf("pool %v\t%v\t(%v/%v) \t%v \t %v \t%v \t%.4f\t SR:%.4f\n", pool.id, b.Proxy.IP(), bandi, size, weights[bandi], b.Offered, b.Succeed, float64(b.SuccessRate()/100), float64(nt)/float64(size))
+	//fmt.Printf("pool %v\t%v\t(%v/%v) \t%v \t %v \t%v \t%.4f\t SR:%.4f\n", pool.id, b.Proxy.IP(), bandi, size, weights[bandi], b.Offered, b.Succeed, float64(b.SuccessRate()/100), float64(nt)/float64(size))
 	//pool.successRateGauge.Set(nt / float64(size))
 	return b
 }

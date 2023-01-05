@@ -5,6 +5,7 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"github.com/nfx/slrp/prometheus"
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/checker"
@@ -31,17 +32,18 @@ func main() {
 	}
 	fmt.Printf("slrp v%s\n", version)
 	app.Run(context.Background(), app.Factories{
-		"ca":        serve.NewCA,
-		"blacklist": probe.NewBlacklistApi,
-		"checker":   checker.NewChecker,
-		"dashboard": serve.NewDashboard,
-		"history":   history.NewHistory,
-		"ipinfo":    ipinfo.NewLookup,
-		"mitm":      serve.NewMitmProxyServer,
-		"pool":      pool.NewPool,
-		"probe":     probe.NewProbe,
-		"refresher": refresher.NewRefresher,
-		"stats":     stats.NewStats,
-		"ui":        app.MountSpaUI(embedFrontend),
+		"ca":         serve.NewCA,
+		"blacklist":  probe.NewBlacklistApi,
+		"checker":    checker.NewChecker,
+		"dashboard":  serve.NewDashboard,
+		"history":    history.NewHistory,
+		"ipinfo":     ipinfo.NewLookup,
+		"mitm":       serve.NewMitmProxyServer,
+		"pool":       pool.NewPool,
+		"probe":      probe.NewProbe,
+		"refresher":  refresher.NewRefresher,
+		"stats":      stats.NewStats,
+		"prometheus": prometheus.NewPrometheus,
+		"ui":         app.MountSpaUI(embedFrontend),
 	})
 }

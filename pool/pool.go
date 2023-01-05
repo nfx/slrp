@@ -5,8 +5,11 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,14 +23,18 @@ import (
 )
 
 type Pool struct {
-	ipLookup      ipinfo.IpInfoGetter
-	work          chan work
-	serial        chan int
-	pressure      chan int
-	halt          chan time.Duration
-	client        httpClient
-	shards        []shard
-	workerCancels []context.CancelFunc
+	ipLookup                ipinfo.IpInfoGetter
+	work                    chan work
+	serial                  chan int
+	pressure                chan int
+	halt                    chan time.Duration
+	client                  httpClient
+	shards                  []shard
+	workerCancels           []context.CancelFunc
+	proxyCountGauge         *prometheus.GaugeVec
+	successRateGauge        *prometheus.GaugeVec
+	averageSuccessRateGauge *prometheus.GaugeVec
+	successRateClick        *prometheus.GaugeVec
 }
 
 type httpClient interface {
@@ -36,10 +43,12 @@ type httpClient interface {
 
 // TODO: make these values configurable
 var poolWorkSize = 128
-var poolShards = 1
+var poolShards = 32
 
 func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter) *Pool {
-	return &Pool{
+	var shardLabels = []string{"id"}
+
+	var p = &Pool{
 		ipLookup: ipLookup,
 		serial:   make(chan int),
 		work:     make(chan work, poolWorkSize),
@@ -50,7 +59,24 @@ func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter) *Pool {
 			Transport: history.Wrap(pmux.ContextualHttpTransport()),
 			Timeout:   10 * time.Second, // TODO: make timeouts configurable
 		},
+		proxyCountGauge: promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "slrp_pool_proxy_total",
+			Help: "The total number of proxies in a pool",
+		}, shardLabels),
+		successRateGauge: promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "slrp_success_rate",
+			Help: "The total number of proxies in a pool",
+		}, shardLabels),
+		averageSuccessRateGauge: promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "slrp_avg_success_rate",
+			Help: "The total number of proxies in a pool",
+		}, shardLabels),
+		successRateClick: promauto.NewGaugeVec(prometheus.GaugeOpts{
+			Name: "slrp_beta_sample",
+		}, shardLabels),
 	}
+
+	return p
 }
 
 func (pool *Pool) Start(ctx app.Context) {
@@ -58,7 +84,9 @@ func (pool *Pool) Start(ctx app.Context) {
 	go pool.halter(ctx)
 	for i := range pool.shards {
 		shard := &pool.shards[i]
+		shard.id = "shard_" + strconv.Itoa(i)
 		shard.init(pool.work)
+		shard.parent = pool
 		go shard.main(ctx)
 		shard.reanimate <- true
 	}

@@ -3,8 +3,6 @@ package pool
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
 	"net/http"
@@ -51,19 +49,20 @@ type removal struct {
 }
 
 type shard struct {
-	Entries          []entry
-	incoming         chan incoming
-	remove           chan removal
-	requests         chan request
-	snapshot         chan chan []entry
-	reanimate        chan bool
-	reply            chan reply
-	work             chan work //todo channel in pool
-	minute           *time.Ticker
-	ticks            int
-	randomSource     *rand.Rand
-	proxyCountGauge  prometheus.Gauge
-	successRateGauge prometheus.Gauge
+	parent       *Pool
+	id           string
+	Entries      []entry
+	incoming     chan incoming
+	remove       chan removal
+	requests     chan request
+	snapshot     chan chan []entry
+	reanimate    chan bool
+	reply        chan reply
+	work         chan work //todo channel in pool
+	minute       *time.Ticker
+	tenSec       *time.Ticker
+	ticks        int
+	randomSource *rand.Rand
 }
 
 func (pool *shard) init(work chan work) {
@@ -76,16 +75,8 @@ func (pool *shard) init(work chan work) {
 	pool.snapshot = make(chan chan []entry)
 	pool.reply = make(chan reply)
 	pool.minute = time.NewTicker(1 * time.Minute)
+	pool.tenSec = time.NewTicker(10 * time.Second)
 	pool.randomSource = rand.New(rand.NewSource(uint64(now().Unix())))
-
-	pool.proxyCountGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "slrp_pool_proxy_total",
-		Help: "The total number of proxies in a pool",
-	})
-	pool.successRateGauge = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "slrp_success_rate",
-		Help: "The total number of proxies in a pool",
-	})
 
 }
 
@@ -100,20 +91,26 @@ func (pool *shard) main(ctx app.Context) {
 				snapshot[i] = pool.Entries[i]
 			}
 			res <- snapshot
+		case <-pool.tenSec.C:
+			var av float64
+			for _, e := range pool.Entries {
+				av += float64(e.SuccessRate())
+			}
+			pool.parent.averageSuccessRateGauge.WithLabelValues(pool.id).Set(av / float64(len(pool.Entries)))
+			var nt float64
+			sampleSize := len(pool.Entries) / 10
+			for i := 0; i < sampleSize; i++ {
+				_, _, e := pool.sampleProxy()
+				nt += float64(e.SuccessRate())
+			}
+			nt = nt / float64(sampleSize)
+			pool.parent.successRateGauge.WithLabelValues(pool.id).Set(nt)
+
 		case <-pool.minute.C:
 			if pool.handleReanimate() {
 				ctx.Heartbeat()
 			}
-			var nt float64
 
-			for i := 0; i < 100; i++ {
-				_, _, e := pool.sampleProxy()
-				nt += float64(e.SuccessRate())
-
-			}
-			nt = nt / float64(100)
-			pool.successRateGauge.Set(nt)
-			//fmt.Printf("\n\n\n\nAVERAGEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE  %.5f\n\n\n\n", nt)
 		case <-pool.reanimate:
 			pool.forceReanimate()
 		case v := <-pool.remove:
@@ -170,6 +167,7 @@ func (pool *shard) removeProxy(r removal) {
 
 func (pool *shard) add(v incoming) {
 	now := time.Now()
+
 	pool.Entries = append(pool.Entries, entry{
 		Proxy:     v.Proxy,
 		FirstSeen: now.Unix(),
@@ -230,11 +228,11 @@ func (pool *shard) ThompsonBandit() *entry {
 	for _, e := range pool.Entries {
 		nt += float64(e.SuccessRate())
 	}
-
-	_, _, b := pool.sampleProxy()
+	weights, bandi, b := pool.sampleProxy()
+	pool.parent.successRateClick.WithLabelValues(pool.id).Set(weights[bandi])
 	b.Offered += 1
-	//fmt.Printf("pool %v\t%v\t(%v/%v) \t%v \t %v \t%v \t%.4f\t SR:%.4f\n", &pool, b.Proxy.IP(), bandi, size, weights[bandi], b.Offered, b.Succeed, float64(b.SuccessRate()/100), float64(nt)/float64(size))
-	pool.successRateGauge.Set(nt / float64(size))
+	fmt.Printf("pool %v\t%v\t(%v/%v) \t%v \t %v \t%v \t%.4f\t SR:%.4f\n", pool.id, b.Proxy.IP(), bandi, size, weights[bandi], b.Offered, b.Succeed, float64(b.SuccessRate()/100), float64(nt)/float64(size))
+	//pool.successRateGauge.Set(nt / float64(size))
 	return b
 }
 
@@ -242,14 +240,15 @@ func (pool *shard) sampleProxy() ([]float64, int, *entry) {
 	mv := float64(-1)
 	weights := make([]float64, len(pool.Entries))
 	bandi := 0
-	const punishFactor = 1
+	const scaleFactor = 1
 	for idx, e := range pool.Entries {
-
-		a := e.Offered
+		//failures
 		b := e.Offered - e.Succeed
+		//successes
+		a := e.Succeed
 		// we use punish factor to penalize the failed attempts more
 		// allows to move dead proxies out of equation faster
-		bet := distuv.Beta{Alpha: float64(a + 1), Beta: float64(b*punishFactor + 1), Src: pool.randomSource}
+		bet := distuv.Beta{Alpha: float64(a*scaleFactor + 1), Beta: float64(b + 1), Src: pool.randomSource}
 		weights[idx] = bet.Rand()
 		if weights[idx] > mv {
 			bandi = idx
@@ -266,9 +265,12 @@ func (pool *shard) handleRequest(r request) {
 	// log := app.Log.From(r.in.Context())
 	r.in.Header.Set("User-Agent", uarand.GetRandom())
 	var entry *entry
-	pool.proxyCountGauge.Set(float64(len(pool.Entries)))
-	entry = pool.ThompsonBandit()
-
+	pool.parent.proxyCountGauge.WithLabelValues(pool.id).Set(float64(len(pool.Entries)))
+	if len(pool.Entries) < 10 {
+		entry = pool.firstAvailableProxy(r)
+	} else {
+		entry = pool.ThompsonBandit()
+	}
 	pool.ticks += 1
 	if entry == nil {
 		// this pool has no entries, try next one

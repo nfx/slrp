@@ -43,7 +43,7 @@ type httpClient interface {
 
 // TODO: make these values configurable
 var poolWorkSize = 128
-var poolShards = 32
+var poolShards = 1
 
 func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter) *Pool {
 	var shardLabels = []string{"id"}

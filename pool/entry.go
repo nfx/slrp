@@ -26,6 +26,7 @@ type entry struct { // todo: package private
 	Succeed        int
 	HourOffered    [24]int
 	HourSucceed    [24]int
+	fails          int
 }
 
 func (e *entry) MarkSeen() {

@@ -10,7 +10,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/maxmind/mmdbwriter v0.0.0-20220830183856-fffdfa44ff0b
-	github.com/microcosm-cc/bluemonday v1.0.23
+	github.com/microcosm-cc/bluemonday v1.0.24
 	github.com/nfx/go-htmltable v0.4.0
 	github.com/oschwald/maxminddb-golang v1.10.0
 	github.com/rs/zerolog v1.29.0

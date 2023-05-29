@@ -18,11 +18,10 @@ require (
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
 	golang.org/x/net v0.10.0
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
-	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/apex/log v1.9.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/bdandy/go-errors v1.2.2 // indirect

@@ -10,19 +10,18 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/maxmind/mmdbwriter v0.0.0-20220830183856-fffdfa44ff0b
-	github.com/microcosm-cc/bluemonday v1.0.23
+	github.com/microcosm-cc/bluemonday v1.0.24
 	github.com/nfx/go-htmltable v0.4.0
 	github.com/oschwald/maxminddb-golang v1.10.0
-	github.com/rs/zerolog v1.29.0
-	github.com/stretchr/testify v1.8.2
+	github.com/rs/zerolog v1.29.1
+	github.com/stretchr/testify v1.8.3
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/exp v0.0.0-20220916125017-b168a2c6b86b
-	golang.org/x/net v0.8.0
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+	golang.org/x/net v0.10.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
-	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/apex/log v1.9.0 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/bdandy/go-errors v1.2.2 // indirect
@@ -46,8 +45,8 @@ require (
 	github.com/tj/go-update v2.2.4+incompatible
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	go4.org/netipx v0.0.0-20220812043211-3cc044ffd68d // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

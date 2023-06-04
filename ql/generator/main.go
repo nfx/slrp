@@ -130,8 +130,7 @@ type Meta struct {
 
 func prepare(filename, forType string) (*Meta, error) {
 	fset := token.NewFileSet()
-	goFile := os.Getenv("GOFILE")
-	file, err := parser.ParseFile(fset, goFile, nil, parser.AllErrors)
+	file, err := parser.ParseFile(fset, filename, nil, parser.AllErrors)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +171,7 @@ func prepare(filename, forType string) (*Meta, error) {
 						})
 					}
 				case *ast.SelectorExpr:
+					ast.Print(fset, x)
 					panic(fmt.Errorf("expr: %s, selector: %s", t.X, t.Sel))
 					// TODO: parse import
 				default:
@@ -181,7 +181,7 @@ func prepare(filename, forType string) (*Meta, error) {
 			return true
 		})
 		targetName := fmt.Sprintf("%s_dataset.go", strings.ToLower(forType))
-		if strings.HasSuffix(goFile, "_test.go") {
+		if strings.HasSuffix(filename, "_test.go") {
 			// special case for package under test, for simplicity reasons.
 			targetName = targetName[:len(targetName)-3] + "_test.go"
 		}

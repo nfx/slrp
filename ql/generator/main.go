@@ -59,7 +59,7 @@ func (d {{.Source}}Dataset) Query(query string) (*{{ev}}QueryResult[{{.Source}}]
 {{define "facet-int"}}{{end}}
 {{define "facet-bool"}}{{end}}
 
-{{define "accessor-int"}}
+{{define "accessor-number"}}
 	"{{.Name}}": {{ev}}NumberGetter{"{{.Name}}", d.get{{.Name}}},
 {{end}}
 
@@ -71,41 +71,47 @@ func (d {{.Source}}Dataset) Query(query string) (*{{ev}}QueryResult[{{.Source}}]
 	"{{.Name}}": {{ev}}BooleanGetter{"{{.Name}}", d.get{{.Name}}},
 {{end}}
 
-{{define "methods-int"}}
-	func (d {{.Source}}Dataset) get{{.Name}}(record int) float64 {
+{{define "methods-number"}}
+	func (d {{.Of.Name}}Dataset) get{{.Name}}(record int) float64 {
+		{{if eq .Ref "time.Time" -}}
+		return float64(d[record].Unix())
+		{{- else if eq .Ref "time.Duration" -}}
+		return float64(d[record])
+		{{- else -}}
 		return float64(d[record].{{.Name}})
+		{{- end}}
 	}
 	{{template "sort" .}}
 {{end}}
 
 {{define "methods-string"}}
-	func (d {{.Source}}Dataset) get{{.Name}}(record int) string {
-		return d[record].{{.Name}}
+	func (d {{.Of.Name}}Dataset) get{{.Name}}(record int) string {
+		return d[record].{{.Name}}{{if .Ref.IsStringer}}.String(){{end}}
 	}
 	{{template "sort" .}}
 {{end}}
 
 {{define "methods-bool"}}
-	func (d {{.Source}}Dataset) get{{.Name}}(record int) bool {
+	func (d {{.Of.Name}}Dataset) get{{.Name}}(record int) bool {
 		return d[record].{{.Name}}
 	}
 
-	func (_ {{.Source}}Dataset) sortAsc{{.Name}}(left, right {{.Source}}) bool {
+	func (_ {{.Of.Name}}Dataset) sortAsc{{.Name}}(left, right {{.Of.Name}}) bool {
 		return left.{{.Name}} == right.{{.Name}}
 	}
 
-	func (_ {{.Source}}Dataset) sortDesc{{.Name}}(left, right {{.Source}}) bool {
+	func (_ {{.Of.Name}}Dataset) sortDesc{{.Name}}(left, right {{.Of.Name}}) bool {
 		return left.{{.Name}} != right.{{.Name}}
 	}
 {{end}}
 
 {{define "sort"}}
-	func (_ {{.Source}}Dataset) sortAsc{{.Name}}(left, right {{.Source}}) bool {
-		return left.{{.Name}} < right.{{.Name}}
+	func (_ {{.Of.Name}}Dataset) sortAsc{{.Name}}(left, right {{.Of.Name}}) bool {
+		return left.get{{.Name}}() < right.get{{.Name}}()
 	}
 
-	func (_ {{.Source}}Dataset) sortDesc{{.Name}}(left, right {{.Source}}) bool {
-		return left.{{.Name}} > right.{{.Name}}
+	func (_ {{.Of.Name}}Dataset) sortDesc{{.Name}}(left, right {{.Of.Name}}) bool {
+		return left.get{{.Name}}() > right.get{{.Name}}()
 	}
 {{end}}
 `
@@ -129,7 +135,7 @@ func main() {
 		},
 		"FieldTemplate": func(prefix string, field *meta.Field) (string, error) {
 			buf := bytes.NewBuffer([]byte{})
-			err = t.ExecuteTemplate(buf, fmt.Sprintf("%s-%s", prefix, field.Type), field)
+			err = t.ExecuteTemplate(buf, fmt.Sprintf("%s-%s", prefix, field.AbstractType()), field)
 			return strings.TrimSpace(buf.String()), err
 		},
 	}).Parse(tmpl)

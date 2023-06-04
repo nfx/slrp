@@ -24,16 +24,17 @@ type Type struct {
 
 type Field struct {
 	Name  string
-	Type  *Ref
+	Ref   *Ref
+	Of    *Type
 	Facet string
 }
 
-type Ref struct {
-	Pkg       string
-	Name      string
-	IsArray   bool
-	IsPointer bool
-	MapKey    *Ref
+func (f Field) AbstractType() string {
+	t := f.Ref
+	if t == nil {
+		return "unknown"
+	}
+	return t.AbstractType()
 }
 
 func Parse(filename, pkg, forType string) (*Dataset, error) {

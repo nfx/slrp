@@ -112,10 +112,16 @@ func (f *fState) typeSpec(s *ast.TypeSpec) error {
 			if !f.isExported(fieldName) {
 				continue
 			}
+			ref := f.typeRef(v.Type)
+			if ref != nil && ref.IsArray {
+				// TODO: add array support to query engine
+				continue
+			}
 			t.Fields = append(t.Fields, Field{
 				Name:  fieldName,
-				Type:  f.typeRef(v.Type),
+				Ref:   ref,
 				Facet: f.facet(v.Tag),
+				Of:    &t,
 			})
 		}
 	case *ast.InterfaceType:
@@ -156,11 +162,13 @@ func (f *fState) typeRef(e ast.Expr) *Ref {
 	case *ast.Ident:
 		return &Ref{
 			Name: f.ident(x),
+			f:    f,
 		}
 	case *ast.SelectorExpr:
 		return &Ref{
 			Pkg:  f.typeRef(x.X).Name,
 			Name: f.ident(x.Sel),
+			f:    f,
 		}
 	case *ast.ArrayType:
 		y := f.typeRef(x.Elt)
@@ -173,6 +181,7 @@ func (f *fState) typeRef(e ast.Expr) *Ref {
 			Name:      y.Name,
 			IsPointer: y.IsPointer,
 			MapKey:    y.MapKey,
+			f:         f,
 		}
 	case *ast.StarExpr:
 		y := f.typeRef(x.X)
@@ -185,6 +194,7 @@ func (f *fState) typeRef(e ast.Expr) *Ref {
 			Name:      y.Name,
 			IsArray:   y.IsArray,
 			MapKey:    y.MapKey,
+			f:         f,
 		}
 	case *ast.MapType:
 		v := f.typeRef(x.Value)
@@ -197,6 +207,7 @@ func (f *fState) typeRef(e ast.Expr) *Ref {
 			IsPointer: v.IsPointer,
 			IsArray:   v.IsArray,
 			MapKey:    f.typeRef(x.Key),
+			f:         f,
 		}
 	case *ast.FuncType:
 		// let's ignore it...

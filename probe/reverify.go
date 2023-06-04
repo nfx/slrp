@@ -33,10 +33,10 @@ type inReverify struct {
 	Proxy    pmux.Proxy
 	Attempt  int
 	After    time.Time
-	Country  string
-	Provider string
+	Country  string `facet:"Country"`
+	Provider string `facet:"Provider"`
 	ASN      uint16
-	Failure  string
+	Failure  string `facet:"Failure"`
 	Sources  []string
 }
 

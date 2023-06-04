@@ -41,6 +41,7 @@ func main() {
 		"pool":      pool.NewPool,
 		"probe":     probe.NewProbe,
 		"refresher": refresher.NewRefresher,
+		"reverify":  probe.NewReverifyApi,
 		"stats":     stats.NewStats,
 		"ui":        app.MountSpaUI(embedFrontend),
 	})

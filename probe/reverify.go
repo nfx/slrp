@@ -1,6 +1,8 @@
 package probe
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/nfx/slrp/ipinfo"
@@ -12,13 +14,9 @@ type probeSnapshot interface {
 	Snapshot() internal
 }
 
-type lookup interface {
-	Get(p pmux.Proxy) (info ipinfo.Info)
-}
-
 type reverifyDashboard struct {
 	Probe  probeSnapshot
-	Lookup lookup
+	Lookup ipinfo.IpInfoGetter
 }
 
 func NewReverifyApi(probe *Probe, info *ipinfo.Lookup) *reverifyDashboard {
@@ -40,7 +38,7 @@ type inReverify struct {
 	Sources  []string
 }
 
-func (d *reverifyDashboard) snapshot() (found []inReverify) {
+func (d *reverifyDashboard) snapshot() (found inReverifyDataset) {
 	s := d.Probe.Snapshot()
 	for _, v := range s.LastReverified {
 		info := d.Lookup.Get(v.Proxy)
@@ -59,4 +57,12 @@ func (d *reverifyDashboard) snapshot() (found []inReverify) {
 		})
 	}
 	return found
+}
+
+func (d *reverifyDashboard) HttpGet(r *http.Request) (any, error) {
+	snapshot := d.snapshot()
+	if len(snapshot) == 0 {
+		return nil, fmt.Errorf("reverify is empty")
+	}
+	return snapshot.Query(r.FormValue("filter"))
 }

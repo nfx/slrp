@@ -10,7 +10,7 @@ import (
 type Dataset[T any] struct {
 	Source    []T
 	Accessors Accessors
-	Facets    FacetRetrievers[T]
+	Facets    func([]T, int) []Facet
 	Sorters   Sorters[T]
 }
 
@@ -25,15 +25,12 @@ func (d Dataset[T]) Query(query string) (*QueryResult[T], error) {
 	if err != nil {
 		return nil, err
 	}
-	less, err := d.Sorters.Sort(plan.Sort)
-	if err != nil {
-		return nil, fmt.Errorf("sort: %w", err)
-	}
 	optimized := d.Transform(*plan)
 	err, ok := d.IsFailure(optimized)
 	if ok {
 		return nil, err
 	}
+	// TODO: eval.Dataset[inReverify,inReverifyDataset]
 	result := []T{}
 	for i := 0; i < len(d.Source); i++ {
 		include, err := Filter(i, optimized)
@@ -45,9 +42,15 @@ func (d Dataset[T]) Query(query string) (*QueryResult[T], error) {
 		}
 		result = append(result, d.Source[i])
 	}
-	// TODO: consider rolling back to sort.SliceStable(),
-	// as field accessors might make things more complicated.
-	slices.SortStableFunc(result, less)
+	if plan.Sort != nil {
+		less, err := d.Sorters.Sort(plan.Sort)
+		if err != nil {
+			return nil, fmt.Errorf("sort: %w", err)
+		}
+		// TODO: consider rolling back to sort.SliceStable(),
+		// as field accessors might make things more complicated.
+		slices.SortStableFunc(result, less)
+	}
 	topN := 10
 	if plan.Limit == 0 {
 		plan.Limit = 20
@@ -58,6 +61,6 @@ func (d Dataset[T]) Query(query string) (*QueryResult[T], error) {
 	return &QueryResult[T]{
 		Total:   len(result),
 		Records: result[:plan.Limit],
-		Facets:  d.Facets.Facets(result, topN),
+		Facets:  d.Facets(result, topN),
 	}, nil
 }

@@ -22,10 +22,13 @@ func (d {{.Type.Name}}Dataset) Query(query string) (*{{ev}}QueryResult[{{.Type.N
 				"{{.Name}}": {Asc: d.sortAsc{{.Name}}, Desc: d.sortDesc{{.Name}}},
 			{{end}}
 		},
-		Facets: {{ev}}FacetRetrievers[{{.Type.Name}}]{
-			{{range .Type.Fields -}}
-				{{FieldTemplate "facet" .}}
-			{{- end}}
+		Facets: func(t []{{.Type.Name}}, topN int) []eval.Facet {
+			r := {{.Type.Name}}Dataset(t)
+			return {{ev}}FacetRetrievers[{{.Type.Name}}]{
+				{{range .Type.Fields -}}
+					{{FieldTemplate "facet" .}}
+				{{- end}}
+			}.Facets(t, topN)
 		},
 	}).Query(query)
 }
@@ -37,7 +40,7 @@ func (d {{.Type.Name}}Dataset) Query(query string) (*{{ev}}QueryResult[{{.Type.N
 {{define "facet-string"}}
 	{{if .Facet }}
 		{{ev}}StringFacet{
-			Getter: d.get{{.Name}}, 
+			Getter: r.get{{.Name}}, 
 			Field: "{{.Name}}", 
 			Name: "{{.Facet}}",
 		},

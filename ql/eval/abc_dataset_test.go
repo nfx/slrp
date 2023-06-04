@@ -22,20 +22,23 @@ func (d AbcDataset) Query(query string) (*QueryResult[Abc], error) {
 			"Foo":    {Asc: d.sortAscFoo, Desc: d.sortDescFoo},
 			"Active": {Asc: d.sortAscActive, Desc: d.sortDescActive},
 		},
-		Facets: FacetRetrievers[Abc]{
-			StringFacet{
-				Getter: d.getZoom,
-				Field:  "Zoom",
-				Name:   "Zooms",
-			}, StringFacet{
-				Getter: d.getZuul,
-				Field:  "Zuul",
-				Name:   "Zuuls",
-			}, StringFacet{
-				Getter: d.getFoo,
-				Field:  "Foo",
-				Name:   "Category",
-			},
+		Facets: func(t []Abc, i int) []Facet {
+			r := AbcDataset(t)
+			return FacetRetrievers[Abc]{
+				StringFacet{
+					Getter: r.getZoom,
+					Field:  "Zoom",
+					Name:   "Zooms",
+				}, StringFacet{
+					Getter: r.getZuul,
+					Field:  "Zuul",
+					Name:   "Zuuls",
+				}, StringFacet{
+					Getter: r.getFoo,
+					Field:  "Foo",
+					Name:   "Category",
+				},
+			}.Facets(t, i)
 		},
 	}).Query(query)
 }

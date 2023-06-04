@@ -28,20 +28,24 @@ func (d inReverifyDataset) Query(query string) (*eval.QueryResult[inReverify], e
 			"ASN":      {Asc: d.sortAscASN, Desc: d.sortDescASN},
 			"Failure":  {Asc: d.sortAscFailure, Desc: d.sortDescFailure},
 		},
-		Facets: eval.FacetRetrievers[inReverify]{
-			eval.StringFacet{
-				Getter: d.getCountry,
-				Field:  "Country",
-				Name:   "Country",
-			}, eval.StringFacet{
-				Getter: d.getProvider,
-				Field:  "Provider",
-				Name:   "Provider",
-			}, eval.StringFacet{
-				Getter: d.getFailure,
-				Field:  "Failure",
-				Name:   "Failure",
-			},
+		Facets: func(t []inReverify, topN int) []eval.Facet {
+			// TODO: try with interface or with eval.Dataset[inReverify,inReverifyDataset]
+			r := inReverifyDataset(t)
+			return eval.FacetRetrievers[inReverify]{
+				eval.StringFacet{
+					Getter: r.getCountry,
+					Field:  "Country",
+					Name:   "Country",
+				}, eval.StringFacet{
+					Getter: r.getProvider,
+					Field:  "Provider",
+					Name:   "Provider",
+				}, eval.StringFacet{
+					Getter: r.getFailure,
+					Field:  "Failure",
+					Name:   "Failure",
+				},
+			}.Facets(t, topN)
 		},
 	}).Query(query)
 }

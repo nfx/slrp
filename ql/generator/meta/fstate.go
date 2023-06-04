@@ -38,6 +38,9 @@ func (f *fState) funcDecl(fu *ast.FuncDecl) error {
 	}
 	for _, v := range fu.Recv.List {
 		typeRef := f.typeRef(v.Type)
+		if typeRef == nil {
+			continue
+		}
 		// shortcut: methods must be defined after type declaration,
 		// even though Go allows for the opposite cases. This assumes
 		// that f.typeSpec() was called *before* f.funcDecl()

@@ -3,14 +3,13 @@ package meta
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 )
 
 type Dataset struct {
 	Tool       string
-	Source     string
 	TargetFile string
-	Package    string
 	Type       *Type
 }
 
@@ -20,6 +19,10 @@ type Type struct {
 
 	methods map[string]bool
 	f       *fState
+}
+
+func (t *Type) Package() string {
+	return path.Base(t.f.pkg)
 }
 
 type Field struct {
@@ -37,7 +40,7 @@ func (f Field) AbstractType() string {
 	return t.AbstractType()
 }
 
-func Parse(filename, pkg, forType string) (*Dataset, error) {
+func Parse(filename, forType string) (*Dataset, error) {
 	c, err := newState(filename)
 	if err != nil {
 		return nil, err
@@ -46,6 +49,7 @@ func Parse(filename, pkg, forType string) (*Dataset, error) {
 	if err != nil {
 		return nil, err
 	}
+	pkg := strings.ReplaceAll(path.Dir(filename), c.root, c.mod)
 	fqtn := fmt.Sprintf("%s.%s", pkg, forType)
 	t, ok := c.types[fqtn]
 	if !ok {
@@ -58,9 +62,7 @@ func Parse(filename, pkg, forType string) (*Dataset, error) {
 	}
 	return &Dataset{
 		Tool:       strings.Join(os.Args, " "),
-		Source:     forType,
 		TargetFile: targetName,
-		Package:    pkg,
 		Type:       t,
 	}, nil
 }

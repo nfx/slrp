@@ -7,7 +7,7 @@ import (
 )
 
 func TestParsing(t *testing.T) {
-	ds, err := Parse("../../../probe/reverify.go", "github.com/nfx/slrp/probe", "inReverify")
+	ds, err := Parse("../../../probe/reverify.go", "inReverify")
 	assert.NoError(t, err)
 	assert.NotNil(t, ds)
 

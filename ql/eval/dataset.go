@@ -45,7 +45,8 @@ func (d Dataset[T]) Query(query string) (*QueryResult[T], error) {
 		}
 		result = append(result, d.Source[i])
 	}
-	// execute sort
+	// TODO: consider rolling back to sort.SliceStable(),
+	// as field accessors might make things more complicated.
 	slices.SortStableFunc(result, less)
 	topN := 10
 	if plan.Limit == 0 {

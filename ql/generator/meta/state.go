@@ -35,7 +35,7 @@ func findGoMod(file string) (string, error) {
 		}
 		dir = filepath.Dir(dir)
 	}
-	return "", fmt.Errorf("go.mod file not found")
+	return "", fmt.Errorf("go.mod file not found for %s", file)
 }
 
 func newState(filename string) (*state, error) {

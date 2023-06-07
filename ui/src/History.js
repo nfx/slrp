@@ -1,5 +1,6 @@
-import { IconHeader, LiveFilter, useTitle } from './util'
-import { useState } from 'react';
+import {IconHeader, LiveFilter, useTitle} from './util'
+import {useState} from 'react';
+import "./History.css"
 
 function convertSize(bytes) {
   if (bytes < 1024) {

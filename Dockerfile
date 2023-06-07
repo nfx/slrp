@@ -19,25 +19,28 @@ ENV PWD="/usr/app"
 WORKDIR $PWD
 ENV version="0.1.5"
 
-RUN curl -sSL "https://github.com/nfx/slrp/releases/download/v$version/slrp_${version}_linux_amd64.tar.gz" | tar xfz -
-
-RUN mkdir ./.slrp
-RUN echo '\
+RUN printf '\
 app:\n\
-  state: $PWD/.slrp/data\n\
-  sync: 1m\n\
+    state: $PWD/.slrp/data\n\
+    sync: 1m\n\
 log:\n\
-  level: info\n\
-  format: pretty\n\
+    level: info\n\
+    format: pretty\n\
 server:\n\
-  addr: "0.0.0.0:8089"\n\
-  read_timeout: 15s\n\
+    addr: "0.0.0.0:8089"\n\
+    read_timeout: 15s\n\
 mitm:\n\
-  addr: "0.0.0.0:8090"\n\
-  read_timeout: 15s\n\
-  idle_timeout: 15s\n\
-  write_timeout: 15s\
+    addr: "0.0.0.0:8090"\n\
+    read_timeout: 15s\n\
+    idle_timeout: 15s\n\
+    write_timeout: 15s\n\
+checker:\n\
+    timeout: 5s\n\
+    strategy: simple\n\
+history:\n\
+    limit: 1000\n\
 ' > ./slrp.yml
+RUN mkdir ./.slrp
 
 EXPOSE 8089 8090
 

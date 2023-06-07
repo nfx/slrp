@@ -88,12 +88,15 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
   let doFilter = useCallback(() => {
     clearTimeout(savedCallback.current)
     savedCallback.current = setTimeout(() => {
-      http.get(endpoint, { params: searchParams }).then(response => {
+      http.get(endpoint, {params: searchParams}).then(response => {
+        if (pause) {
+          clearTimeout(savedCallback.current)
+          return
+        }
         setTotal(response.data.Total)
         onUpdate(response.data)
         setFailure(null)
-        if (!pause)
-          savedCallback.current = setTimeout(doFilter, minDelay)
+        savedCallback.current = setTimeout(doFilter, minDelay)
       }).catch(err => {
         if (err.isAxiosError) {
           setFailure(err.response.data.Message)

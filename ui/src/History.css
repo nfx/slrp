@@ -1,32 +1,25 @@
+#history-table .request abbr {
+  display: inline-block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
 @media screen and (min-width: 781px) {
   #history-table .request abbr {
     max-width: 600px;
-    display: inline-block;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    vertical-align: bottom;
   }
 }
 
 @media screen and (max-width: 780px) {
   #history-table .request abbr {
     max-width: 400px;
-    display: inline-block;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    vertical-align: bottom;
   }
 }
 
 @media screen and (max-width: 500px) {
   #history-table .request abbr {
     max-width: 380px;
-    display: inline-block;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    vertical-align: bottom;
   }
 }

@@ -1,4 +1,4 @@
-import { IconHeader, LiveFilter, SearchFacet, useTitle, http } from './util'
+import { IconHeader, LiveFilter, QueryFacets, useTitle, http } from './util'
 import { Countries } from './countries';
 import { useState } from 'react';
 
@@ -25,14 +25,11 @@ function Item({Proxy, Failure, Sources, Provider, ASN, Country}) {
 
 export default function Blacklist() {
   useTitle("Blacklist")
-  const [blacklist, setBlacklist] = useState(null);
+  const [result, setResult] = useState(null);
   return <div className="card blacklist table-responsive">
-    <LiveFilter endpoint="/blacklist" onUpdate={setBlacklist} minDelay={10000} />
-    {blacklist != null && <div>
-      <SearchFacet name='Failures' items={blacklist.TopFailures} link={`/blacklist?filter=Failure ~ "$"`} />
-      <SearchFacet name='Countries' items={blacklist.TopCountries} link={`/blacklist?filter=Country:$`} />
-      <SearchFacet name='Providers' items={blacklist.TopProviders} link={`/blacklist?filter=Provider ~ "$"`} />
-      <SearchFacet name='Sources' items={blacklist.TopSources} />
+    <LiveFilter endpoint="/blacklist" onUpdate={setResult} minDelay={10000} />
+    {result != null && <div>
+      <QueryFacets endpoint="/blacklist" {...result} />
       <table className='table text-start table-sm'>
         <thead>
           <tr className="text-uppercase text-muted">
@@ -44,7 +41,7 @@ export default function Blacklist() {
           </tr>
         </thead>
         <tbody>
-          {blacklist.Items.map(r => <Item key={r.Proxy} {...r} />)}
+          {result.Records.map(r => <Item key={r.Proxy} {...r} />)}
         </tbody>
       </table>
     </div>}

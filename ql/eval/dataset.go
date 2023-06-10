@@ -7,10 +7,10 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type Dataset[T any] struct {
-	Source    []T
+type Dataset[T any, D ~[]T] struct {
+	Source    D
 	Accessors Accessors
-	Facets    func([]T, int) []Facet
+	Facets    func(D, int) []Facet
 	Sorters   Sorters[T]
 }
 
@@ -20,7 +20,7 @@ type QueryResult[T any] struct {
 	Facets  []Facet
 }
 
-func (d Dataset[T]) Query(query string) (*QueryResult[T], error) {
+func (d Dataset[T, D]) Query(query string) (*QueryResult[T], error) {
 	plan, err := internal.Parse(query)
 	if err != nil {
 		return nil, err
@@ -30,8 +30,7 @@ func (d Dataset[T]) Query(query string) (*QueryResult[T], error) {
 	if ok {
 		return nil, err
 	}
-	// TODO: eval.Dataset[inReverify,inReverifyDataset]
-	result := []T{}
+	result := D{}
 	for i := 0; i < len(d.Source); i++ {
 		include, err := Filter(i, optimized)
 		if err != nil {
@@ -51,7 +50,6 @@ func (d Dataset[T]) Query(query string) (*QueryResult[T], error) {
 		// as field accessors might make things more complicated.
 		slices.SortStableFunc(result, less)
 	}
-	topN := 10
 	if plan.Limit == 0 {
 		plan.Limit = 20
 	}
@@ -61,6 +59,6 @@ func (d Dataset[T]) Query(query string) (*QueryResult[T], error) {
 	return &QueryResult[T]{
 		Total:   len(result),
 		Records: result[:plan.Limit],
-		Facets:  d.Facets(result, topN),
+		Facets:  d.Facets(result, plan.Limit),
 	}, nil
 }

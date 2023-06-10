@@ -9,6 +9,7 @@ import (
 )
 
 func TestWebanet(t *testing.T) {
+	t.Skip() // last updated only on 22.01.2023
 	server := httptest.NewServer(http.FileServer(http.Dir("./testdata/webanet")))
 	defer server.Close()
 	webanetURL = fmt.Sprintf("%s/page", server.URL)

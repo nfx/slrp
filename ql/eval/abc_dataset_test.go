@@ -4,7 +4,7 @@ package eval
 type AbcDataset []Abc
 
 func (d AbcDataset) Query(query string) (*QueryResult[Abc], error) {
-	return (&Dataset[Abc]{
+	return (&Dataset[Abc,AbcDataset]{
 		Source: d,
 		Accessors: Accessors{
 			"Bar":    NumberGetter{"Bar", d.getBar},
@@ -22,8 +22,7 @@ func (d AbcDataset) Query(query string) (*QueryResult[Abc], error) {
 			"Foo":    {Asc: d.sortAscFoo, Desc: d.sortDescFoo},
 			"Active": {Asc: d.sortAscActive, Desc: d.sortDescActive},
 		},
-		Facets: func(t []Abc, i int) []Facet {
-			r := AbcDataset(t)
+		Facets: func(r AbcDataset, i int) []Facet {
 			return FacetRetrievers[Abc]{
 				StringFacet{
 					Getter: r.getZoom,
@@ -38,7 +37,7 @@ func (d AbcDataset) Query(query string) (*QueryResult[Abc], error) {
 					Field:  "Foo",
 					Name:   "Category",
 				},
-			}.Facets(t, i)
+			}.Facets(r, i)
 		},
 	}).Query(query)
 }

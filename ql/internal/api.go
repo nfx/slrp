@@ -13,7 +13,7 @@ import (
 func Parse(query string) (*ast.Query, error) {
 	if query == "" {
 		return &ast.Query{
-			Limit: 10,
+			Limit:  20,
 			Filter: ast.True,
 		}, nil
 	}

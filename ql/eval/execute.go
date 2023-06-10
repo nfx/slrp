@@ -25,7 +25,9 @@ func Filter(record int, filter ast.Node) (bool, error) {
 		case ast.Contains:
 			left := op.Left.(ast.String)
 			right := op.Right.(ast.String)
-			return ast.Bool(strings.Contains(string(left), string(right)))
+			leftLower := strings.ToLower(string(left))
+			rightLower := strings.ToLower(string(right))
+			return ast.Bool(strings.Contains(leftLower, rightLower))
 		case EqualString:
 			left := op.Left.(ast.String)
 			right := op.Right.(ast.String)

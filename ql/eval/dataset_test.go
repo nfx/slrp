@@ -90,8 +90,14 @@ func TestItWorks(t *testing.T) {
 				{7, 8, "aaa", "zzz", "a", true},
 			},
 			Facets: []Facet{
-				{"Zuuls", []Card{{"xxx", 2, "Zuul:xxx"}}},
-				{"Category", []Card{{"b", 4, "Foo:b"}}},
+				{"Zuuls", []Card{
+					{"zzz", 2, "Zuul:zzz"},
+					{"xxx", 2, "Zuul:xxx"},
+				}},
+				{"Category", []Card{
+					{"b", 2, "Foo:b"},
+					{"a", 2, "Foo:a"},
+				}},
 			},
 			Total: 4,
 		}, ""},
@@ -103,8 +109,14 @@ func TestItWorks(t *testing.T) {
 				{7, 8, "aaa", "zzz", "a", true},
 			},
 			Facets: []Facet{
-				{"Zuuls", []Card{{"xxx", 2, "Zuul:xxx"}}},
-				{"Category", []Card{{"b", 4, "Foo:b"}}},
+				{"Zuuls", []Card{
+					{"zzz", 2, "Zuul:zzz"},
+					{"xxx", 2, "Zuul:xxx"},
+				}},
+				{"Category", []Card{
+					{"b", 2, "Foo:b"},
+					{"a", 2, "Foo:a"},
+				}},
 			},
 			Total: 4,
 		}, ""},
@@ -167,10 +179,10 @@ func TestItWorks(t *testing.T) {
 			Total: 3,
 			Facets: []Facet{
 				{"Zuuls", []Card{
-					{"xxx", 2, "Zuul:xxx"},
+					{"zzz", 3, "Zuul:zzz"},
 				}},
 				{"Category", []Card{
-					{"b", 3, "Foo:b"},
+					{"a", 2, "Foo:a"},
 				}},
 			},
 		}, ""},

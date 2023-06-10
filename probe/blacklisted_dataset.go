@@ -37,8 +37,11 @@ func (d blacklistedDataset) Query(query string) (*eval.QueryResult[blacklisted],
 				}, eval.StringFacet{
 					// TODO: add as an override feature to generator
 					Getter: filtered.getFailureFacet,
-					Field:  "Failure",
-					Name:   "Failure",
+					// TODO: add as an override feature to generator
+					Contains: true,
+
+					Field: "Failure",
+					Name:  "Failure",
 				},
 			}.Facets(filtered, topN)
 		},

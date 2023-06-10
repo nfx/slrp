@@ -45,9 +45,10 @@ type bucket interface {
 }
 
 type StringFacet struct {
-	Getter func(int) string
-	Field  string
-	Name   string
+	Getter   func(int) string
+	Field    string
+	Name     string
+	Contains bool
 }
 
 func (s StringFacet) Bucket() bucket {
@@ -79,10 +80,14 @@ func (s *stringSummary) Facet(n int) Facet {
 		if !isAlpha.MatchString(q) {
 			q = fmt.Sprintf(`"%s"`, q)
 		}
+		query := fmt.Sprintf("%s:%s", s.Field, q)
+		if s.Contains {
+			query = fmt.Sprintf("%s ~ %s", s.Field, q)
+		}
 		cards = append(cards, Card{
 			Name:   name,
 			Value:  cnt,
-			Filter: fmt.Sprintf("%s:%s", s.Field, q),
+			Filter: query,
 		})
 	}
 	slices.SortStableFunc(cards, func(a, b Card) bool {

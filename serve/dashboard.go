@@ -157,6 +157,7 @@ func (d *dashboard) HttpGet(_ *http.Request) (interface{}, error) {
 	if ok {
 		srcs = append(srcs, src{
 			Name:        "reverify",
+			Homepage:    "/reverify",
 			Frequency:   "1h",
 			State:       string(reverify.State),
 			Failure:     reverify.Failure,

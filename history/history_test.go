@@ -62,5 +62,5 @@ func TestRecord(t *testing.T) {
 	x, err = history.HttpGet(&http.Request{})
 	assert.NoError(t, err)
 	fr := x.(filterResults)
-	assert.Equal(t, 1, len(fr.Requests))
+	assert.Equal(t, 1, len(fr.QueryResult.Records))
 }

@@ -3,21 +3,21 @@ package history
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
-	"github.com/nfx/slrp/ql"
+	"github.com/nfx/slrp/ql/eval"
 
 	"github.com/yosssi/gohtml"
 )
 
 type filterResults struct {
-	Total    int
-	Requests []filteredRequest
-	Err      error `json:",omitempty"`
+	eval.QueryResult[filteredRequest]
+	Err error `json:",omitempty"`
 }
 
 type filteredRequest struct {
@@ -35,22 +35,40 @@ type filteredRequest struct {
 	Took       float64
 }
 
+//go:generate go run ../ql/generator/main.go Request
 type Request struct {
 	ID         int
 	Serial     int
-	Attempt    int
+	Attempt    int `facet:"Attempt"`
 	Ts         time.Time
-	Method     string
-	URL        string
-	StatusCode int
-	Status     string
-	Proxy      pmux.Proxy
+	Method     string     `facet:"Method"`
+	URL        string     `facet:"Host"`
+	StatusCode int        `facet:"Status Code"`
+	Status     string     `facet:"Status"`
+	Proxy      pmux.Proxy `facet:"Proxy"`
 	Appeared   int
 	InHeaders  map[string]string
 	OutHeaders map[string]string
 	InBody     []byte
 	OutBody    []byte
 	Took       time.Duration
+}
+
+func (d RequestDataset) getHostname(record int) string {
+	original := d[record].URL
+	u, err := url.Parse(original)
+	if err == nil {
+		return u.Host
+	} else {
+		return original
+	}
+}
+
+func (d RequestDataset) getStatusFacet(record int) string {
+	split := strings.Split(d[record].Status, ": ")
+	// perform error common suffix normalisation
+	failure := split[len(split)-1]
+	return failure
 }
 
 func (r Request) String() string {
@@ -88,13 +106,14 @@ type History struct {
 	requestRequest chan requestRequest
 	filter         chan filter
 	record         chan Request
-	requests       []Request
+	requests       RequestDataset
 	appears        map[pmux.Proxy]int
 	limit          int
 }
 
 func NewHistory() *History {
 	return &History{
+		requests:       RequestDataset{},
 		requestRequest: make(chan requestRequest),
 		filter:         make(chan filter),
 		record:         make(chan Request, 128),
@@ -195,21 +214,21 @@ func (h *History) main(ctx app.Context) {
 }
 
 func (h *History) handleFilter(f filter) filterResults {
-	total := 0
-	var buf []Request
-	// TODO: compare if it's okay to search on original slice
-	// or make a copy every request
-	err := ql.Execute(&h.requests, &buf, f.Query, func(all *[]Request) {
-		total = len(*all)
-	}, ql.DefaultLimit(100), ql.DefaultOrder{ql.Desc("Ts")})
+	res, err := h.requests.Query(f.Query)
 	if err != nil {
 		return filterResults{
 			Err: err,
 		}
 	}
-	result := []filteredRequest{}
-	for _, v := range buf {
-		result = append(result, filteredRequest{
+	// re-create []filteredRequest from *eval.QueryResults
+	out := filterResults{
+		QueryResult: eval.QueryResult[filteredRequest]{
+			Total:  res.Total,
+			Facets: res.Facets,
+		},
+	}
+	for _, v := range res.Records {
+		out.QueryResult.Records = append(out.QueryResult.Records, filteredRequest{
 			ID:         v.ID,
 			Serial:     v.Serial,
 			Attempt:    v.Attempt,
@@ -224,8 +243,5 @@ func (h *History) handleFilter(f filter) filterResults {
 			Took:       v.Took.Round(time.Second).Seconds(),
 		})
 	}
-	return filterResults{
-		Total:    total,
-		Requests: result,
-	}
+	return out
 }

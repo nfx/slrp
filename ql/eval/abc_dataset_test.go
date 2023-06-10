@@ -4,7 +4,7 @@ package eval
 type AbcDataset []Abc
 
 func (d AbcDataset) Query(query string) (*QueryResult[Abc], error) {
-	return (&Dataset[Abc,AbcDataset]{
+	return (&Dataset[Abc, AbcDataset]{
 		Source: d,
 		Accessors: Accessors{
 			"Bar":    NumberGetter{"Bar", d.getBar},

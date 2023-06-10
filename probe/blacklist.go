@@ -12,13 +12,13 @@ import (
 	"github.com/nfx/slrp/sources"
 )
 
-type dashboard struct {
+type blacklistDashboard struct {
 	probe *Probe
 	info  *ipinfo.Lookup
 }
 
-func NewBlacklistApi(probe *Probe, info *ipinfo.Lookup) *dashboard {
-	return &dashboard{
+func NewBlacklistApi(probe *Probe, info *ipinfo.Lookup) *blacklistDashboard {
+	return &blacklistDashboard{
 		probe: probe,
 		info:  info,
 	}
@@ -47,7 +47,7 @@ type blacklistedResults struct {
 	Items        []blacklisted
 }
 
-func (d *dashboard) HttpGet(r *http.Request) (interface{}, error) {
+func (d *blacklistDashboard) HttpGet(r *http.Request) (interface{}, error) {
 	probe := d.probe.Snapshot()
 	snapshot := []blacklisted{}
 	for proxy, failureIndex := range probe.Blacklist {

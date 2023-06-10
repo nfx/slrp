@@ -11,6 +11,12 @@ import (
 //go:generate goyacc -o parser.go parser.y
 
 func Parse(query string) (*ast.Query, error) {
+	if query == "" {
+		return &ast.Query{
+			Limit:  20,
+			Filter: ast.True,
+		}, nil
+	}
 	lexer := &Lexer{
 		Scanner: scanner.Scanner{
 			IsIdentRune: func(ch rune, i int) bool {

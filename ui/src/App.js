@@ -8,6 +8,7 @@ import Dashboard from "./Sources";
 import Proxies from "./Proxies";
 import History from "./History";
 import Blacklist from "./Blacklist";
+import Reverify from "./Reverify";
 
 function Header() {
   return <header className="p-1 mb-3 border-bottom">
@@ -20,6 +21,7 @@ function Header() {
           <li><NavLink to="/" className="nav-link px-2 link-secondary">Overview</NavLink></li>
           <li><NavLink to="/proxies" className="nav-link px-2 link-dark">Proxies</NavLink></li>
           <li><NavLink to="/history" className="nav-link px-2 link-dark">History</NavLink></li>
+          <li><NavLink to="/reverify" className="nav-link px-2 link-dark">Reverify</NavLink></li>
           <li><NavLink to="/blacklist" className="nav-link px-2 link-dark">Blacklist</NavLink></li>
         </ul>
       </div>
@@ -44,6 +46,7 @@ function App() {
       <Route index element={<Dashboard />} />
       <Route path="proxies" element={<Proxies />} />
       <Route path="history" element={<History />} />
+      <Route path="reverify" element={<Reverify />} />
       <Route path="blacklist" element={<Blacklist />} />
     </Route>
   </Routes>

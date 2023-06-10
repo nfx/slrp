@@ -4,7 +4,7 @@ import (
 	"github.com/nfx/slrp/ql/ast"
 )
 
-func (d Dataset[T]) Transform(src ast.Query) ast.Node {
+func (d Dataset[T, D]) Transform(src ast.Query) ast.Node {
 	return src.Transform(func(raw ast.Node) ast.Node {
 		switch n := raw.(type) {
 		case ast.Query:
@@ -69,7 +69,7 @@ func (d Dataset[T]) Transform(src ast.Query) ast.Node {
 	})
 }
 
-func (d Dataset[T]) IsFailure(n ast.Node) (error, bool) {
+func (d Dataset[T, D]) IsFailure(n ast.Node) (error, bool) {
 	var failures []Invalid
 	n.Transform(func(n ast.Node) ast.Node {
 		i, ok := n.(Invalid)
@@ -88,7 +88,7 @@ func (d Dataset[T]) IsFailure(n ast.Node) (error, bool) {
 // MatchAll runs optimisation for single-string-filters:
 // if filter is just a text, search in all string fields
 // EXAMPLE: text -> a~test OR b~text OR c~text
-func (d Dataset[T]) MatchAll(m ast.Node) (or ast.Or) {
+func (d Dataset[T, D]) MatchAll(m ast.Node) (or ast.Or) {
 	for _, v := range d.Accessors {
 		getter, ok := v.(StringGetter)
 		if !ok {
@@ -113,7 +113,7 @@ func (d Dataset[T]) MatchAll(m ast.Node) (or ast.Or) {
 	return
 }
 
-func (d Dataset[T]) StringFrom(n ast.Node) (ast.Node, bool) {
+func (d Dataset[T, D]) StringFrom(n ast.Node) (ast.Node, bool) {
 	switch x := n.(type) {
 	case ast.Ident:
 		return ast.String(x), true
@@ -124,7 +124,7 @@ func (d Dataset[T]) StringFrom(n ast.Node) (ast.Node, bool) {
 	}
 }
 
-func (d Dataset[T]) IsString(raw ast.Node) bool {
+func (d Dataset[T, D]) IsString(raw ast.Node) bool {
 	switch raw.(type) {
 	case StringGetter, ast.String:
 		return true
@@ -133,7 +133,7 @@ func (d Dataset[T]) IsString(raw ast.Node) bool {
 	}
 }
 
-func (d Dataset[T]) IsBoolean(raw ast.Node) bool {
+func (d Dataset[T, D]) IsBoolean(raw ast.Node) bool {
 	switch raw.(type) {
 	case Invalid:
 		return true // hack...
@@ -150,7 +150,7 @@ func (d Dataset[T]) IsBoolean(raw ast.Node) bool {
 	}
 }
 
-func (d Dataset[T]) IsNumber(raw ast.Node) bool {
+func (d Dataset[T, D]) IsNumber(raw ast.Node) bool {
 	switch raw.(type) {
 	case NumberGetter, ast.Number:
 		return true

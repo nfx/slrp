@@ -170,6 +170,35 @@ export function SearchFacet({name, items, link = null}) {
   return result
 }
 
+function QueryFacetFilter({Name, Value, Filter, endpoint}) {
+  const short = Name.length > 32 ? `${Name.substring(0, 32)}...` : Name
+  const link = Name != "n/a" ? `${endpoint}?filter=${Filter}` : null
+  return <li>
+    {link === null ? short : <a className='link-primary app-link' href={link}>
+      {short}
+    </a>} <sup>{Value}</sup>
+  </li>
+}
+
+function QueryFacet({Name, Top, endpoint}) {
+  let result = []
+  if (Top.length > 1) {
+    result.push(<div key={Name} className='search-facet'>
+      <strong>{Name}</strong>
+      <ul>
+        {Top.map(f => 
+          <QueryFacetFilter key={f.Name} endpoint={endpoint} {...f} />)}
+      </ul>
+    </div>)
+  }
+  return result
+}
+
+export function QueryFacets({Facets, endpoint}) {
+  return Facets != null && Facets.map(f => 
+    <QueryFacet key={f.Name} endpoint={endpoint} {...f} />)
+}
+
 export function useInterval(callback, delay) {
 	// https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 	const savedCallback = useRef();

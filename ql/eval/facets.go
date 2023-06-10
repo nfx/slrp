@@ -86,7 +86,10 @@ func (s *stringSummary) Facet(n int) Facet {
 		})
 	}
 	slices.SortStableFunc(cards, func(a, b Card) bool {
-		return a.Value > b.Value
+		if a.Value > b.Value {
+			return true
+		}
+		return a.Name > b.Name
 	})
 	min := n
 	cardsLen := len(cards)

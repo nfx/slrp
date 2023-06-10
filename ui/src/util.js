@@ -80,6 +80,7 @@ export function Card({ label, value, increment = 0 }) {
 
 export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
   const savedCallback = useRef();
+  const [pause, setPause] = useState(false);
   const [total, setTotal] = useState(null);
   const [failure, setFailure] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,7 +88,11 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
   let doFilter = useCallback(() => {
     clearTimeout(savedCallback.current)
     savedCallback.current = setTimeout(() => {
-      http.get(endpoint, { params: searchParams }).then(response => {
+      http.get(endpoint, {params: searchParams}).then(response => {
+        if (pause) {
+          clearTimeout(savedCallback.current)
+          return
+        }
         setTotal(response.data.Total)
         onUpdate(response.data)
         setFailure(null)
@@ -100,7 +105,7 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
         return false
       })
     }, 500)
-  }, [savedCallback, searchParams, endpoint, minDelay, onUpdate])
+  }, [pause, savedCallback, searchParams, endpoint, minDelay, onUpdate])
 
   useEffect(() => {
     doFilter()
@@ -113,21 +118,40 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
     setSearchParams(filter === "" ? {} : { filter })
     doFilter()
   }
-  return <div className='search-filter'>
-    {total != null && <span className='total'>{total} total</span>}
-    <input className="form-control form-control-dark w-100" type="text"
-      value={filter} onChange={change} placeholder="Search" aria-label="Search" />
-    {failure != null && <div className="alert-danger" role="alert">
-      {failure}
-    </div>}
-  </div>
+
+  let togglePause = () => {
+    setPause(!pause)
+    if (pause) {
+      doFilter()
+    } else {
+      clearTimeout(savedCallback.current)
+    }
+  }
+
+  return (
+    <div className='search-filter'>
+      <div className='input-group'>
+        <div>
+          {total != null && <span className='total'>{total} total</span>}
+          <input className="form-control form-control-dark w-100 border-secondary" type="text"
+                 value={filter} onChange={change} placeholder="Search" aria-label="Search"/>
+        </div>
+        <button className="btn btn-outline-secondary border-secondary" type="button"
+                onClick={togglePause} title={!pause ? "Pause live update" : "Resume live update"}>
+          <i className={`bi ${pause ? 'bi-play' : 'bi-pause'}`}/>
+        </button>
+      </div>
+      {failure != null && <div className="alert-danger" role="alert">{failure}</div>}
+    </div>
+  )
+
 }
 
 function FilterableFacet({Name, Value, link}) {
   const short = Name.length > 32 ? `${Name.substring(0, 32)}...` : Name
   return <li>
-    {link === null ? short : <a className='link-primary app-link' 
-      href={link.replace('$', Name)}>
+    {link === null ? short : <a className='link-primary app-link'
+                                href={link.replace('$', Name)}>
       {short}
     </a>} <sup>{Value}</sup>
   </li>

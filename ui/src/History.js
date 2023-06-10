@@ -1,5 +1,6 @@
-import { IconHeader, LiveFilter, useTitle } from './util'
-import { useState } from 'react';
+import {IconHeader, LiveFilter, useTitle} from './util'
+import {useState} from 'react';
+import "./History.css"
 
 function convertSize(bytes) {
   if (bytes < 1024) {
@@ -61,8 +62,8 @@ function Request(props) {
 export default function History() {
   useTitle("History")
   const [history, setHistory] = useState(null);
-  return <div className="card history table-responsive">
-    <LiveFilter endpoint="/history" onUpdate={setHistory} minDelay={2000} />
+  return <div id="history-table" className="card history table-responsive">
+    <LiveFilter endpoint="/history" onUpdate={setHistory} minDelay={2000}/>
     {history != null && <table className='table text-start table-sm'>
       <thead>
         <tr className="text-uppercase text-muted">

@@ -23,8 +23,8 @@ function Item({Proxy, Sources, Provider, ASN, Country, Attempt}) {
   </tr>
 }
 
-export default function Blacklist() {
-  useTitle("Blacklist")
+export default function Reverify() {
+  useTitle("Reverify")
   const [result, setResult] = useState(null);
   return <div className="card blacklist table-responsive">
     <LiveFilter endpoint="/reverify" onUpdate={setResult} minDelay={10000} />

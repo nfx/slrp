@@ -172,7 +172,7 @@ export function SearchFacet({name, items, link = null}) {
 
 function QueryFacetFilter({Name, Value, Filter, endpoint}) {
   const short = Name.length > 32 ? `${Name.substring(0, 32)}...` : Name
-  const link = Name != "n/a" ? `${endpoint}?filter=${Filter}` : null
+  const link = Name !== "n/a" ? `${endpoint}?filter=${Filter}` : null
   return <li>
     {link === null ? short : <a className='link-primary app-link' href={link}>
       {short}

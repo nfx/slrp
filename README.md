@@ -65,6 +65,10 @@ Download service, start it up, wait couple of minutes for the pool to pick up. N
 
 [http://localhost:8089/history](http://localhost:8089/history) provides search interface over last 1000 forwarding attempts (configurable).
 
+## Reverify
+
+[http://localhost:8089/reverify](http://localhost:8089/reverify) provides search interface over timed out probes.
+
 ## Blacklist
 
 [http://localhost:8089/blacklist](http://localhost:8089/blacklist) provides search interface over unsuccessful probes.
@@ -180,6 +184,10 @@ Get 100 last forwarding attempts
 ## GET `/api/history/:id`
 
 Get sanitized HTTP response from forwarding attempt
+
+## GET `/api/reverify`
+
+Get first 20 timed out items that are in the reverify pool
 
 ## GET `/api/blacklist`
 

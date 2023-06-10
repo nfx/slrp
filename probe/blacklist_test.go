@@ -10,6 +10,7 @@ import (
 	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pmux"
 	"github.com/nfx/slrp/pool"
+	"github.com/nfx/slrp/ql/eval"
 	"github.com/nfx/slrp/stats"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,6 +46,6 @@ func TestBlacklist(t *testing.T) {
 	res, err := b.HttpGet(&http.Request{})
 	assert.NoError(t, err)
 
-	br := res.(blacklistedResults)
-	assert.Len(t, br.Items, 1)
+	br := res.(*eval.QueryResult[blacklisted])
+	assert.Len(t, br.Records, 1)
 }

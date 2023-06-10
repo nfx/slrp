@@ -8,7 +8,7 @@ import (
 type inReverifyDataset []inReverify
 
 func (d inReverifyDataset) Query(query string) (*eval.QueryResult[inReverify], error) {
-	return (&eval.Dataset[inReverify,inReverifyDataset]{
+	return (&eval.Dataset[inReverify, inReverifyDataset]{
 		Source: d,
 		Accessors: eval.Accessors{
 			"Proxy":    eval.StringGetter{Name: "Proxy", Func: d.getProxy},
@@ -29,7 +29,6 @@ func (d inReverifyDataset) Query(query string) (*eval.QueryResult[inReverify], e
 			"Failure":  {Asc: d.sortAscFailure, Desc: d.sortDescFailure},
 		},
 		Facets: func(filtered inReverifyDataset, topN int) []eval.Facet {
-			// TODO: try with interface or with eval.Dataset[inReverify,inReverifyDataset]
 			return eval.FacetRetrievers[inReverify]{
 				eval.StringFacet{
 					Getter: filtered.getCountry,

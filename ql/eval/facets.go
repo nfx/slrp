@@ -91,8 +91,8 @@ func (s *stringSummary) Facet(n int) Facet {
 		})
 	}
 	slices.SortStableFunc(cards, func(a, b Card) bool {
-		if a.Value > b.Value {
-			return true
+		if a.Value != b.Value {
+			return a.Value > b.Value
 		}
 		return a.Name > b.Name
 	})

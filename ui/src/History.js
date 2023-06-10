@@ -1,4 +1,4 @@
-import {IconHeader, LiveFilter, useTitle} from './util'
+import {IconHeader, LiveFilter, QueryFacets, useTitle} from './util'
 import {useState} from 'react';
 import "./History.css"
 
@@ -61,24 +61,28 @@ function Request(props) {
 
 export default function History() {
   useTitle("History")
-  const [history, setHistory] = useState(null);
+  const [result, setResult] = useState(null);
   return <div id="history-table" className="card history table-responsive">
-    <LiveFilter endpoint="/history" onUpdate={setHistory} minDelay={2000}/>
-    {history != null && <table className='table text-start table-sm'>
-      <thead>
-        <tr className="text-uppercase text-muted">
-          <th></th>
-          <IconHeader icon="filetype-raw" 
-            title="Click on link to get pretty dump. Click on number to filter by serial." />
-          <IconHeader icon="123" title="HTTP status code" />
-          <IconHeader icon="link proxy" title="Proxy used" />
-          <IconHeader icon="arrow-left-right size" title="Size" />
-          <IconHeader icon="hourglass-bottom took" title="Proxy used" />
-        </tr>
-      </thead>
-      <tbody>
-        {history.Requests.map(r => <Request key={r.ID} {...r} />)}
-      </tbody>
-    </table>}
+    <LiveFilter endpoint="/history" onUpdate={setResult} minDelay={2000}/>
+    {result !== null && <div>
+      <QueryFacets endpoint="/history" {...result} />
+      <table className='table text-start table-sm'>
+        <thead>
+          <tr className="text-uppercase text-muted">
+            <th></th>
+            <IconHeader icon="filetype-raw" 
+              title="Click on link to get pretty dump. Click on number to filter by serial." />
+            <IconHeader icon="123" title="HTTP status code" />
+            <IconHeader icon="link proxy" title="Proxy used" />
+            <IconHeader icon="arrow-left-right size" title="Size" />
+            <IconHeader icon="hourglass-bottom took" title="Proxy used" />
+          </tr>
+        </thead>
+        <tbody>
+          {result.Records !== null && result.Records.map(r => 
+            <Request key={r.ID} {...r} />)}
+        </tbody>
+      </table>
+    </div>}
   </div>
 }

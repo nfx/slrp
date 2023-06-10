@@ -116,8 +116,8 @@ func (f *fState) typeSpec(s *ast.TypeSpec) error {
 				continue
 			}
 			ref := f.typeRef(v.Type)
-			if ref != nil && ref.IsArray {
-				// TODO: add array support to query engine
+			if ref != nil && (ref.IsArray || ref.MapKey != nil) {
+				// TODO: add array/map support to query engine
 				continue
 			}
 			t.Fields = append(t.Fields, Field{

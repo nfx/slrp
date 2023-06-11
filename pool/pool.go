@@ -14,7 +14,6 @@ import (
 	"github.com/nfx/slrp/history"
 	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pmux"
-	"github.com/nfx/slrp/ql"
 
 	_ "github.com/bdandy/go-socks4"
 )
@@ -193,8 +192,9 @@ type PoolStats struct {
 	Entries []ApiEntry
 }
 
+//go:generate go run ../ql/generator/main.go ApiEntry
 type ApiEntry struct {
-	Proxy          pmux.Proxy
+	Proxy          pmux.Proxy `facet:"Protocol"`
 	FirstSeen      int64
 	LastSeen       int64
 	ReanimateAfter time.Time
@@ -207,9 +207,13 @@ type ApiEntry struct {
 	Succeed        int
 	HourOffered    [24]int
 	HourSucceed    [24]int
-	Country        string
+	Country        string `facet:"Country"`
 	Provider       string
 	ASN            uint16
+}
+
+func (d ApiEntryDataset) getProxyProtocol(record int) string {
+	return d[record].Proxy.Scheme()
 }
 
 func (pool *Pool) HttpGet(r *http.Request) (any, error) {
@@ -217,7 +221,7 @@ func (pool *Pool) HttpGet(r *http.Request) (any, error) {
 	if filter == "" {
 		filter = "Offered > 1 ORDER BY LastSeen DESC"
 	}
-	var tmp []ApiEntry
+	var tmp ApiEntryDataset
 	for _, v := range pool.snapshot() {
 		info := pool.ipLookup.Get(v.Proxy)
 		tmp = append(tmp, ApiEntry{
@@ -239,37 +243,7 @@ func (pool *Pool) HttpGet(r *http.Request) (any, error) {
 			ASN:            info.ASN,
 		})
 	}
-	result := PoolStats{}
-	err := ql.Execute(&tmp, &result.Entries, filter, func(all *[]ApiEntry) {
-		var http, https, socks4, socks5, alive, offered, succeeded int
-		result.Total = len(*all)
-		for _, v := range *all {
-			switch v.Proxy.Proto() {
-			case pmux.HTTP:
-				http++
-			case pmux.HTTPS:
-				https++
-			case pmux.SOCKS4:
-				socks4++
-			case pmux.SOCKS5:
-				socks5++
-			}
-			if v.Ok {
-				alive++
-			}
-			offered += v.Offered
-			succeeded += v.Succeed
-		}
-		result.Cards = []Card{
-			{"Alive", alive},
-			{"Success rate", float32(succeeded) / float32(offered)},
-			{"HTTP proxies", http},
-			{"HTTPS proxies", https},
-			{"SOCKS4 proxies", socks4},
-			{"SOCKS5 proxies", socks5},
-		}
-	}, ql.DefaultOrder{ql.Desc("LastSeen")}, ql.DefaultLimit(20))
-	return result, err
+	return tmp.Query(filter)
 }
 
 func (pool *Pool) Len() (res int) {

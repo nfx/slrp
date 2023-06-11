@@ -1,17 +1,14 @@
-import { Card, LiveFilter, TimeDiff, http, IconHeader, useTitle } from './util'
+import { LiveFilter, QueryFacets, TimeDiff, http, IconHeader, useTitle } from './util'
 import { Countries } from './countries';
 import { useState } from 'react';
 
 export default function Proxies() {
   useTitle("Proxies")
-  const [pool, setPool] = useState(null);
+  const [result, setResult] = useState(null);
   return <div>
-    {pool != null && <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3">
-      {pool.Cards.map(card => 
-        <Card key={card.Name} label={card.Name} value={card.Value} /> )}
-    </div>}
-    <LiveFilter endpoint="/pool" onUpdate={setPool} minDelay={2000} />
-    {pool != null && <div className="card table-responsive">
+    <LiveFilter endpoint="/pool" onUpdate={setResult} minDelay={2000} />
+    {result !== null && <div className="card table-responsive">
+      <QueryFacets endpoint="/proxies" {...result} />
       <table className="table text-start caption-top">
         <thead>
           <tr className="text-uppercase text-muted">
@@ -27,7 +24,7 @@ export default function Proxies() {
           </tr>
         </thead>
         <tbody>
-        {pool.Entries.map(proxy => 
+        {result.Records.map(proxy => 
           <Entry key={proxy.Proxy} {...proxy} />)}
         </tbody>
       </table>

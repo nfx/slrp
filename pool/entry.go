@@ -12,7 +12,7 @@ import (
 // unexported unit test shim
 var now = time.Now
 
-type entry struct { // todo: package private
+type entry struct {
 	Proxy          pmux.Proxy
 	FirstSeen      int64
 	LastSeen       int64

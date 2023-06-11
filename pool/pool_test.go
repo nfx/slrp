@@ -16,6 +16,7 @@ import (
 	"github.com/nfx/slrp/internal/qa"
 	"github.com/nfx/slrp/ipinfo"
 	"github.com/nfx/slrp/pmux"
+	"github.com/nfx/slrp/ql/eval"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -152,9 +153,9 @@ func TestHttpGet(t *testing.T) {
 		},
 	})
 	assert.NoError(t, err)
-	stats := res.(PoolStats)
+	stats := res.(*eval.QueryResult[ApiEntry])
 	assert.Equal(t, 1, stats.Total)
-	assert.Equal(t, "Zimbabwe", stats.Entries[0].Country)
+	assert.Equal(t, "Zimbabwe", stats.Records[0].Country)
 }
 
 func load(t *testing.T) *Pool {

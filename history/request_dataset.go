@@ -27,7 +27,7 @@ func (d RequestDataset) Query(query string) (*eval.QueryResult[Request], error) 
 			"ID":         {Asc: d.sortAscID, Desc: d.sortDescID},
 			"Serial":     {Asc: d.sortAscSerial, Desc: d.sortDescSerial},
 			"Attempt":    {Asc: d.sortAscAttempt, Desc: d.sortDescAttempt},
-			"Ts":         {Asc: d.sortAscTs, Desc: d.sortDescTs},
+			"Ts":         {Asc: d.sortAscTs, Desc: d.sortDescTs, DescDefault: true},
 			"Method":     {Asc: d.sortAscMethod, Desc: d.sortDescMethod},
 			"URL":        {Asc: d.sortAscURL, Desc: d.sortDescURL},
 			"StatusCode": {Asc: d.sortAscStatusCode, Desc: d.sortDescStatusCode},

@@ -3,6 +3,7 @@ package eval
 import (
 	"fmt"
 
+	"github.com/nfx/slrp/ql/ast"
 	"github.com/nfx/slrp/ql/internal"
 	"golang.org/x/exp/slices"
 )
@@ -41,15 +42,24 @@ func (d Dataset[T, D]) Query(query string) (*QueryResult[T], error) {
 		}
 		result = append(result, d.Source[i])
 	}
-	if plan.Sort != nil {
-		less, err := d.Sorters.Sort(plan.Sort)
-		if err != nil {
-			return nil, fmt.Errorf("sort: %w", err)
+	if plan.Sort == nil {
+		plan.Sort = ast.Sort{}
+		for k, v := range d.Sorters {
+			if v.AscDefault || v.DescDefault {
+				plan.Sort = append(plan.Sort, ast.OrderBy{
+					Ident: k,
+					Asc:   v.AscDefault,
+				})
+			}
 		}
-		// TODO: consider rolling back to sort.SliceStable(),
-		// as field accessors might make things more complicated.
-		slices.SortStableFunc(result, less)
 	}
+	less, err := d.Sorters.Sort(plan.Sort)
+	if err != nil {
+		return nil, fmt.Errorf("sort: %w", err)
+	}
+	// TODO: consider rolling back to sort.SliceStable(),
+	// as field accessors might make things more complicated.
+	slices.SortStableFunc(result, less)
 	if plan.Limit == 0 {
 		plan.Limit = 20
 	}

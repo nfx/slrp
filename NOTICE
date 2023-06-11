@@ -1,9 +1,6 @@
 This project uses software from https://github.com/bdandy/go-socks4 (MIT)
 * Copyright (c) 2016 Bogdan
 
-This project uses software from https://github.com/alecthomas/participle (MIT)
-* Copyright (C) 2017 Alec Thomas
-
 This project uses software from https://github.com/corpix/uarand (The Unlicense)
 
 This project uses software from https://github.com/dop251/goja (MIT)

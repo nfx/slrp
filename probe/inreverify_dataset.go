@@ -21,7 +21,7 @@ func (d inReverifyDataset) Query(query string) (*eval.QueryResult[inReverify], e
 		},
 		Sorters: eval.Sorters[inReverify]{
 			"Proxy":    {Asc: d.sortAscProxy, Desc: d.sortDescProxy},
-			"Attempt":  {Asc: d.sortAscAttempt, Desc: d.sortDescAttempt},
+			"Attempt":  {Asc: d.sortAscAttempt, Desc: d.sortDescAttempt, AscDefault: true},
 			"After":    {Asc: d.sortAscAfter, Desc: d.sortDescAfter},
 			"Country":  {Asc: d.sortAscCountry, Desc: d.sortDescCountry},
 			"Provider": {Asc: d.sortAscProvider, Desc: d.sortDescProvider},

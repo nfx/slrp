@@ -29,7 +29,7 @@ func (d ApiEntryDataset) Query(query string) (*eval.QueryResult[ApiEntry], error
 		Sorters: eval.Sorters[ApiEntry]{
 			"Proxy":          {Asc: d.sortAscProxy, Desc: d.sortDescProxy},
 			"FirstSeen":      {Asc: d.sortAscFirstSeen, Desc: d.sortDescFirstSeen},
-			"LastSeen":       {Asc: d.sortAscLastSeen, Desc: d.sortDescLastSeen},
+			"LastSeen":       {Asc: d.sortAscLastSeen, Desc: d.sortDescLastSeen, DescDefault: true},
 			"ReanimateAfter": {Asc: d.sortAscReanimateAfter, Desc: d.sortDescReanimateAfter},
 			"Ok":             {Asc: d.sortAscOk, Desc: d.sortDescOk},
 			"Speed":          {Asc: d.sortAscSpeed, Desc: d.sortDescSpeed},

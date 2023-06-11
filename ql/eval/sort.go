@@ -7,8 +7,10 @@ import (
 )
 
 type Sorter[T any] struct {
-	Asc  func(left, right T) bool
-	Desc func(left, right T) bool
+	Asc         func(left, right T) bool
+	Desc        func(left, right T) bool
+	AscDefault  bool
+	DescDefault bool
 }
 
 func (s Sorter[T]) Comparator(ob ast.OrderBy) func(left, right T) bool {

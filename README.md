@@ -57,21 +57,33 @@ Download service, start it up, wait couple of minutes for the pool to pick up. N
 
 ![proxies](docs/proxies.png)
 
-[http://localhost:8089/proxies](http://localhost:8089/proxies) provides search interface over active pool of found proxies. By default, entries are sorted by last working on top.
+[http://localhost:8089/proxies](http://localhost:8089/proxies) provides search interface over active pool of found proxies. By default, entries are sorted by last working on top. Query samples:
+
+* [`Proxy ~ socks`](http://localhost:8089/proxies?filter=Proxy+%7E+socks) - all SOCKS4 and SOCKS5 proxies
+* [`Proxy ~ http`](http://localhost:8089/proxies?filter=Proxy+%7E+http) - all HTTP and HTTPS proxies
+* [`Proxy ~ socks AND Succeed > 0`](http://localhost:8089/proxies?filter=Proxy+%7E+socks+AND+Succeed+%3E+0) - all SOCKS proxies that have ever succeeded
+* [`Proxy ~ socks AND Succeed > 0 ORDER BY Offered DESC`](http://localhost:8089/proxies?filter=Proxy+%7E+socks+AND+Succeed+%3E+0+ORDER+BY+Offered+DESC) - all SOCKS proxies that have ever succeeded ordered by the number of times attempted
+* [`Country:DE OR Country:UK`](http://localhost:8089/proxies?filter=Country%3ADE+OR+Country%3AUK) - proxies from Germany or the United Kingdom
 
 ## History
 
 ![history](docs/history.png)
 
-[http://localhost:8089/history](http://localhost:8089/history) provides search interface over last 1000 forwarding attempts (configurable).
+[http://localhost:8089/history](http://localhost:8089/history) provides search interface over the last 1000 forwarding attempts (configurable). Sample queries:
+
+* [`URL ~ "proxynova.com" AND StatusCode < 400`](http://localhost:8089/history?filter=URL+%7E+%22proxynova.com%22+AND+StatusCode+%3C+400) - all non-failed attempts to URL containing `proxynova.com`.
 
 ## Reverify
 
-[http://localhost:8089/reverify](http://localhost:8089/reverify) provides search interface over timed out probes.
+[http://localhost:8089/reverify](http://localhost:8089/reverify) provides search interface over timed out probes. Sample queries:
+
+* [`Country:CN`](http://localhost:8089/reverify?filter=Country:CN) - all timed out proxies from China
 
 ## Blacklist
 
-[http://localhost:8089/blacklist](http://localhost:8089/blacklist) provides search interface over unsuccessful probes.
+[http://localhost:8089/blacklist](http://localhost:8089/blacklist) provides search interface over unsuccessful probes. Sample queries:
+
+* [`Failure ~ "this IP address found"`](http://localhost:8089/blacklist?filter=Failure%20~%20%22this%20IP%20address%20found%22) - all transparent proxies.
 
 # Configuration
 

@@ -2,6 +2,8 @@ vendor
 main
 __debug_bin
 
+ui/build
+
 *.tgz
 *.zip
 

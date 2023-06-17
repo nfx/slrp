@@ -1,6 +1,7 @@
 vendor
 main
 __debug_bin
+.idea
 
 ui/build
 
@@ -18,5 +19,5 @@ coverage.txt
 *.output
 
 slrp
-package-lock.json 
+package-lock.json
 .vagrant

@@ -11,13 +11,15 @@
     "react-router-dom": "^6.2.1"
   },
   "devDependencies": {
+    "prettier": "2.8.8",
     "react-scripts": "^5.0.0"
   },
   "scripts": {
     "start": "node_modules/react-scripts/bin/react-scripts.js start",
     "build": "node_modules/react-scripts/bin/react-scripts.js build",
     "test": "node_modules/react-scripts/bin/react-scripts.js test",
-    "eject": "node_modules/react-scripts/bin/react-scripts.js eject"
+    "eject": "node_modules/react-scripts/bin/react-scripts.js eject",
+    "prettier": "npx prettier --write ."
   },
   "eslintConfig": {
     "extends": [

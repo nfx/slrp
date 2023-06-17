@@ -6,6 +6,9 @@ build-ui:
 dev-ui:
 	npm --prefix ui start
 
+fmt-ui:
+	npm --prefix ui run prettier
+
 snapshot: build-ui
 	goreleaser build --snapshot --rm-dist --single-target
 
@@ -31,7 +34,7 @@ cpu-profile:
 block-profile:
 	go tool pprof http://localhost:6060/debug/pprof/block
 
-pprof: 
+pprof:
 	go tool pprof -http=:8080 slrp http://127.0.0.1:6060/debug/pprof/profile
 
 race:

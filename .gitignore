@@ -18,5 +18,5 @@ coverage.txt
 *.output
 
 slrp
-package-lock.json 
+package-lock.json
 .vagrant

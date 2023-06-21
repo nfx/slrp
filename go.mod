@@ -11,7 +11,7 @@ require (
 	github.com/maxmind/mmdbwriter v0.0.0-20230605153824-1949661752e7
 	github.com/microcosm-cc/bluemonday v1.0.24
 	github.com/nfx/go-htmltable v0.4.0
-	github.com/oschwald/maxminddb-golang v1.10.0
+	github.com/oschwald/maxminddb-golang v1.11.0
 	github.com/rs/zerolog v1.29.1
 	github.com/stretchr/testify v1.8.4
 	github.com/tj/go-update v2.2.4+incompatible

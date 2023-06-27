@@ -162,14 +162,14 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }: LiveFilterPr
     <div className="search-filter">
       <div className="input-group">
         <div>
-          {total && <span className="total">{total} total</span>}
+          {total !== undefined && <span className="total">{total} total</span>}
           <input className="form-control form-control-dark w-100 border-secondary" type="text" value={filter} onChange={change} placeholder="Search" aria-label="Search" />
         </div>
         <button className="btn btn-outline-secondary border-secondary" type="button" onClick={togglePause} title={!pause ? "Pause live update" : "Resume live update"}>
           <i className={`bi ${pause ? "bi-play" : "bi-pause"}`} />
         </button>
       </div>
-      {failure && (
+      {failure !== undefined && (
         <div className="alert-danger" role="alert">
           {failure}
         </div>
@@ -229,19 +229,18 @@ function QueryFacetFilter({ Name, Value, Filter, endpoint }: { Name: string; Val
 }
 
 function QueryFacet({ Name, Top, endpoint }: { Name: string; Top: { Name: string; Value: string; Filter: string }[]; endpoint: string }) {
-  if (Top.length > 1) {
-    return (
-      <div key={Name} className="search-facet">
-        <strong>{Name}</strong>
-        <ul>
-          {Top.map(f => (
-            <QueryFacetFilter key={f.Name} endpoint={endpoint} {...f} />
-          ))}
-        </ul>
-      </div>
-    );
-  }
-  return <></>;
+  return Top.length == 0 ? (
+    <></>
+  ) : (
+    <div key={Name} className="search-facet">
+      <strong>{Name}</strong>
+      <ul>
+        {Top.map(f => (
+          <QueryFacetFilter key={f.Name} endpoint={endpoint} {...f} />
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export type Top = { Name: string; Value: string; Filter: string }[];

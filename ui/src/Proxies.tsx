@@ -1,14 +1,15 @@
-import { LiveFilter, QueryFacets, TimeDiff, http, IconHeader, useTitle } from "./util";
+import { LiveFilter, QueryFacets, TimeDiff, http, IconHeader, useTitle, Facet } from "./util";
 import { Countries } from "./countries";
 import { useState } from "react";
+import React from "react";
 
 export default function Proxies() {
   useTitle("Proxies");
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<{ Facets: Facet[]; Records?: ProxyEntry[] }>();
   return (
     <div>
       <LiveFilter endpoint="/pool" onUpdate={setResult} minDelay={2000} />
-      {result !== null && (
+      {result && (
         <div className="card table-responsive">
           <QueryFacets endpoint="/proxies" {...result} />
           <table className="table text-start caption-top">
@@ -25,11 +26,7 @@ export default function Proxies() {
                 <th className="col-remove" />
               </tr>
             </thead>
-            <tbody>
-              {result.Records.map(proxy => (
-                <Entry key={proxy.Proxy} {...proxy} />
-              ))}
-            </tbody>
+            <tbody>{result.Records && result.Records.map(proxy => <Entry key={proxy.Proxy} {...proxy} />)}</tbody>
           </table>
         </div>
       )}
@@ -37,7 +34,7 @@ export default function Proxies() {
   );
 }
 
-function timeTook(duration) {
+function timeTook(duration: number) {
   let ms = duration / 1000000;
   if (ms < 1000) {
     return `${ms.toFixed()}ms`;
@@ -45,10 +42,27 @@ function timeTook(duration) {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-function Entry(props) {
+export type ProxyEntry = {
+  Proxy: string;
+  FirstSeen: number;
+  LastSeen: number;
+  Timeouts: number;
+  Ok: boolean;
+  ReanimateAfter: number;
+  Speed: number;
+  Country: string;
+  Provider: string;
+  ASN: string;
+  Offered: number;
+  Succeed: number;
+  HourSucceed: number[];
+  HourOffered: number[];
+};
+
+function Entry(props: ProxyEntry) {
   const proxy = props.Proxy;
   const { FirstSeen, LastSeen, Timeouts, Ok, ReanimateAfter, Speed, Country, Provider, ASN } = props;
-  const removeProxy = e => {
+  const removeProxy = () => {
     http.delete(`/probe/${proxy.replace("//", "")}`);
     return false;
   };
@@ -101,21 +115,26 @@ function Entry(props) {
   );
 }
 
-function HourSuccessRate({ HourSucceed, HourOffered }) {
+type HourSuccessRateProps = {
+  HourSucceed: number[];
+  HourOffered: number[];
+};
+
+function HourSuccessRate({ HourSucceed, HourOffered }: HourSuccessRateProps) {
   // https://stackoverflow.com/questions/45514676/react-check-if-element-is-visible-in-dom
-  const rate = HourSucceed.map((s, i) => (s === 0 ? 0 : (100 * s) / HourOffered[i]));
-  const x = r => {
-    let l = r;
-    let e = 100 - l;
-    let t = {
+  const rates = HourSucceed.map((s, i) => (s === 0 ? 0 : (100 * s) / HourOffered[i]));
+  const generateStyle = (rate: number) => {
+    const l = rate;
+    const e = 100 - l;
+    const t: Record<string, string> = {
       width: "2px",
       height: "20px",
       float: "left",
       border: "0"
     };
-    if (r > 0) {
-      t.backgroundColor = "green";
-      t.backgroundImage = `linear-gradient(0deg, #080 ${l}%, #fff ${e}%)`;
+    if (rate > 0) {
+      t["backgroundColor"] = "green";
+      t["backgroundImage"] = `linear-gradient(0deg, #080 ${l}%, #fff ${e}%)`;
     }
     return t;
   };
@@ -123,8 +142,8 @@ function HourSuccessRate({ HourSucceed, HourOffered }) {
   let s = { height: "100%" };
   return (
     <div style={s}>
-      {rate.map((r, i) => (
-        <div key={i} style={x(r)} />
+      {rates.map((rate, i) => (
+        <div key={i} style={generateStyle(rate)} />
       ))}
     </div>
   );

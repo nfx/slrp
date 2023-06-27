@@ -1,5 +1,5 @@
 // generated automatically from https://apps.timwhitlock.info/emoji/tables/iso3166
-export const Countries = {
+export const Countries: { [country: string]: { flag: string; name: string } } = {
   AD: { flag: "🇦🇩", name: "Andorra" },
   AE: { flag: "🇦🇪", name: "United Arab Emirates" },
   AF: { flag: "🇦🇫", name: "Afghanistan" },

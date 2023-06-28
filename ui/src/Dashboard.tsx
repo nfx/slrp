@@ -1,11 +1,36 @@
 import { ReactNode, useState } from "react";
-import { Card, IconHeader, TimeDiff, http, useInterval, useTitle } from "./util";
+import { Card as CardEntry } from "./components/Card";
+import { IconHeader } from "./components/IconHeader";
+import { TimeDiff } from "./components/TimeDiff";
+import { http, tinyNum, useInterval, useTitle } from "./util";
 
 const overall = ["Exclusive", "Dirty", "Contribution"] as const;
 const pipeline = ["Scheduled", "New", "Probing"] as const;
 const stats = ["Found", "Timeouts", "Blacklisted", "Ignored"] as const;
 const cols = [...pipeline, ...stats];
-type Summary = Partial<ProbeProps>;
+
+type ProbeEntry = {
+  Name: string;
+  State: string;
+  Progress: number;
+  Failure: string;
+  EstFinish: number;
+  NextRefresh: number;
+  UrlPrefix: string;
+  Homepage: string;
+  Scheduled: number;
+  New: number;
+  Probing: number;
+  Found: number;
+  Timeouts: number;
+  Blacklisted: number;
+  Ignored: number;
+  Exclusive: number;
+  Dirty: number;
+  Contribution: number;
+};
+
+type Summary = Partial<ProbeEntry>;
 
 function successRate(v: Summary) {
   if (!v["Found"]) {
@@ -20,12 +45,12 @@ function successRate(v: Summary) {
   );
 }
 
-function SourceOverview({ sources }: { sources: ProbeProps[] }) {
+function SourceOverview({ sources }: { sources: ProbeEntry[] }) {
   const summary: Summary = {};
   sources.forEach(probe =>
     cols.forEach(col => {
       const oldVal = summary[col];
-      const val = probe[col as keyof ProbeProps] as number;
+      const val = probe[col as keyof ProbeEntry] as number;
       summary[col] = val + (oldVal ? oldVal : 0);
     })
   );
@@ -90,41 +115,7 @@ function Cols(props: Summary) {
   );
 }
 
-function tinyNum(n?: number) {
-  if (!n) {
-    return 0;
-  }
-  if (n < 1000) {
-    return n;
-  } else if (n < 1000000) {
-    return (n / 1000).toFixed() + "k";
-  }
-  return (n / 1000000).toFixed(1) + "m";
-}
-
-type ProbeProps = {
-  Name: string;
-  State: string;
-  Progress: number;
-  Failure: string;
-  EstFinish: number;
-  NextRefresh: number;
-  UrlPrefix: string;
-  Homepage: string;
-  Scheduled: number;
-  New: number;
-  Probing: number;
-  Found: number;
-  Timeouts: number;
-  Blacklisted: number;
-  Ignored: number;
-  Exclusive: number;
-  Dirty: number;
-  Contribution: number;
-};
-// type ProbeProps = { [key: string]: number | string };
-
-function Probe(props: ProbeProps) {
+function Probe(props: ProbeEntry) {
   const { Name, State, Progress, Failure, EstFinish, NextRefresh, UrlPrefix, Homepage } = props;
   const style: Record<string, string | number> = {};
   let rowClass = "";
@@ -157,7 +148,7 @@ function Probe(props: ProbeProps) {
   );
 }
 
-type Card = {
+type CardEntry = {
   Name: string;
   Value: string;
   Increment?: number;
@@ -165,7 +156,7 @@ type Card = {
 
 export default function Dashboard() {
   useTitle("Overview");
-  const [dashboard, setDashboard] = useState<{ Cards: Card[]; Refresh: ProbeProps[] }>();
+  const [dashboard, setDashboard] = useState<{ Cards: CardEntry[]; Refresh: ProbeEntry[] }>();
   const [delay, setDelay] = useState<number | undefined>(1000);
   useInterval(() => {
     http
@@ -182,7 +173,7 @@ export default function Dashboard() {
     <div>
       <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3">
         {dashboard.Cards.map(card => (
-          <Card key={card.Name} label={card.Name} value={card.Value} increment={card.Increment} />
+          <CardEntry key={card.Name} label={card.Name} value={card.Value} increment={card.Increment} />
         ))}
       </div>
       <SourceOverview sources={dashboard.Refresh} />

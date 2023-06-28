@@ -1,7 +1,10 @@
-import { LiveFilter, QueryFacets, TimeDiff, http, IconHeader, useTitle, Facet } from "./util";
-import { Countries } from "./countries";
 import { useState } from "react";
-import React from "react";
+import { IconHeader } from "./components/IconHeader";
+import { LiveFilter } from "./components/LiveFilter";
+import { TimeDiff } from "./components/TimeDiff";
+import { Facet, QueryFacets } from "./components/facets/QueryFacet";
+import { Countries } from "./countries";
+import { http, useTitle } from "./util";
 
 export default function Proxies() {
   useTitle("Proxies");

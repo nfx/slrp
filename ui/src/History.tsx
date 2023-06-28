@@ -1,8 +1,8 @@
-import { IconHeader, LiveFilter, QueryFacets, useTitle } from "./util";
 import { useState } from "react";
 import "./History.css";
+import { Facet, IconHeader, LiveFilter, QueryFacets, useTitle } from "./util";
 
-function convertSize(bytes) {
+function convertSize(bytes: number) {
   if (bytes < 1024) {
     return `${bytes.toFixed()}b`;
   } else if (bytes < 1024 * 1024) {
@@ -11,59 +11,72 @@ function convertSize(bytes) {
   return `${(bytes / 1024 / 1024).toFixed()}mb`;
 }
 
-function Request(props) {
-  let { ID, Serial, Attempt, Ts, Method, URL, Status, StatusCode, Proxy, Appeared, Size, Took } = props;
+type RequestProps = {
+  ID: string;
+  Serial: number;
+  Attempt: number;
+  Ts: string;
+  Method: string;
+  URL: string;
+  Status: string;
+  StatusCode: number;
+  Proxy: string;
+  Appeared: number;
+  Size: number;
+  Took: number;
+};
 
-  let pos = URL.indexOf("/", 9);
-  let path = URL.substring(pos);
+function Request(props: RequestProps) {
+  const pos = props.URL.indexOf("/", 9);
+  const path = props.URL.substring(pos);
 
   let color = "text-muted";
-  if (StatusCode < 300) {
+  if (props.StatusCode < 300) {
     color = "text-success";
-  } else if (StatusCode < 500) {
+  } else if (props.StatusCode < 500) {
     color = "text-warning";
   }
   // TODO: add links in backend
   return (
     <tr className="list-group-item-action">
       <td className="text-muted">
-        <small>{new Date(Ts).toLocaleTimeString()}</small>
+        <small>{new Date(props.Ts).toLocaleTimeString()}</small>
       </td>
       <td>
         <span className="request">
-          {Method}{" "}
-          <a className="app-link" href={`http://localhost:8089/api/history/${ID}?format=text`} rel="noreferrer" target="_blank">
-            <abbr title={URL}>{path}</abbr>
+          {props.Method}{" "}
+          <a className="app-link" href={`http://localhost:8089/api/history/${props.ID}?format=text`} rel="noreferrer" target="_blank">
+            <abbr title={props.URL}>{path}</abbr>
           </a>
           <sup>
-            <a className="text-muted" href={`/history?filter=Serial:${Serial}`}>
-              {Serial}
+            <a className="text-muted" href={`/history?filter=Serial:${props.Serial}`}>
+              {props.Serial}
             </a>
           </sup>
         </span>
       </td>
       <td className={color}>
-        {StatusCode === 200 ? 200 : <abbr title={Status}>{StatusCode}</abbr>} <sup>{Attempt}</sup>
+        {props.StatusCode === 200 ? 200 : <abbr title={props.Status}>{props.StatusCode}</abbr>} <sup>{props.Attempt}</sup>
       </td>
       <td className="text-muted proxy">
         <a className="link-primary app-link" href={`/history?filter=Proxy:"${Proxy}"`}>
-          {Proxy}
+          {props.Proxy}
         </a>{" "}
-        <sup>{Appeared}</sup>
+        <sup>{props.Appeared}</sup>
       </td>
-      <td className="size">{convertSize(Size)}</td>
-      <td className="took">{Took}s</td>
+      <td className="size">{convertSize(props.Size)}</td>
+      <td className="took">{props.Took}s</td>
     </tr>
   );
 }
 
 export default function History() {
   useTitle("History");
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<{ facets: Facet[]; Records?: RequestProps[] }>();
   return (
     <div id="history-table" className="card history table-responsive">
       <LiveFilter endpoint="/history" onUpdate={setResult} minDelay={2000} />
-      {result !== null && (
+      {result && (
         <div>
           <QueryFacets endpoint="/history" {...result} />
           <table className="table text-start table-sm">
@@ -77,7 +90,7 @@ export default function History() {
                 <IconHeader icon="hourglass-bottom took" title="Proxy used" />
               </tr>
             </thead>
-            <tbody>{result.Records !== null && result.Records.map(r => <Request key={r.ID} {...r} />)}</tbody>
+            <tbody>{result.Records && result.Records.map(r => <Request key={r.ID} {...r} />)}</tbody>
           </table>
         </div>
       )}

@@ -1,22 +1,34 @@
-import { Card, IconHeader, TimeDiff, useInterval, useTitle, http } from "./util";
-import { useState } from "react";
+import { ReactNode, useState } from "react";
+import { Card, IconHeader, TimeDiff, http, useInterval, useTitle } from "./util";
 
-const overall = ["Exclusive", "Dirty", "Contribution"];
-const pipeline = ["Scheduled", "New", "Probing"];
-const stats = ["Found", "Timeouts", "Blacklisted", "Ignored"];
+const overall = ["Exclusive", "Dirty", "Contribution"] as const;
+const pipeline = ["Scheduled", "New", "Probing"] as const;
+const stats = ["Found", "Timeouts", "Blacklisted", "Ignored"] as const;
+const cols = [...pipeline, ...stats];
+type Summary = Partial<ProbeProps>;
 
-function successRate(v) {
-  if (v["Found"] === 0) {
+function successRate(v: Summary) {
+  if (!v["Found"]) {
     return 0;
   }
-  return (100 * v["Found"]) / stats.reduce((x, col) => x + v[col], 0);
+  return (
+    (100 * v["Found"]) /
+    stats.reduce((x, col) => {
+      const val = v[col];
+      return x + (val ? val : 0);
+    }, 0)
+  );
 }
 
-function SourceOverview({ sources }) {
-  var summary = { _: 1 };
-  const cols = pipeline.concat(stats);
-  cols.forEach(col => (summary[col] = 0));
-  sources.forEach(probe => cols.forEach(col => (summary[col] += probe[col])));
+function SourceOverview({ sources }: { sources: ProbeProps[] }) {
+  const summary: Summary = {};
+  sources.forEach(probe =>
+    cols.forEach(col => {
+      const oldVal = summary[col];
+      const val = probe[col as keyof ProbeProps] as number;
+      summary[col] = val + (oldVal ? oldVal : 0);
+    })
+  );
   return (
     <div className="card probes table-responsive">
       <table className="table text-start caption-top">
@@ -52,30 +64,33 @@ function SourceOverview({ sources }) {
   );
 }
 
-function Cols(props) {
-  return [
-    overall.map(col => (
-      <td key={col} className={`metric col-${col}`}>
-        {tinyNum(props[col])}
+function Cols(props: Summary) {
+  // `overall`, `pipeline` and `stats` contain numeric fields
+  return (
+    <>
+      {overall.map(col => (
+        <td key={col} className={`metric col-${col}`}>
+          {tinyNum(props[col])}
+        </td>
+      ))}
+      {pipeline.map(col => (
+        <td key={col} className={`metric col-${col}`}>
+          {props[col]}
+        </td>
+      ))}
+      <td key="sr" className={`metric col-Rate`}>
+        {successRate(props).toFixed(2)}%
       </td>
-    )),
-    pipeline.map(col => (
-      <td key={col} className={`metric col-${col}`}>
-        {props[col]}
-      </td>
-    )),
-    <td key="sr" className={`metric col-Rate`}>
-      {successRate(props).toFixed(2)}%
-    </td>,
-    stats.map(col => (
-      <td key={col} className={`metric col-${col}`}>
-        {tinyNum(props[col])}
-      </td>
-    ))
-  ];
+      {stats.map(col => (
+        <td key={col} className={`metric col-${col}`}>
+          {tinyNum(props[col])}
+        </td>
+      ))}
+    </>
+  );
 }
 
-function tinyNum(n) {
+function tinyNum(n?: number) {
   if (!n) {
     return 0;
   }
@@ -87,9 +102,31 @@ function tinyNum(n) {
   return (n / 1000000).toFixed(1) + "m";
 }
 
-function Probe(props) {
-  let { Name, State, Progress, Failure, EstFinish, NextRefresh, UrlPrefix, Homepage } = props;
-  let style = {};
+type ProbeProps = {
+  Name: string;
+  State: string;
+  Progress: number;
+  Failure: string;
+  EstFinish: number;
+  NextRefresh: number;
+  UrlPrefix: string;
+  Homepage: string;
+  Scheduled: number;
+  New: number;
+  Probing: number;
+  Found: number;
+  Timeouts: number;
+  Blacklisted: number;
+  Ignored: number;
+  Exclusive: number;
+  Dirty: number;
+  Contribution: number;
+};
+// type ProbeProps = { [key: string]: number | string };
+
+function Probe(props: ProbeProps) {
+  const { Name, State, Progress, Failure, EstFinish, NextRefresh, UrlPrefix, Homepage } = props;
+  const style: Record<string, string | number> = {};
   let rowClass = "";
   let running = State === "running";
   if (running && Progress > 1) {
@@ -98,7 +135,7 @@ function Probe(props) {
     style.backgroundImage = lg;
   }
   let refresh = running ? <TimeDiff ts={EstFinish} title="Estimated finish" /> : <TimeDiff ts={NextRefresh} title="Next Refresh" />;
-  let icons = {
+  let icons: Record<string, ReactNode> = {
     running: <i className="spinner-border spinner-border-sm text-success" />,
     failed: <i className="bi bi-emoji-dizzy-fill" title={Failure} />,
     idle: <i className="bi bi-alarm text-muted" title="Idle" />
@@ -120,10 +157,16 @@ function Probe(props) {
   );
 }
 
+type Card = {
+  Name: string;
+  Value: string;
+  Increment?: number;
+};
+
 export default function Dashboard() {
   useTitle("Overview");
-  const [dashboard, setDashboard] = useState(null);
-  const [delay, setDelay] = useState(1000);
+  const [dashboard, setDashboard] = useState<{ Cards: Card[]; Refresh: ProbeProps[] }>();
+  const [delay, setDelay] = useState<number | undefined>(1000);
   useInterval(() => {
     http
       .get("/dashboard")
@@ -132,19 +175,10 @@ export default function Dashboard() {
         if (err.isAxiosError) {
           console.error(err.response.data);
         }
-        setDelay(null);
+        setDelay(undefined);
       });
   }, delay);
-  if (dashboard == null) {
-    return (
-      <div className="d-flex justify-content-center">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-  return (
+  return dashboard ? (
     <div>
       <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3">
         {dashboard.Cards.map(card => (
@@ -152,6 +186,12 @@ export default function Dashboard() {
         ))}
       </div>
       <SourceOverview sources={dashboard.Refresh} />
+    </div>
+  ) : (
+    <div className="d-flex justify-content-center">
+      <div className="spinner-border" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
     </div>
   );
 }

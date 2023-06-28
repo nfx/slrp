@@ -1,9 +1,18 @@
-import { IconHeader, LiveFilter, QueryFacets, useTitle, http } from "./util";
-import { Countries } from "./countries";
 import { useState } from "react";
+import { Countries } from "./countries";
+import { Facet, IconHeader, LiveFilter, QueryFacets, http, useTitle } from "./util";
 
-function Item({ Proxy, Sources, Provider, ASN, Country, Attempt }) {
-  const removeProxy = e => {
+type BlacklistItem = {
+  Proxy: string;
+  Failure: string;
+  Sources: string[];
+  Provider: string;
+  ASN: string;
+  Country: string;
+};
+
+function Item({ Proxy, Failure, Sources, Provider, ASN, Country }: BlacklistItem) {
+  const removeProxy = () => {
     http.delete(`/blacklist/${Proxy.replace("//", "")}`);
     return false;
   };
@@ -15,7 +24,7 @@ function Item({ Proxy, Sources, Provider, ASN, Country, Attempt }) {
         </a>
       </td>
       <td className="proxy">
-        {Proxy}{" "}
+        <del>{Proxy}</del>{" "}
         <sup className="text-muted" title={Sources.join(", ")}>
           {Sources.length} sources
         </sup>
@@ -29,20 +38,20 @@ function Item({ Proxy, Sources, Provider, ASN, Country, Attempt }) {
           {Provider}
         </a>
       </td>
-      <td className="attempt text-muted">{Attempt}</td>
+      <td className="failure text-muted">{Failure}</td>
     </tr>
   );
 }
 
-export default function Reverify() {
-  useTitle("Reverify");
-  const [result, setResult] = useState(null);
+export default function Blacklist() {
+  useTitle("Blacklist");
+  const [result, setResult] = useState<{ Facets?: Facet[]; Records?: BlacklistItem[] }>();
   return (
     <div className="card blacklist table-responsive">
-      <LiveFilter endpoint="/reverify" onUpdate={setResult} minDelay={10000} />
-      {result != null && (
+      <LiveFilter endpoint="/blacklist" onUpdate={setResult} minDelay={10000} />
+      {result && (
         <div>
-          <QueryFacets endpoint="/reverify" {...result} />
+          <QueryFacets endpoint="/blacklist" {...result} />
           <table className="table text-start table-sm">
             <thead>
               <tr className="text-uppercase text-muted">
@@ -50,14 +59,10 @@ export default function Reverify() {
                 <IconHeader icon="link proxy" title="Proxy used" />
                 <IconHeader icon="flag country" title="Country" />
                 <IconHeader icon="hdd-network provider" title="Provider" />
-                <IconHeader icon="hdd-network attempt" title="Attempt" />
+                <IconHeader icon="emoji-dizzy failure" title="Failure" />
               </tr>
             </thead>
-            <tbody>
-              {result.Records.map(r => (
-                <Item key={r.Proxy} {...r} />
-              ))}
-            </tbody>
+            <tbody>{result.Records && result.Records.map(r => <Item key={r.Proxy} {...r} />)}</tbody>
           </table>
         </div>
       )}

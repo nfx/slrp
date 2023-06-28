@@ -1,19 +1,20 @@
 import axios from "axios";
 import { useEffect, useState, useRef, Component, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import React from "react";
 
 export const http = axios.create({
   baseURL: "/api"
 });
 
-export class ErrorBoundary extends Component {
+export class ErrorBoundary extends Component<{ children: React.ReactNode }> {
   state = { error: false, errorMessage: "" };
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: any) {
     return { error: true, errorMessage: error.toString() };
   }
 
-  componentDidCatch(error, _) {
+  componentDidCatch(error: any) {
     console.error(error);
   }
 
@@ -30,9 +31,14 @@ export class ErrorBoundary extends Component {
   }
 }
 
-export function TimeDiff({ ts, title }) {
-  const now = new Date();
-  const it = new Date(ts);
+type TimeDiffProps = {
+  ts: number;
+  title: string;
+};
+
+export function TimeDiff({ ts, title }: TimeDiffProps) {
+  const now = new Date().getTime();
+  const it = new Date(ts).getTime();
   let elapsed = Math.abs((now - it) / 1000);
   let value = "?";
   if (elapsed < 60) {
@@ -60,7 +66,7 @@ export function TimeDiff({ ts, title }) {
   );
 }
 
-export function IconHeader({ icon, col, title }) {
+export function IconHeader({ icon, col, title }: { icon: string; col?: string; title: string }) {
   const cl = `bi bi-${icon}`;
   return (
     <th className={`col-${col}`}>
@@ -69,7 +75,13 @@ export function IconHeader({ icon, col, title }) {
   );
 }
 
-export function Card({ label, value, increment = 0 }) {
+export type CardProps = {
+  label: string;
+  value: string;
+  increment?: number;
+};
+
+export function Card({ label, value, increment = 0 }: CardProps) {
   return (
     <div className="col">
       <div className="card mb-3">
@@ -87,11 +99,17 @@ export function Card({ label, value, increment = 0 }) {
   );
 }
 
-export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
-  const savedCallback = useRef();
+type LiveFilterProps = {
+  endpoint: string;
+  onUpdate: (data: any) => void;
+  minDelay?: number;
+};
+
+export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }: LiveFilterProps) {
+  const savedCallback = useRef<number>();
   const [pause, setPause] = useState(false);
-  const [total, setTotal] = useState(null);
-  const [failure, setFailure] = useState(null);
+  const [total, setTotal] = useState();
+  const [failure, setFailure] = useState<number | undefined>();
   const [searchParams, setSearchParams] = useSearchParams();
 
   let doFilter = useCallback(() => {
@@ -106,7 +124,7 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
           }
           setTotal(response.data.Total);
           onUpdate(response.data);
-          setFailure(null);
+          setFailure(undefined);
           savedCallback.current = setTimeout(doFilter, minDelay);
         })
         .catch(err => {
@@ -125,7 +143,7 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
   }, [savedCallback, doFilter]);
 
   let filter = searchParams.get("filter") || "";
-  let change = event => {
+  let change = (event: React.ChangeEvent<HTMLInputElement>) => {
     filter = event.target.value;
     setSearchParams(filter === "" ? {} : { filter });
     doFilter();
@@ -144,14 +162,14 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
     <div className="search-filter">
       <div className="input-group">
         <div>
-          {total != null && <span className="total">{total} total</span>}
+          {total !== undefined && <span className="total">{total} total</span>}
           <input className="form-control form-control-dark w-100 border-secondary" type="text" value={filter} onChange={change} placeholder="Search" aria-label="Search" />
         </div>
         <button className="btn btn-outline-secondary border-secondary" type="button" onClick={togglePause} title={!pause ? "Pause live update" : "Resume live update"}>
           <i className={`bi ${pause ? "bi-play" : "bi-pause"}`} />
         </button>
       </div>
-      {failure != null && (
+      {failure !== undefined && (
         <div className="alert-danger" role="alert">
           {failure}
         </div>
@@ -160,24 +178,24 @@ export function LiveFilter({ endpoint, onUpdate, minDelay = 5000 }) {
   );
 }
 
-function FilterableFacet({ Name, Value, link }) {
+function FilterableFacet({ Name, Value, link }: { Name: string; Value: string; link?: string }) {
   const short = Name.length > 32 ? `${Name.substring(0, 32)}...` : Name;
   return (
     <li>
-      {link === null ? (
-        short
-      ) : (
+      {link ? (
         <a className="link-primary app-link" href={link.replace("$", Name)}>
           {short}
         </a>
+      ) : (
+        short
       )}{" "}
       <sup>{Value}</sup>
     </li>
   );
 }
 
-export function SearchFacet({ name, items, link = null }) {
-  let result = [];
+export function SearchFacet({ name, items, link }: { name: string; items: { Name: string; Value: string }[]; link?: string }) {
+  let result: any[] = [];
   if (items.length > 1) {
     result.push(
       <div key={name} className="search-facet">
@@ -193,12 +211,12 @@ export function SearchFacet({ name, items, link = null }) {
   return result;
 }
 
-function QueryFacetFilter({ Name, Value, Filter, endpoint }) {
+function QueryFacetFilter({ Name, Value, Filter, endpoint }: { Name: string; Value: string; Filter: string; endpoint: string }) {
   const short = Name.length > 32 ? `${Name.substring(0, 32)}...` : Name;
-  const link = Name !== "n/a" ? `${endpoint}?filter=${Filter}` : null;
+  const link = Name !== "n/a" ? `${endpoint}?filter=${Filter}` : undefined;
   return (
     <li>
-      {link === null ? (
+      {link ? (
         short
       ) : (
         <a className="link-primary app-link" href={link}>
@@ -210,45 +228,49 @@ function QueryFacetFilter({ Name, Value, Filter, endpoint }) {
   );
 }
 
-function QueryFacet({ Name, Top, endpoint }) {
-  let result = [];
-  if (Top.length > 1) {
-    result.push(
-      <div key={Name} className="search-facet">
-        <strong>{Name}</strong>
-        <ul>
-          {Top.map(f => (
-            <QueryFacetFilter key={f.Name} endpoint={endpoint} {...f} />
-          ))}
-        </ul>
-      </div>
-    );
-  }
-  return result;
+function QueryFacet({ Name, Top, endpoint }: { Name: string; Top: { Name: string; Value: string; Filter: string }[]; endpoint: string }) {
+  return Top.length == 0 ? (
+    <></>
+  ) : (
+    <div key={Name} className="search-facet">
+      <strong>{Name}</strong>
+      <ul>
+        {Top.map(f => (
+          <QueryFacetFilter key={f.Name} endpoint={endpoint} {...f} />
+        ))}
+      </ul>
+    </div>
+  );
 }
 
-export function QueryFacets({ Facets, endpoint }) {
-  return Facets != null && Facets.map(f => <QueryFacet key={f.Name} endpoint={endpoint} {...f} />);
+export type Top = { Name: string; Value: string; Filter: string }[];
+
+export type Facet = { Name: string; Top: Top };
+
+export function QueryFacets({ Facets, endpoint }: { Facets?: Facet[]; endpoint: string }) {
+  return <>{Facets && Facets.map(f => <QueryFacet key={f.Name} endpoint={endpoint} {...f} />)}</>;
 }
 
-export function useInterval(callback, delay) {
+export function useInterval(callback: () => any, delay?: number) {
   // https://overreacted.io/making-setinterval-declarative-with-react-hooks/
-  const savedCallback = useRef();
+  const savedCallback = useRef<() => number>();
   useEffect(() => {
     savedCallback.current = callback;
   });
   useEffect(() => {
     function tick() {
-      savedCallback.current();
+      if (savedCallback.current) {
+        savedCallback.current();
+      }
     }
-    if (delay !== null) {
+    if (delay !== undefined) {
       let id = setInterval(tick, delay);
       return () => clearInterval(id);
     }
   }, [delay]);
 }
 
-export function useTitle(title) {
+export function useTitle(title: string) {
   useEffect(() => {
     const prev = document.title;
     document.title = `${title} - slrp`;

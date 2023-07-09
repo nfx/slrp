@@ -1,6 +1,6 @@
 export type CardProps = {
   label: string;
-  value: string;
+  value: number;
   increment?: number;
 };
 

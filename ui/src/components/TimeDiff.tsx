@@ -1,5 +1,5 @@
 type TimeDiffProps = {
-  ts: number;
+  ts: string | number | Date;
   title: string;
 };
 

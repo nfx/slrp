@@ -5,16 +5,16 @@ import { Facet, QueryFacets } from "./components/facets/QueryFacet";
 import { Countries } from "./countries";
 import { http, useTitle } from "./util";
 
-type BlacklistEntry = {
+type Blacklisted = {
   Proxy: string;
+  Country: string;
+  Provider: string;
+  ASN: number;
   Failure: string;
   Sources: string[];
-  Provider: string;
-  ASN: string;
-  Country: string;
 };
 
-function BlacklistItem({ Proxy, Failure, Sources, Provider, ASN, Country }: BlacklistEntry) {
+function BlacklistItem({ Proxy, Failure, Sources, Provider, ASN, Country }: Blacklisted) {
   const removeProxy = () => {
     http.delete(`/blacklist/${Proxy.replace("//", "")}`);
     return false;
@@ -48,7 +48,7 @@ function BlacklistItem({ Proxy, Failure, Sources, Provider, ASN, Country }: Blac
 
 export default function Blacklist() {
   useTitle("Blacklist");
-  const [result, setResult] = useState<{ Facets?: Facet[]; Records?: BlacklistEntry[] }>();
+  const [result, setResult] = useState<{ Facets?: Facet[]; Records?: Blacklisted[] }>();
   return (
     <div className="card blacklist table-responsive">
       <LiveFilter endpoint="/blacklist" onUpdate={setResult} minDelay={10000} />

@@ -5,16 +5,18 @@ import { Facet, QueryFacets } from "./components/facets/QueryFacet";
 import { Countries } from "./countries";
 import { http, useTitle } from "./util";
 
-type ReverifyEntry = {
+type InReverify = {
   Proxy: string;
-  Sources: string[];
-  Provider: string;
-  ASN: string;
-  Country: string;
   Attempt: number;
+  After: string;
+  Country: string;
+  Provider: string;
+  ASN: number;
+  Failure: string;
+  Sources: string[];
 };
 
-function ReverifyItem({ Proxy, Sources, Provider, ASN, Country, Attempt }: ReverifyEntry) {
+function ReverifyItem({ Proxy, Sources, Provider, ASN, Country, Attempt }: InReverify) {
   const removeProxy = () => {
     http.delete(`/blacklist/${Proxy.replace("//", "")}`);
     return false;
@@ -48,7 +50,7 @@ function ReverifyItem({ Proxy, Sources, Provider, ASN, Country, Attempt }: Rever
 
 export default function Reverify() {
   useTitle("Reverify");
-  const [result, setResult] = useState<{ Facets: Facet[]; Records?: ReverifyEntry[] }>();
+  const [result, setResult] = useState<{ Facets: Facet[]; Records?: InReverify[] }>();
   return (
     <div className="card blacklist table-responsive">
       <LiveFilter endpoint="/reverify" onUpdate={setResult} minDelay={10000} />

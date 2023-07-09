@@ -14,22 +14,22 @@ function convertSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed()}mb`;
 }
 
-type HistoryEntry = {
-  ID: string;
+type FilteredRequest = {
+  ID: number;
   Serial: number;
   Attempt: number;
   Ts: string;
   Method: string;
   URL: string;
-  Status: string;
   StatusCode: number;
+  Status: string;
   Proxy: string;
   Appeared: number;
   Size: number;
   Took: number;
 };
 
-function Request(history: HistoryEntry) {
+function Request(history: FilteredRequest) {
   const pos = history.URL.indexOf("/", 9);
   const path = history.URL.substring(pos);
 
@@ -75,7 +75,7 @@ function Request(history: HistoryEntry) {
 
 export default function History() {
   useTitle("History");
-  const [result, setResult] = useState<{ facets: Facet[]; Records?: HistoryEntry[] }>();
+  const [result, setResult] = useState<{ facets: Facet[]; Records?: FilteredRequest[] }>();
   return (
     <div id="history-table" className="card history table-responsive">
       <LiveFilter endpoint="/history" onUpdate={setResult} minDelay={2000} />

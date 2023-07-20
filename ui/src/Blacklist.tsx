@@ -1,17 +1,20 @@
 import { useState } from "react";
+import { IconHeader } from "./components/IconHeader";
+import { LiveFilter } from "./components/LiveFilter";
+import { Facet, QueryFacets } from "./components/facets/QueryFacet";
 import { Countries } from "./countries";
-import { Facet, IconHeader, LiveFilter, QueryFacets, http, useTitle } from "./util";
+import { http, useTitle } from "./util";
 
-type BlacklistItem = {
+type Blacklisted = {
   Proxy: string;
+  Country: string;
+  Provider: string;
+  ASN: number;
   Failure: string;
   Sources: string[];
-  Provider: string;
-  ASN: string;
-  Country: string;
 };
 
-function Item({ Proxy, Failure, Sources, Provider, ASN, Country }: BlacklistItem) {
+function BlacklistItem({ Proxy, Failure, Sources, Provider, ASN, Country }: Blacklisted) {
   const removeProxy = () => {
     http.delete(`/blacklist/${Proxy.replace("//", "")}`);
     return false;
@@ -45,7 +48,7 @@ function Item({ Proxy, Failure, Sources, Provider, ASN, Country }: BlacklistItem
 
 export default function Blacklist() {
   useTitle("Blacklist");
-  const [result, setResult] = useState<{ Facets?: Facet[]; Records?: BlacklistItem[] }>();
+  const [result, setResult] = useState<{ Facets?: Facet[]; Records?: Blacklisted[] }>();
   return (
     <div className="card blacklist table-responsive">
       <LiveFilter endpoint="/blacklist" onUpdate={setResult} minDelay={10000} />
@@ -62,7 +65,7 @@ export default function Blacklist() {
                 <IconHeader icon="emoji-dizzy failure" title="Failure" />
               </tr>
             </thead>
-            <tbody>{result.Records && result.Records.map(r => <Item key={r.Proxy} {...r} />)}</tbody>
+            <tbody>{result.Records && result.Records.map(r => <BlacklistItem key={r.Proxy} {...r} />)}</tbody>
           </table>
         </div>
       )}

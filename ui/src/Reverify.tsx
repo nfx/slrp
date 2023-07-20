@@ -1,17 +1,22 @@
 import { useState } from "react";
+import { IconHeader } from "./components/IconHeader";
+import { LiveFilter } from "./components/LiveFilter";
+import { Facet, QueryFacets } from "./components/facets/QueryFacet";
 import { Countries } from "./countries";
-import { Facet, IconHeader, LiveFilter, QueryFacets, http, useTitle } from "./util";
+import { http, useTitle } from "./util";
 
-type ReverifyItem = {
+type InReverify = {
   Proxy: string;
-  Sources: string[];
-  Provider: string;
-  ASN: string;
-  Country: string;
   Attempt: number;
+  After: string;
+  Country: string;
+  Provider: string;
+  ASN: number;
+  Failure: string;
+  Sources: string[];
 };
 
-function Item({ Proxy, Sources, Provider, ASN, Country, Attempt }: ReverifyItem) {
+function ReverifyItem({ Proxy, Sources, Provider, ASN, Country, Attempt }: InReverify) {
   const removeProxy = () => {
     http.delete(`/blacklist/${Proxy.replace("//", "")}`);
     return false;
@@ -45,11 +50,11 @@ function Item({ Proxy, Sources, Provider, ASN, Country, Attempt }: ReverifyItem)
 
 export default function Reverify() {
   useTitle("Reverify");
-  const [result, setResult] = useState<{ Facets: Facet[]; Records?: ReverifyItem[] }>();
+  const [result, setResult] = useState<{ Facets: Facet[]; Records?: InReverify[] }>();
   return (
     <div className="card blacklist table-responsive">
       <LiveFilter endpoint="/reverify" onUpdate={setResult} minDelay={10000} />
-      {result != null && (
+      {result && (
         <div>
           <QueryFacets endpoint="/reverify" {...result} />
           <table className="table text-start table-sm">
@@ -62,7 +67,7 @@ export default function Reverify() {
                 <IconHeader icon="hdd-network attempt" title="Attempt" />
               </tr>
             </thead>
-            <tbody>{result.Records && result.Records.map(r => <Item key={r.Proxy} {...r} />)}</tbody>
+            <tbody>{result.Records && result.Records.map(r => <ReverifyItem key={r.Proxy} {...r} />)}</tbody>
           </table>
         </div>
       )}

@@ -1,11 +1,14 @@
-import { LiveFilter, QueryFacets, TimeDiff, http, IconHeader, useTitle, Facet } from "./util";
-import { Countries } from "./countries";
 import { useState } from "react";
-import React from "react";
+import { IconHeader } from "./components/IconHeader";
+import { LiveFilter } from "./components/LiveFilter";
+import { TimeDiff } from "./components/TimeDiff";
+import { Facet, QueryFacets } from "./components/facets/QueryFacet";
+import { Countries } from "./countries";
+import { http, useTitle } from "./util";
 
 export default function Proxies() {
   useTitle("Proxies");
-  const [result, setResult] = useState<{ Facets: Facet[]; Records?: ProxyEntry[] }>();
+  const [result, setResult] = useState<{ Facets: Facet[]; Records?: ApiEntry[] }>();
   return (
     <div>
       <LiveFilter endpoint="/pool" onUpdate={setResult} minDelay={2000} />
@@ -42,24 +45,26 @@ function timeTook(duration: number) {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-export type ProxyEntry = {
+export type ApiEntry = {
   Proxy: string;
   FirstSeen: number;
   LastSeen: number;
-  Timeouts: number;
+  ReanimateAfter: string;
   Ok: boolean;
-  ReanimateAfter: number;
   Speed: number;
+  Seen: number;
+  Timeouts: number;
+  Offered: number;
+  Reanimated: number;
+  Succeed: number;
+  HourOffered: number[];
+  HourSucceed: number[];
   Country: string;
   Provider: string;
-  ASN: string;
-  Offered: number;
-  Succeed: number;
-  HourSucceed: number[];
-  HourOffered: number[];
+  ASN: number;
 };
 
-function Entry(props: ProxyEntry) {
+function Entry(props: ApiEntry) {
   const proxy = props.Proxy;
   const { FirstSeen, LastSeen, Timeouts, Ok, ReanimateAfter, Speed, Country, Provider, ASN } = props;
   const removeProxy = () => {

@@ -1,14 +1,13 @@
-import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { NavLink, Outlet, Route, Routes } from "react-router-dom";
 import "./App.css";
-import React from "react";
-import { Routes, Route, NavLink, Outlet } from "react-router-dom";
-import { ErrorBoundary } from "./util";
-import Dashboard from "./Sources";
-import Proxies from "./Proxies";
-import History from "./History";
 import Blacklist from "./Blacklist";
+import Dashboard from "./Dashboard";
+import History from "./History";
+import Proxies from "./Proxies";
 import Reverify from "./Reverify";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function Header() {
   return (

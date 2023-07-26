@@ -7,5 +7,14 @@ export default defineConfig({
   plugins: [react(), viteTsconfigPaths()],
   build: {
     outDir: "./build"
+  },
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8089",
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 });

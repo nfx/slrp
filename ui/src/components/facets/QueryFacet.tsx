@@ -4,11 +4,11 @@ function QueryFacetFilter({ Name, Value, Filter, endpoint }: { Name: string; Val
   return (
     <li>
       {link ? (
-        short
-      ) : (
         <a className="link-primary app-link" href={link}>
           {short}
         </a>
+      ) : (
+        short
       )}{" "}
       <sup>{Value}</sup>
     </li>

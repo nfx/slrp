@@ -20,6 +20,12 @@ func TestNewProxy(t *testing.T) {
 	}
 }
 
+func TestSocksToHttp(t *testing.T) {
+	p := NewProxy("1.2.4.5:8731", "socks4")
+	assert.Equal(t, "http://1.2.4.5:8731", p.AsHttp().String())
+	assert.Equal(t, "https://1.2.4.5:8731", p.AsHttps().String())
+}
+
 func TestProxyIP(t *testing.T) {
 	assert.Equal(t, net.IPv4(1, 2, 3, 4), HttpProxy("1.2.3.4:56789").IP())
 }

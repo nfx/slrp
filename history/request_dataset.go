@@ -63,17 +63,17 @@ func (d RequestDataset) Query(query string) (*eval.QueryResult[Request], error) 
 					Name:   "Proxy",
 				}, eval.NumberRanges{
 					// TODO: implement as generator feature
-					Getter: filtered.getTook,
+					Getter:   filtered.getTook,
 					Duration: true,
 
-					Name: "Took",
+					Name:  "Took",
 					Field: "Took",
 				}, eval.NumberRanges{
 					// TODO: implement as generator feature
 					Getter: filtered.getSize,
-					Size: true,
+					Size:   true,
 
-					Name: "Size",
+					Name:  "Size",
 					Field: "Size",
 				},
 			}.Facets(filtered, topN)

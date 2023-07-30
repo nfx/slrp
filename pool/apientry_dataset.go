@@ -43,10 +43,10 @@ func (d ApiEntryDataset) Query(query string) (*eval.QueryResult[ApiEntry], error
 		Facets: func(filtered ApiEntryDataset, topN int) []eval.Facet {
 			return eval.FacetRetrievers[ApiEntry]{
 				eval.StringFacet{
-					Getter: filtered.getProxyProtocol,
+					Getter:   filtered.getProxyProtocol,
 					Contains: true,
-					Field:  "Proxy",
-					Name:   "Protocol",
+					Field:    "Proxy",
+					Name:     "Protocol",
 				}, eval.StringFacet{
 					Getter: filtered.getCountry,
 					Field:  "Country",
@@ -65,20 +65,20 @@ func (d ApiEntryDataset) Query(query string) (*eval.QueryResult[ApiEntry], error
 					TimeAgo: true,
 				},
 				eval.NumberRanges{
-					Getter:  filtered.getSpeed,
-					Field:   "Speed",
-					Name:    "Speed",
+					Getter:   filtered.getSpeed,
+					Field:    "Speed",
+					Name:     "Speed",
 					Duration: true,
 				},
 				eval.NumberRanges{
-					Getter:  filtered.getSucceed,
-					Field:   "Succeed",
-					Name:    "Succeed",
+					Getter: filtered.getSucceed,
+					Field:  "Succeed",
+					Name:   "Succeed",
 				},
 				eval.NumberRanges{
-					Getter:  filtered.getOffered,
-					Field:   "Offered",
-					Name:    "Offered",
+					Getter: filtered.getOffered,
+					Field:  "Offered",
+					Name:   "Offered",
 				},
 			}.Facets(filtered, topN)
 		},

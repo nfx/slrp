@@ -8,9 +8,9 @@ import (
 
 var defaultSorting = fastestUnseen
 
-func fastestUnseen(entries []entry) {
+func fastestUnseen(entries []*entry) {
 	sorter.Slice(entries, func(i int) sorter.Cmp {
-		e := &entries[i]
+		e := entries[i]
 		return sorter.Chain{
 			// todo: FloatDesc on HourProbability?... no data == 100% perhaps?
 			sorter.IntAsc(e.ReanimateAfter.Unix()),
@@ -21,9 +21,9 @@ func fastestUnseen(entries []entry) {
 	})
 }
 
-func sortForDisplay(entries []entry) {
+func sortForDisplay(entries []*entry) {
 	sorter.Slice(entries, func(i int) sorter.Cmp {
-		e := &entries[i]
+		e := entries[i]
 		return sorter.Chain{
 			// todo: FloatDesc on HourProbability?... no data == 100% perhaps?
 			sorter.IntAsc(e.ReanimateAfter.Unix()),
@@ -34,9 +34,9 @@ func sortForDisplay(entries []entry) {
 	})
 }
 
-func saturate(entries []entry) {
+func saturate(entries []*entry) {
 	sorter.Slice(entries, func(i int) sorter.Cmp {
-		e := &entries[i]
+		e := entries[i]
 		return sorter.Chain{
 			sorter.IntAsc(e.ReanimateAfter.Unix()),
 			sorter.FloatDesc(e.SuccessRate()),

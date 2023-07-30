@@ -7,6 +7,7 @@ import (
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
+	"github.com/nfx/slrp/pool/counter"
 )
 
 // unexported unit test shim
@@ -19,21 +20,51 @@ type entry struct {
 	ReanimateAfter time.Time
 	Ok             bool
 	Speed          time.Duration
-	Seen           int
 	Timeouts       int
+	Failures       int
 	Offered        int
 	Reanimated     int
 	Succeed        int
-	HourOffered    [24]int
-	HourSucceed    [24]int
+
+	OfferShort   counter.RollingCounter
+	SuccessShort counter.RollingCounter
+	TimeoutShort counter.RollingCounter
+	FailureShort counter.RollingCounter
+
+	Offer1D   counter.RollingCounter
+	Success1D counter.RollingCounter
+	Timeout1D counter.RollingCounter
+	Failure1D counter.RollingCounter
+
+	HourOffered [24]int
+	HourSucceed [24]int
 }
 
-func (e *entry) MarkSeen() {
-	e.LastSeen = now().Unix()
-	e.Seen++
+func newEntry(proxy pmux.Proxy, speed time.Duration, evictSpanMinutes int16) *entry {
+	now := now()
+	return &entry{
+		Ok:        true,
+		Proxy:     proxy,
+		Speed:     speed,
+		FirstSeen: now.Unix(),
+		LastSeen:  now.Unix(),
+
+		OfferShort:   counter.NewRollingCounter(evictSpanMinutes, time.Minute),
+		SuccessShort: counter.NewRollingCounter(evictSpanMinutes, time.Minute),
+		TimeoutShort: counter.NewRollingCounter(evictSpanMinutes, time.Minute),
+		FailureShort: counter.NewRollingCounter(evictSpanMinutes, time.Minute),
+
+		Offer1D:   counter.NewRollingCounter(24, time.Hour),
+		Success1D: counter.NewRollingCounter(24, time.Hour),
+		Timeout1D: counter.NewRollingCounter(24, time.Hour),
+		Failure1D: counter.NewRollingCounter(24, time.Hour),
+	}
 }
 
 func (e *entry) MarkSuccess() {
+	e.SuccessShort.Increment()
+	e.Success1D.Increment()
+
 	now := now()
 	hour := now.Hour()
 	if (e.Succeed + 1) < e.Offered {
@@ -50,21 +81,88 @@ func (e *entry) MarkSuccess() {
 	e.ReanimateAfter = time.Time{}
 }
 
-func (e *entry) MarkFailure(err error) {
+func (e *entry) MarkFailure(err error, shortTimeoutSleep time.Duration) {
 	t, ok := err.(interface {
 		Timeout() bool
 	})
 	e.Ok = false
-	// TODO: mark configurable
-	e.ReanimateAfter = now().Add(1 * time.Minute)
+	e.ReanimateAfter = now().Add(shortTimeoutSleep)
 	if ok && t.Timeout() {
+		e.TimeoutShort.Increment()
+		e.Timeout1D.Increment()
 		e.Timeouts++
+	} else {
+		e.FailureShort.Increment()
+		e.Failure1D.Increment()
+		e.Failures++
 	}
+}
+
+func (e *entry) RequestsComplete() bool {
+	offers := e.OfferShort.Sum()
+	if offers == 0 {
+		return false
+	}
+	return offers == e.RequestsShort()
+}
+
+func (e *entry) RequestsShort() int {
+	return e.SuccessShort.Sum() + e.TimeoutShort.Sum() + e.FailureShort.Sum()
+}
+
+func (e *entry) SuccessRateShort() float64 {
+	pass := float64(e.SuccessShort.Sum())
+	fail := float64(e.RequestsShort())
+	return pass / fail
+}
+
+func (e *entry) RequestsLong() int {
+	return e.Success1D.Sum() + e.Timeout1D.Sum() + e.Failure1D.Sum()
+}
+
+func (e *entry) SuccessRateLong() float64 {
+	pass := float64(e.Success1D.Sum())
+	fail := float64(e.RequestsLong())
+	return pass / fail
+}
+
+func (e *entry) Eviction(evictThresholdTimeouts, evictThresholdFailures, evictThresholdReanimations int, longTimeoutSleep time.Duration) bool {
+	if !e.RequestsComplete() {
+		return false
+	}
+	suceeded := e.SuccessShort.Sum()
+	timedOut := e.TimeoutShort.Sum()
+	failed := e.FailureShort.Sum()
+	if suceeded == 0 && timedOut > evictThresholdTimeouts {
+		e.Ok = false
+		e.ReanimateAfter = now().Add(longTimeoutSleep)
+		// don't evict just yet
+		return false
+	}
+	if suceeded == 0 && failed > evictThresholdFailures {
+		e.Ok = false
+		return true
+	}
+	if suceeded == 0 && e.Reanimated > evictThresholdReanimations && (timedOut > 0 || failed > 0) {
+		e.Ok = false
+		return true
+	}
+	return false
 }
 
 // TODO: bug in offering: plenty of 551 errors, even though they should have been limited.
 // perhaps we can do LastOffered and check it to be more than 3s (checker.Timeout) ago.
-func (e *entry) ConsiderSkip(ctx context.Context) bool {
+func (e *entry) ConsiderSkip(ctx context.Context, offerLimit int) bool {
+	currentOffers := e.OfferShort.Sum()
+	if currentOffers > offerLimit {
+		// there were too many offers in the last 5 minutes
+		return true
+	}
+	if e.SuccessShort.Sum() == 0 && e.FailureShort.Sum() == 3 {
+		e.Ok = false
+		e.ReanimateAfter = now().Add(30 * time.Second)
+		return true
+	}
 	now := now()
 	log := app.Log.From(ctx).
 		With().
@@ -87,26 +185,10 @@ func (e *entry) ConsiderSkip(ctx context.Context) bool {
 		log.Trace().Str("until", e.DeadUntil()).Msg("not ok")
 		return true
 	}
-	// if e.HourOffered[now.Hour()] > 3 && e.HourSucceed[now.Hour()] == 0 {
-	// 	e.Ok = false
-	// 	e.ReanimateAfter = time.Date(
-	// 		now.Year(), now.Month(), now.Day(),
-	// 		now.Hour()+1, 5, 0, 0, now.Location())
-	// 	log.Trace().
-	// 		Str("until", e.DeadUntil()).
-	// 		Int("hour", now.Hour()).
-	// 		Int("offered", e.HourOffered[now.Hour()]).
-	// 		Int("succeeded", e.HourSucceed[now.Hour()]).
-	// 		Msg("skipping for an hour")
-	// 	return true
-	// }
-	// if e.Timeouts > 12 && e.Succeed == 0 {
-	// 	e.Ok = false // TODO: outer process
-	// 	log.Trace().Int("timeouts", e.Timeouts).Msg("to be blacklisted")
-	// 	return true
-	// }
 	e.HourOffered[now.Hour()]++
 	e.Offered += 1
+	e.OfferShort.Increment()
+	e.Offer1D.Increment()
 	log.Trace().Int("new_offered", e.Offered).Msg("offered")
 	return false
 }

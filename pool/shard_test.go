@@ -14,11 +14,11 @@ func TestShardHandleReanimate(t *testing.T) {
 		return ti(0, 2, 0)
 	}
 	s := &shard{
-		Entries: []entry{
+		Entries: []*entry{
 			{ReanimateAfter: ti(0, 1, 0)},
 		},
 	}
-	s.init(make(chan work))
+	s.init(testPoolCfg, make(chan work))
 	s.minute = time.NewTicker(500 * time.Millisecond)
 
 	ctx := app.MockCtx()
@@ -35,11 +35,11 @@ func TestShardHandleReply(t *testing.T) {
 		return ti(0, 2, 0)
 	}
 	s := &shard{
-		Entries: []entry{
+		Entries: []*entry{
 			{ReanimateAfter: ti(0, 1, 0)},
 		},
 	}
-	s.init(make(chan work))
+	s.init(testPoolCfg, make(chan work))
 
 	ctx := app.MockCtx()
 	defer ctx.Cancel()

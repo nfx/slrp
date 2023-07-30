@@ -17,7 +17,6 @@ func (d ApiEntryDataset) Query(query string) (*eval.QueryResult[ApiEntry], error
 			"ReanimateAfter": eval.NumberGetter{Name: "ReanimateAfter", Func: d.getReanimateAfter},
 			"Ok":             eval.BooleanGetter{Name: "Ok", Func: d.getOk},
 			"Speed":          eval.NumberGetter{Name: "Speed", Func: d.getSpeed},
-			"Seen":           eval.NumberGetter{Name: "Seen", Func: d.getSeen},
 			"Timeouts":       eval.NumberGetter{Name: "Timeouts", Func: d.getTimeouts},
 			"Offered":        eval.NumberGetter{Name: "Offered", Func: d.getOffered},
 			"Reanimated":     eval.NumberGetter{Name: "Reanimated", Func: d.getReanimated},
@@ -33,7 +32,6 @@ func (d ApiEntryDataset) Query(query string) (*eval.QueryResult[ApiEntry], error
 			"ReanimateAfter": {Asc: d.sortAscReanimateAfter, Desc: d.sortDescReanimateAfter},
 			"Ok":             {Asc: d.sortAscOk, Desc: d.sortDescOk},
 			"Speed":          {Asc: d.sortAscSpeed, Desc: d.sortDescSpeed},
-			"Seen":           {Asc: d.sortAscSeen, Desc: d.sortDescSeen},
 			"Timeouts":       {Asc: d.sortAscTimeouts, Desc: d.sortDescTimeouts},
 			"Offered":        {Asc: d.sortAscOffered, Desc: d.sortDescOffered},
 			"Reanimated":     {Asc: d.sortAscReanimated, Desc: d.sortDescReanimated},
@@ -157,18 +155,6 @@ func (_ ApiEntryDataset) sortAscSpeed(left, right ApiEntry) bool {
 
 func (_ ApiEntryDataset) sortDescSpeed(left, right ApiEntry) bool {
 	return left.Speed > right.Speed
-}
-
-func (d ApiEntryDataset) getSeen(record int) float64 {
-	return float64(d[record].Seen)
-}
-
-func (_ ApiEntryDataset) sortAscSeen(left, right ApiEntry) bool {
-	return left.Seen < right.Seen
-}
-
-func (_ ApiEntryDataset) sortDescSeen(left, right ApiEntry) bool {
-	return left.Seen > right.Seen
 }
 
 func (d ApiEntryDataset) getTimeouts(record int) float64 {

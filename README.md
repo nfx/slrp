@@ -187,6 +187,13 @@ Proxy probing component.
 
 * `enable_http_rescue` - experimental feature to enable rescuing HTTP proxies, that were presented as SOCKS5 or HTTPS. Detected based on protocol probe heuristics. Defaults to false.
 
+## refresher
+
+Source refresh component.
+
+* `enabled` - run the refresher. Enabled by default.
+* `max_scheduled` - number of sources to refresh at the same time. Defaults to 5.
+
 ## mitm
 
 HTTP proxy frontend.
@@ -231,11 +238,19 @@ Get information about refresh status for all sources
 
 Get 20 last used proxies
 
+## POST `/api/refresher/{source_name}`
+
+Start refreshing the source
+
+## DELETE `/api/refresher/{source_name}`
+
+Stop refreshing the source
+
 ## GET `/api/history`
 
 Get 100 last forwarding attempts
 
-## GET `/api/history/:id`
+## GET `/api/history/{id}`
 
 Get sanitized HTTP response from forwarding attempt
 

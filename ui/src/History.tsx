@@ -48,7 +48,7 @@ function Request(history: FilteredRequest) {
       <td>
         <span className="request">
           {history.Method}{" "}
-          <a className="app-link" href={`http://localhost:8089/api/history/${history.ID}?format=text`} rel="noreferrer" target="_blank">
+          <a className="app-link" href={`/api/history/${history.ID}?format=text`} rel="noreferrer" target="_blank">
             <abbr title={history.URL}>{path}</abbr>
           </a>
           <sup>
@@ -62,10 +62,14 @@ function Request(history: FilteredRequest) {
         {history.StatusCode === 200 ? 200 : <abbr title={history.Status}>{history.StatusCode}</abbr>} <sup>{history.Attempt}</sup>
       </td>
       <td className="text-muted proxy">
-        <a className="link-primary app-link" href={`/history?filter=Proxy:"${Proxy}"`}>
+        <a className="link-primary app-link" href={`/history?filter=Proxy:"${history.Proxy}"`}>
           {history.Proxy}
         </a>{" "}
-        <sup>{history.Appeared}</sup>
+        <sup>
+          <a className="link-primary app-link" href={`/proxies?filter=Proxy:"${history.Proxy}"`}>
+            {history.Appeared}
+          </a>
+        </sup>
       </td>
       <td className="size">{convertSize(history.Size)}</td>
       <td className="took">{history.Took}s</td>

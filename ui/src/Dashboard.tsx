@@ -9,7 +9,7 @@ const pipeline = ["Scheduled", "New", "Probing"] as const;
 const stats = ["Found", "Timeouts", "Blacklisted", "Ignored"] as const;
 const cols = [...pipeline, ...stats];
 
-type Source  = {
+type Source = {
   Name: string;
   Homepage: string;
   UrlPrefix: string;
@@ -123,41 +123,48 @@ function Cols(props: Summary) {
   );
 }
 
-function StatusIcon(props: {
-  source: string;
-  state: string;
-  failure: string;
-}) {
+function StatusIcon(props: { source: string; state: string; failure: string }) {
   const [hover, setHover] = useState<boolean>(false);
-  const startTitle = props.failure ? `Restart from ${props.failure}` : 'Start';
-  const startRefresh = <i className="bi bi-collection-play-fill text-success" 
-    title={startTitle} onClick={() => {
-    http
-      .post(`/refresher/${props.source}`)
-      .then(_ => props.state = "running");
-  }} />;
+  const startTitle = props.failure ? `Restart from ${props.failure}` : "Start";
+  const startRefresh = (
+    <i
+      className="bi bi-collection-play-fill text-success"
+      title={startTitle}
+      onClick={() => {
+        http.post(`/refresher/${props.source}`).then(_ => (props.state = "running"));
+      }}
+    />
+  );
 
-  const stopRefresh = <i className="bi bi-stop-circle-fill text-danger" title="Stop" onClick={() => {
-    http
-      .delete(`/refresher/${props.source}`)
-      .then(_ => props.state = "idle");
-  }} />;
+  const stopRefresh = (
+    <i
+      className="bi bi-stop-circle-fill text-danger"
+      title="Stop"
+      onClick={() => {
+        http.delete(`/refresher/${props.source}`).then(_ => (props.state = "idle"));
+      }}
+    />
+  );
 
-  const idle = hover ? startRefresh : <i className="bi bi-alarm text-muted" title="Idle" />
+  const idle = hover ? startRefresh : <i className="bi bi-alarm text-muted" title="Idle" />;
 
   let icons: Record<string, ReactNode> = {
-    running: hover ? stopRefresh : <i className="spinner-border spinner-border-sm text-success">
-      <span className="sr-only">.</span>
-    </i>,
+    running: hover ? (
+      stopRefresh
+    ) : (
+      <i className="spinner-border spinner-border-sm text-success">
+        <span className="sr-only">.</span>
+      </i>
+    ),
     failed: hover ? startRefresh : <i className="bi bi-emoji-dizzy-fill" title={props.failure} />,
     idle: idle,
-    "": idle,
+    "": idle
   };
-  return <span 
-    onMouseOver={() => setHover(true)} 
-    onMouseLeave={() => setHover(false)}>
+  return (
+    <span onMouseOver={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {icons[props.state]}&nbsp;
-    </span>;
+    </span>
+  );
 }
 
 function Probe(props: Source) {
@@ -171,7 +178,7 @@ function Probe(props: Source) {
     style.backgroundImage = lg;
   }
   let refresh = running ? <TimeDiff ts={EstFinish} title="Estimated finish" /> : <TimeDiff ts={NextRefresh} title="Next Refresh" />;
-  
+
   return (
     <tr className={rowClass} style={style}>
       <td>

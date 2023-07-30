@@ -262,6 +262,10 @@ Get first 20 timed out items that are in the reverify pool
 
 Get first 20 blacklisted items sorted by proxy along with common error stats
 
+# Developing
+
+UI development requires `npm` installed. Once you have it, please `npm install vite typescript -g`.
+
 # References
 
 * [ProxyBroker](https://github.com/constverum/ProxyBroker) is pretty similar project in nature. Requires couple of Python module dependencies and had the last commit in March 2019. 

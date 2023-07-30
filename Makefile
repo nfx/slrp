@@ -2,6 +2,7 @@ default: build
 
 clean:
 	rm -fr dist ui/build ui/node_modules slrp main
+	cp ui/src/favicon.ico ui/build/favicon.ico
 
 build-ui:
 	npm --prefix ui run build

@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
@@ -156,11 +157,12 @@ func (r req) Do(ctx context.Context, h httpClient) ([]byte, int, error) {
 	attempt := 0
 	var err error
 	var resp *http.Response
-	for attempt < 10 {
+	for attempt < 3 {
 		attempt++
 		resp, err = h.Do(request)
 		if resp != nil && resp.StatusCode == 552 {
 			// retry on proxy pool exhaustion
+			time.Sleep(time.Duration(attempt+1) * time.Second)
 			continue
 		}
 		if err != nil {
@@ -170,11 +172,16 @@ func (r req) Do(ctx context.Context, h httpClient) ([]byte, int, error) {
 		break
 	}
 	serial, err := strconv.Atoi(resp.Header.Get("X-Proxy-Serial"))
+	// TODO: get used proxy and add it to the error
 	if err != nil {
 		serial = 0
 	}
+	proxy := resp.Header.Get("X-Proxy-Through")
 	if resp.Body == nil {
-		return nil, serial, fmt.Errorf("nil body: %s %s", request.Method, request.URL)
+		return nil, serial, newErr("nil body",
+			strEC{"proxy", proxy},
+			intEC{"serial", serial},
+			strEC{"url", request.URL.String()})
 	}
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
@@ -183,7 +190,9 @@ func (r req) Do(ctx context.Context, h httpClient) ([]byte, int, error) {
 			// TODO: highlight in history?...
 			if strings.Contains(strings.ToLower(string(body)), v) {
 				return nil, serial, newErr("found blocker",
-					intEC{"serial", serial}, strEC{"marker", v})
+					strEC{"proxy", proxy},
+					intEC{"serial", serial},
+					strEC{"marker", v})
 			}
 		}
 	}
@@ -194,16 +203,20 @@ func (r req) Do(ctx context.Context, h httpClient) ([]byte, int, error) {
 	if resp.StatusCode >= 400 {
 		return nil, serial, newErr("error status",
 			intEC{"serial", serial},
+			strEC{"proxy", proxy},
 			intEC{"code", resp.StatusCode},
 			strEC{"status", resp.Status})
 	}
 	if len(body) == 0 && !r.EmptyBodyValid {
-		return nil, serial, newErr("empty body",
+		return nil, serial, newErr("empty body", // TODO: valid on regex sources
+			strEC{"proxy", proxy},
 			intEC{"serial", serial})
 	}
 	if r.ExpectInResponse != "" && !strings.Contains(string(body), r.ExpectInResponse) {
 		return body, serial, newErr("invalid response",
-			intEC{"serial", serial}, strEC{"expect", r.ExpectInResponse})
+			intEC{"serial", serial},
+			strEC{"proxy", proxy},
+			strEC{"expect", r.ExpectInResponse})
 	}
 	return body, serial, err
 }

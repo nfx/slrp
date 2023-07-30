@@ -95,6 +95,7 @@ type Refresher struct {
 
 type probeContract interface {
 	Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool
+	Forget(ctx context.Context, proxy pmux.Proxy, err error) bool
 }
 
 type poolContract interface {
@@ -309,31 +310,21 @@ func (ref *Refresher) refresh(ctx context.Context, client *http.Client, source s
 	ref.stats.Launch(source.ID)
 	feed := source.Feed(ctx, client)
 	ref.progress <- progress{source.ID, 0}
-	for proxy := range feed.Generate(ctx) {
-		ctx := app.Log.WithStringer(ctx, "proxy", proxy)
-		if !ref.probe.Schedule(ctx, proxy, source.ID) {
+	for signal := range feed.Generate(ctx) {
+		ctx := app.Log.WithStringer(ctx, "proxy", signal.Proxy)
+		log := app.Log.From(ctx)
+		if !signal.Add {
+			log.Info().Err(signal.Err).Msg("forgetting proxy")
+			// let's see if it's not too aggressive
+			if !ref.probe.Forget(ctx, signal.Proxy, signal.Err) {
+				log.Warn().Msg("failed to forget")
+			}
+			continue
+		}
+		if !ref.probe.Schedule(ctx, signal.Proxy, source.ID) {
 			log.Warn().Msg("failed to schedule") // TODO: this happens too often
 		}
 		ref.progress <- progress{source.ID, feed.Len()}
-
-		// if proxy.Proto == pmux.HTTP {
-		// 	if !ref.probe.Schedule(ctx, pmux.Proxy{
-		// 		IP:    proxy.IP,
-		// 		Port:  proxy.Port,
-		// 		Proto: pmux.HTTPS,
-		// 	}, source.ID) {
-		// 		log.Warn().Msg("failed to schedule")
-		// 	}
-		// }
-		// if proxy.Proto == pmux.HTTPS {
-		// 	if !ref.probe.Schedule(ctx, pmux.Proxy{
-		// 		IP:    proxy.IP,
-		// 		Port:  proxy.Port,
-		// 		Proto: pmux.HTTP,
-		// 	}, source.ID) {
-		// 		log.Warn().Msg("failed to schedule")
-		// 	}
-		// }
 	}
 	// TODO: maybe update failed state from a secong goroutine?...
 	ref.stats.Finish(source.ID, feed.Err())

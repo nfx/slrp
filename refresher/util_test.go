@@ -24,6 +24,10 @@ func (c counterProbe) Schedule(ctx context.Context, proxy pmux.Proxy, source int
 	return true
 }
 
+func (c counterProbe) Forget(ctx context.Context, proxy pmux.Proxy, err error) bool {
+	return true
+}
+
 type mockStats map[int]*stats.Stat
 
 func (m mockStats) Launch(source int) {
@@ -102,15 +106,18 @@ var stubSource = []sources.Source{
 
 type proxyArraySrc []pmux.Proxy
 
-func (t proxyArraySrc) Generate(ctx context.Context) <-chan pmux.Proxy {
-	out := make(chan pmux.Proxy)
+func (t proxyArraySrc) Generate(ctx context.Context) <-chan sources.Signal {
+	out := make(chan sources.Signal)
 	go func() {
 		defer close(out)
 		for _, v := range t {
 			select {
 			case <-ctx.Done():
 				return
-			case out <- v:
+			case out <- sources.Signal{
+				Proxy: v,
+				Add:   true,
+			}:
 			}
 		}
 	}()
@@ -127,8 +134,8 @@ func (t proxyArraySrc) Len() int {
 
 type sleepingSrc int
 
-func (t sleepingSrc) Generate(ctx context.Context) <-chan pmux.Proxy {
-	out := make(chan pmux.Proxy)
+func (t sleepingSrc) Generate(ctx context.Context) <-chan sources.Signal {
+	out := make(chan sources.Signal)
 	go func() {
 		defer close(out)
 		for {
@@ -153,8 +160,8 @@ func (t sleepingSrc) Len() int {
 
 type failingSrc string
 
-func (f failingSrc) Generate(ctx context.Context) <-chan pmux.Proxy {
-	out := make(chan pmux.Proxy)
+func (f failingSrc) Generate(ctx context.Context) <-chan sources.Signal {
+	out := make(chan sources.Signal)
 	close(out)
 	return out
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/nfx/slrp/pmux"
 	"github.com/rs/zerolog"
 )
 
@@ -33,6 +34,18 @@ type sourceError struct {
 	msg    string
 	fields []errorContext
 	skip   bool
+}
+
+func (se sourceError) Proxy() pmux.Proxy {
+	for _, v := range se.fields {
+		switch x := v.(type) {
+		case strEC:
+			return pmux.NewProxyFromURL(x.value)
+		default:
+			continue
+		}
+	}
+	return 0
 }
 
 func (se sourceError) Error() string {

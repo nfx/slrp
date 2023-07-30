@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -16,10 +17,9 @@ import (
 )
 
 func TestFailure(t *testing.T) {
-	defaultClient = &staticResponseClient{
+	c := NewChecker(&checkerShim{
 		err: fmt.Errorf("fails"),
-	}
-	c := NewChecker()
+	})
 
 	ctx := context.Background()
 	_, err := c.Check(ctx, pmux.HttpProxy("127.0.0.1:1"))
@@ -30,23 +30,23 @@ func TestConfigurableChecker(t *testing.T) {
 	client := http.DefaultClient
 	c := configurableChecker{
 		client: client,
-		strategies: map[string]Checker{
-			"simple": &simple{}, // just for tests
-		},
 	}
 	err := c.Configure(app.Config{})
 	assert.NoError(t, err)
-	assert.Equal(t, "simple", c.strategy)
 	assert.Equal(t, time.Second*5, client.Timeout)
 }
 
-type staticResponseClient struct {
+type checkerShim struct {
 	http.Response
 	err error
 }
 
-func (r staticResponseClient) Do(req *http.Request) (*http.Response, error) {
+func (r checkerShim) Do(req *http.Request) (*http.Response, error) {
 	return &r.Response, r.err
+}
+
+func (r checkerShim) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	return nil, r.err
 }
 
 func body(x string) io.ReadCloser {
@@ -90,7 +90,7 @@ func TestTwoPassCheck(t *testing.T) {
 					&simple{
 						ip:    "XYZ",
 						valid: "..",
-						client: staticResponseClient{
+						client: checkerShim{
 							Response: http.Response{
 								Body:       body(tt.firstBody),
 								StatusCode: 200,
@@ -103,7 +103,7 @@ func TestTwoPassCheck(t *testing.T) {
 					&simple{
 						ip:    "XYZ",
 						valid: "..",
-						client: staticResponseClient{
+						client: checkerShim{
 							Response: http.Response{
 								Body:       body(tt.secondBody),
 								StatusCode: 200,
@@ -197,7 +197,7 @@ func TestSimpleCheck(t *testing.T) {
 				ip:    "255.0.0.1",
 				valid: tt.valid,
 				page:  tt.page,
-				client: staticResponseClient{
+				client: checkerShim{
 					Response: http.Response{
 						Body:       tt.body,
 						StatusCode: 200,

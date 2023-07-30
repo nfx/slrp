@@ -83,20 +83,20 @@ func TestDialProxiedConnection_SOCKS(t *testing.T) {
 func TestPickProxyFromContext(t *testing.T) {
 	p := HttpProxy("127.0.0.1:0")
 	r := p.MustNewGetRequest("https://ifconfig.me")
-	u, _ := pickHttpProxyFromContext(r)
+	u, _ := ProxyFromContext(r)
 	assert.Equal(t, u.String(), p.String())
 }
 
 func TestPickProxyFromContext_Tunnel(t *testing.T) {
 	p := Socks5Proxy("127.0.0.1:0")
 	r := p.MustNewGetRequest("https://ifconfig.me")
-	u, err := pickHttpProxyFromContext(r)
+	u, err := ProxyFromContext(r)
 	assert.Nil(t, u)
 	assert.NoError(t, err)
 }
 
 func TestPickProxyFromContext_NoProxy(t *testing.T) {
-	u, err := pickHttpProxyFromContext(&http.Request{})
+	u, err := ProxyFromContext(&http.Request{})
 	assert.Nil(t, u)
 	assert.NoError(t, err)
 }

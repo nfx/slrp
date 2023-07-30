@@ -181,6 +181,12 @@ Proxy pool maintenance.
 * `evict_threshold_failures` - number of failures within the last `evict_span_minutes` to evict proxy from the pool.
 * `evict_threshold_reanimations` - number of any proxy sleeps ever to evict proxy from the pool.
 
+## probe
+
+Proxy probing component.
+
+* `enable_http_rescue` - experimental feature to enable rescuing HTTP proxies, that were presented as SOCKS5 or HTTPS. Detected based on protocol probe heuristics. Defaults to false.
+
 ## mitm
 
 HTTP proxy frontend.

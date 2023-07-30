@@ -58,6 +58,18 @@ func (p Proxy) IP() net.IP {
 	return net.IPv4(byte(a), byte(b), byte(c), byte(d))
 }
 
+func (p Proxy) AsHttp() Proxy {
+	ip := uint64(p>>32) << 32
+	port := uint64(p.Port()) << 16
+	return Proxy(ip + port + uint64(HTTP))
+}
+
+func (p Proxy) AsHttps() Proxy {
+	ip := uint64(p>>32) << 32
+	port := uint64(p.Port()) << 16
+	return Proxy(ip + port + uint64(HTTPS))
+}
+
 func (p Proxy) Address() string {
 	ip := p >> 32
 	a := ip >> 24 & 0xff

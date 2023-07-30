@@ -38,6 +38,11 @@ type Probe struct {
 	probing chan verify
 	state   internal
 	minute  *time.Ticker
+
+	// experimental feature to enable rescuing HTTP proxies,
+	// that were presented as SOCKS5 or HTTPS. Detected based
+	// on protocol probe heuristics.
+	enableHttpRescue bool
 }
 
 func NewProbe(stats *stats.Stats, p *pool.Pool, c checker.Checker) *Probe {
@@ -66,7 +71,7 @@ func (p *Probe) Forget(ctx context.Context, proxy pmux.Proxy, err error) bool {
 	if proxy == 0 {
 		return false
 	}
-	p.pool.Remove(proxy) // TODO: check error?..
+	p.pool.Remove(proxy)
 	p.state.forget <- failure{
 		v: verify{
 			ctx:    ctx,
@@ -76,6 +81,11 @@ func (p *Probe) Forget(ctx context.Context, proxy pmux.Proxy, err error) bool {
 		err: err,
 	}
 	return true
+}
+
+func (p *Probe) Configure(c app.Config) error {
+	p.enableHttpRescue = c.BoolOr("enable_http_rescue", false)
+	return nil
 }
 
 func (p *Probe) Start(ctx app.Context) {
@@ -240,7 +250,22 @@ func (p *Probe) worker(ctx context.Context) {
 			ctx := app.Log.WithStringer(v.ctx, "proxy", v.Proxy)
 			speed, err := p.checker.Check(ctx, v.Proxy)
 			if err != nil {
-				if isTemporary(err) {
+				if p.enableHttpRescue && isHttpProxy(err) {
+					log := app.Log.From(ctx)
+					newProxy := v.Proxy.AsHttp()
+					log.Info().Stringer("new_proxy", newProxy).Msg("converted proxy to HTTP")
+					// TODO: add to seen in the handleTimeout (or handleScheduled?...)
+					p.state.timeout <- failure{
+						v: verify{
+							ctx:     v.ctx,
+							Proxy:   newProxy,
+							Source:  v.Source,
+							Attempt: v.Attempt,
+						},
+						err: err,
+					}
+					p.state.forget <- failure{v, fmt.Errorf("expected %s, got HTTP", v.Proxy.Scheme())}
+				} else if isTemporary(err) {
 					p.state.timeout <- failure{v, err}
 				} else {
 					p.state.forget <- failure{v, err}
@@ -254,24 +279,45 @@ func (p *Probe) worker(ctx context.Context) {
 	}
 }
 
+func isHttpProxy(err error) bool {
+	if err == nil {
+		return false
+	}
+	return matchError(err,
+		"server gave HTTP response to HTTPS client",
+		"first record does not look like a TLS handshake",
+		"unknown socks4 server response 84", // HTTP/1.1 from SOCK4 lib we're using
+		"unexpected protocol version 72",    // H is 72 in ASCII (https://ascii.cl/ is handy)
+	)
+}
+
 func isTemporary(err error) bool {
 	if err == nil {
 		return false
 	}
-	str := err.Error()
-	for _, v := range []string{
+	if matchError(err,
 		"Maximum number of open connections reached",
 		"Too many open connections",
 		"Too Many Requests",
 		"Gateway Timeout",
 		"too many open files",
-	} {
-		if strings.Contains(str, v) {
-			return true
-		}
+		"context canceled",
+		"error code: 1001", // Cloudflare is currently unable to resolve the requested domain
+		"network is unreachable") {
+		return true
 	}
 	t, ok := err.(interface {
 		Temporary() bool
 	})
 	return ok && t.Temporary()
+}
+
+func matchError(err error, needles ...string) bool {
+	str := err.Error()
+	for _, v := range needles {
+		if strings.Contains(str, v) {
+			return true
+		}
+	}
+	return false
 }

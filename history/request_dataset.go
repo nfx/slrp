@@ -22,6 +22,7 @@ func (d RequestDataset) Query(query string) (*eval.QueryResult[Request], error) 
 			"Proxy":      eval.StringGetter{Name: "Proxy", Func: d.getProxy},
 			"Appeared":   eval.NumberGetter{Name: "Appeared", Func: d.getAppeared},
 			"Took":       eval.NumberGetter{Name: "Took", Func: d.getTook},
+			"Size":       eval.NumberGetter{Name: "Size", Func: d.getSize},
 		},
 		Sorters: eval.Sorters[Request]{
 			"ID":         {Asc: d.sortAscID, Desc: d.sortDescID},
@@ -60,10 +61,28 @@ func (d RequestDataset) Query(query string) (*eval.QueryResult[Request], error) 
 					Getter: filtered.getProxy,
 					Field:  "Proxy",
 					Name:   "Proxy",
+				}, eval.NumberRanges{
+					// TODO: implement as generator feature
+					Getter: filtered.getTook,
+					Duration: true,
+
+					Name: "Took",
+					Field: "Took",
+				}, eval.NumberRanges{
+					// TODO: implement as generator feature
+					Getter: filtered.getSize,
+					Size: true,
+
+					Name: "Size",
+					Field: "Size",
 				},
 			}.Facets(filtered, topN)
 		},
 	}).Query(query)
+}
+
+func (d RequestDataset) getSize(record int) float64 {
+	return float64(d[record].Size)
 }
 
 func (d RequestDataset) getID(record int) float64 {

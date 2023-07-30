@@ -80,6 +80,7 @@ func (rt roundTripper) RoundTrip(in *http.Request) (*http.Response, error) {
 		OutHeaders: rt.headersToMap(out.Header),
 		InBody:     justRead(in.Body),
 		OutBody:    outBody,
+		Size:       len(outBody),
 		Took:       time.Since(start),
 	})
 	if err != nil {

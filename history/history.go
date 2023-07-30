@@ -51,6 +51,7 @@ type Request struct {
 	OutHeaders map[string]string
 	InBody     []byte
 	OutBody    []byte
+	Size       int
 	Took       time.Duration
 }
 

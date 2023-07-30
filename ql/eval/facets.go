@@ -51,6 +51,7 @@ type NumberRanges struct {
 	Field    string
 	Name     string
 	Duration bool
+	Size     bool
 	TimeAgo  bool
 }
 
@@ -65,6 +66,16 @@ type numberRanges struct {
 
 func (s *numberRanges) Consume(i int) {
 	s.data = append(s.data, s.Getter(i))
+}
+
+func (s *numberRanges) readableSize(bytes float64) string {
+	b := int(bytes)
+	if bytes < 1024 {
+		return fmt.Sprintf("%db", b)
+	} else if bytes < 1024*1024 {
+		return fmt.Sprintf("%dkb", b/1024)
+	}
+	return fmt.Sprintf("%dmb", b/1024/1024)
 }
 
 func (s *numberRanges) readableSince(t float64) string {
@@ -145,6 +156,13 @@ func (s *numberRanges) Facet(n int) Facet {
 			a, b := s.readableSince(r.min), s.readableSince(r.max)
 			if a == b {
 				name = a + " ago"
+			} else {
+				name = fmt.Sprintf("%s .. %s", a, b)
+			}
+		} else if s.Size {
+			a, b := s.readableSize(r.min), s.readableSize(r.max)
+			if a == b {
+				name = a
 			} else {
 				name = fmt.Sprintf("%s .. %s", a, b)
 			}

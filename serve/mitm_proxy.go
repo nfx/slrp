@@ -11,15 +11,18 @@ import (
 )
 
 type MitmProxyServer struct {
-	HttpProxyServer
+	HttpsProxyServer
 	sessions chan int
 }
 
 func NewMitmProxyServer(pool *pool.Pool, ca certWrapper) *MitmProxyServer {
 	return &MitmProxyServer{
-		HttpProxyServer: HttpProxyServer{
-			transport: pool,
-			signer:    ca.Sign,
+		HttpsProxyServer: HttpsProxyServer{
+			HttpProxyServer: HttpProxyServer{
+				transport: pool,
+				signer:    ca.Sign,
+			},
+			sslConfig: ca.Config(),
 		},
 		sessions: make(chan int),
 	}
@@ -35,7 +38,12 @@ func (mps *MitmProxyServer) Configure(c app.Config) error {
 	mps.IdleTimeout = c.DurOr("idle_timeout", 15*time.Second)
 	mps.WriteTimeout = c.DurOr("write_timeout", 15*time.Second)
 	mps.Handler = mps
-	return mps.Listen()
+	err := mps.Listen()
+	if err != nil {
+		return err
+	}
+	log.Info().Stringer("endpoint", mps.Proxy()).Msg("configured MITM Proxy")
+	return nil
 }
 
 func (mps *MitmProxyServer) Start(ctx app.Context) {

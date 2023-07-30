@@ -11,20 +11,26 @@ import (
 	"net/url"
 	"os"
 	"sync"
+	"time"
 
+	"github.com/nfx/slrp/pool/counter"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	endpoint := flag.String("proxy", "https://localhost:8090", "URL of SRLP installation")
 	workers := flag.Int("workers", 2, "number of workers")
+	failAfter := flag.Int("failAfter", 1000, "number of workers")
+	flag.Parse()
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	proxyURL, err := url.Parse(*endpoint)
+	if err != nil {
+		log.Err(err).Msg("failed to parse Proxy URL")
+	}
 	client := &http.Client{
 		Transport: &http.Transport{
-			Proxy: http.ProxyURL(&url.URL{
-				Scheme: "http",
-				Host:   "localhost:8090",
-			}),
+			Proxy: http.ProxyURL(proxyURL),
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
@@ -47,7 +53,11 @@ func main() {
 		choice := rand.Intn(len(checkers))
 		res, err := client.Get(checkers[choice])
 		if err != nil {
-			log.Err(err).Msg("failed to get")
+			var serial string
+			if res != nil && res.Header != nil {
+				serial = res.Header.Get("X-Proxy-Serial")
+			}
+			log.Err(err).Str("serial", serial).Msg("failed to get")
 			return info{status: 500}
 		}
 		defer res.Body.Close()
@@ -74,13 +84,14 @@ func main() {
 	}
 	go func() {
 		var errors int
-		seen := map[string]int{}
+		seen := map[string]*counter.RollingCounter{}
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case i := <-show:
-				if errors > 100 {
+				if errors > *failAfter {
+					log.Error().Int("errors", errors).Msg("stopping")
 					cancel()
 				}
 				if i.status > 430 {
@@ -88,11 +99,17 @@ func main() {
 					break
 				}
 				errors = 0
-				seen[i.proxy] = seen[i.proxy] + 1
+				cnt, ok := seen[i.proxy]
+				if !ok {
+					*cnt = counter.NewRollingCounter(1, time.Minute)
+					seen[i.proxy] = cnt
+				}
+				cnt.Increment()
 				msg := "ok"
 				var err error
-				if seen[i.proxy] > 1 {
-					err = fmt.Errorf("seen %d times", seen[i.proxy])
+				rollingSum := cnt.Sum()
+				if rollingSum > 1 {
+					err = fmt.Errorf("seen %d times", rollingSum)
 					msg = "not ok"
 				}
 				log.Info().
@@ -106,5 +123,8 @@ func main() {
 			}
 		}
 	}()
+	log.Info().
+		Int("workers", *workers).
+		Msg("starting")
 	<-ctx.Done()
 }

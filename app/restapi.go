@@ -19,6 +19,14 @@ type httpGetByID interface {
 	HttpGetByID(string, *http.Request) (any, error)
 }
 
+type httpPost interface {
+	HttpPost(*http.Request) (any, error)
+}
+
+type httpPostByID interface {
+	HttpPostByID(string, *http.Request) (any, error)
+}
+
 type httpDeleteByID interface {
 	HttpDeletetByID(string, *http.Request) (any, error)
 }
@@ -31,6 +39,8 @@ type httpResource struct {
 	service    string
 	get        httpGet
 	getByID    httpGetByID
+	post       httpPost
+	postByID   httpPostByID
 	deleteByID httpDeleteByID
 }
 
@@ -85,6 +95,11 @@ func (hr *httpResource) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	} else if hr.getByID != nil {
 		vars := mux.Vars(r) // id is defined by the route
 		response, err = hr.getByID.HttpGetByID(vars["id"], r)
+	} else if hr.post != nil {
+		response, err = hr.post.HttpPost(r)
+	} else if hr.postByID != nil {
+		vars := mux.Vars(r) // id is defined by the route
+		response, err = hr.postByID.HttpPostByID(vars["id"], r)
 	} else if hr.deleteByID != nil {
 		vars := mux.Vars(r) // id is defined by the route
 		response, err = hr.deleteByID.HttpDeletetByID(vars["id"], r)
@@ -175,6 +190,22 @@ func (s *mainServer) initRestAPI() {
 				service: service,
 				getByID: getByID,
 			}).Methods("GET")
+		}
+		post, ok := v.(httpPost)
+		if ok {
+			hasApi[service] = true
+			s.router.Handle(fmt.Sprintf("/api/%s", service), &httpResource{
+				service: service,
+				post:    post,
+			}).Methods("POST")
+		}
+		postByID, ok := v.(httpPostByID)
+		if ok {
+			hasApi[service] = true
+			s.router.Handle(fmt.Sprintf("/api/%s/{id}", service), &httpResource{
+				service:  service,
+				postByID: postByID,
+			}).Methods("POST")
 		}
 		deleteByID, ok := v.(httpDeleteByID)
 		if ok {

@@ -3,6 +3,7 @@ package sources
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sync"
@@ -12,15 +13,21 @@ import (
 	"github.com/nfx/slrp/pmux"
 )
 
+type Signal struct {
+	Proxy pmux.Proxy
+	Add   bool
+	Err   error
+}
+
 type Src interface {
-	Generate(ctx context.Context) <-chan pmux.Proxy
+	Generate(ctx context.Context) <-chan Signal
 	Err() error
 	Len() int
 }
 
 func gen(r func() ([]pmux.Proxy, error)) Src {
 	return &retriableGenerator{
-		out: make(chan pmux.Proxy),
+		out: make(chan Signal),
 		f:   r,
 	}
 }
@@ -36,13 +43,13 @@ func simpleGen(f func(context.Context, *http.Client) ([]pmux.Proxy, error)) Feed
 }
 
 type retriableGenerator struct {
-	out chan pmux.Proxy
+	out chan Signal
 	err error
 	f   func() ([]pmux.Proxy, error)
 	len int
 }
 
-func (f *retriableGenerator) Generate(ctx context.Context) <-chan pmux.Proxy {
+func (f *retriableGenerator) Generate(ctx context.Context) <-chan Signal {
 	go f.generate(ctx)
 	return f.out
 }
@@ -81,6 +88,9 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 		case <-start:
 			proxies, err := f.f()
 			f.err = err
+			if errors.Is(err, context.Canceled) {
+				return
+			}
 			if se, ok := err.(sourceError); ok {
 				// contextualize errors
 				evt := log.Debug().Err(errors.New(se.msg))
@@ -91,7 +101,15 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 					evt.Msg("skipping retry")
 					return
 				}
+				// TODO: proxy pool exhausted should trigger sleep
 				evt.Msg("intermediate failure")
+				proxy := se.Proxy()
+				if proxy != 0 {
+					f.out <- Signal{
+						Proxy: proxy,
+						Err:   fmt.Errorf(se.msg),
+					}
+				}
 				sleep := rand.Intn(15)
 				next = time.Now().Add(time.Duration(sleep) * time.Second)
 				continue
@@ -108,7 +126,10 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 				case <-ctx.Done():
 					log.Trace().Msg("stopped forwarding")
 					return
-				case f.out <- proxy:
+				case f.out <- Signal{
+					Proxy: proxy,
+					Add:   true,
+				}:
 				}
 			}
 			return
@@ -119,12 +140,12 @@ func (f *retriableGenerator) generate(ctx context.Context) {
 type mergeSrc struct {
 	srcs []Src
 	wg   sync.WaitGroup
-	out  chan pmux.Proxy
+	out  chan Signal
 }
 
 func merged() *mergeSrc {
 	return &mergeSrc{
-		out: make(chan pmux.Proxy),
+		out: make(chan Signal),
 	}
 }
 
@@ -136,9 +157,9 @@ func (m *mergeSrc) refresh(r func() ([]pmux.Proxy, error)) *mergeSrc {
 func (m *mergeSrc) forward(ctx context.Context, src Src) {
 	defer m.wg.Done()
 	log := app.Log.From(ctx)
-	for proxy := range src.Generate(ctx) {
+	for found := range src.Generate(ctx) {
 		select {
-		case m.out <- proxy:
+		case m.out <- found:
 		case <-ctx.Done():
 			log.Trace().Msg("stopped merge forward")
 			return
@@ -154,7 +175,7 @@ func (m *mergeSrc) finish(ctx context.Context) {
 	close(m.out)
 }
 
-func (m *mergeSrc) Generate(ctx context.Context) <-chan pmux.Proxy {
+func (m *mergeSrc) Generate(ctx context.Context) <-chan Signal {
 	for _, src := range m.srcs {
 		m.wg.Add(1)
 		go m.forward(ctx, src)

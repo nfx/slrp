@@ -21,16 +21,16 @@ func init() {
 
 type webaNet struct {
 	h   *http.Client
-	out chan pmux.Proxy
+	out chan Signal
 	err error
 	src Src
 }
 
 var webanetURL = "https://webanetlabs.net/publ/24"
 
-func (w *webaNet) Generate(ctx context.Context) <-chan pmux.Proxy {
+func (w *webaNet) Generate(ctx context.Context) <-chan Signal {
 	merged := merged()
-	w.out = make(chan pmux.Proxy)
+	w.out = make(chan Signal)
 	w.src = merged
 	recent, err := findLinksWithOn(ctx, w.h,
 		fmt.Sprintf("/proxylist%d", time.Now().Year()),

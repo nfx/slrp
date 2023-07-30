@@ -107,7 +107,7 @@ func Test_mergeSrc_Len(t *testing.T) {
 	canAssertB := make(chan bool)
 	go func() {
 		for v := range m.Generate(ctx) {
-			switch v { // switch on the first items in results
+			switch v.Proxy { // switch on the first items in results
 			case pmux.HttpProxy("127.0.0.1:1024"):
 				canAssertA <- true
 			case pmux.HttpProxy("127.0.0.1:2048"):

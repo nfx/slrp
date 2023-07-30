@@ -50,6 +50,12 @@ func freeProxyCz(ctx context.Context, h *http.Client) Src {
 				return
 			}
 			err = p.Each3("IP address", "Port", "Protocol", func(a, b, c string) error {
+				if strings.Contains(a, "window.adsbygoogle") {
+					return nil
+				}
+				if strings.Contains(a, "Please try again later") {
+					return nil
+				}
 				enc := strings.Split(a, `"`)
 				if len(enc) != 3 {
 					return fmt.Errorf("mangled address: %s", a)

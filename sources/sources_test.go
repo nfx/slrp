@@ -13,7 +13,7 @@ import (
 
 func consumeSource(ctx context.Context, feed Src) (found []pmux.Proxy) {
 	for proxy := range feed.Generate(ctx) {
-		found = append(found, proxy)
+		found = append(found, proxy.Proxy)
 	}
 	return
 }

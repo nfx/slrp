@@ -27,7 +27,7 @@ func TestPremproxy(t *testing.T) {
 	src := premproxy(ctx, &http.Client{})
 	seen := map[string]int{}
 	for x := range src.Generate(ctx) {
-		y := x.String()
+		y := x.Proxy.String()
 		seen[y] = seen[y] + 1
 	}
 	log.Printf("found: %d", len(seen))

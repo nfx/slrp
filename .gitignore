@@ -20,3 +20,4 @@ coverage.txt
 slrp
 package-lock.json
 .vagrant
+*.patch

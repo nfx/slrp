@@ -118,15 +118,13 @@ func getConfig() (configuration, error) {
 		validLoc = loc
 		break
 	}
-	os.Stderr.WriteString(fmt.Sprintf("Loading config: %s\n", validLoc))
 	data := configuration{}
-	err = yaml.Unmarshal(raw, &data)
-	if err != nil {
-		return nil, fmt.Errorf("invalid config in %s: %w", validLoc, err)
-	}
-	if data == nil {
-		// when there's no config
-		data = configuration{}
+	if validLoc != "" {
+		os.Stderr.WriteString(fmt.Sprintf("Loading config: %s\n", validLoc))
+		err = yaml.Unmarshal(raw, &data)
+		if err != nil {
+			return nil, fmt.Errorf("invalid config in %s: %w", validLoc, err)
+		}
 	}
 	for _, raw := range os.Environ() {
 		rawSplit := strings.SplitN(raw, "=", 2)

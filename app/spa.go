@@ -1,11 +1,13 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
 	"path"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -54,12 +56,16 @@ func (sf spaFS) findWebRoot() (string, error) {
 		}
 		nesting++
 	}
-	return "", fmt.Errorf("can't find index.html")
+	return "", fmt.Errorf("can't find index.html: %w", fs.ErrNotExist)
 }
 
 // Open uses unlerlying fs.FS to open file prepended by a web root prefix
 func (sf spaFS) Open(name string) (fs.File, error) {
 	root, err := sf.findWebRoot()
+	if errors.Is(err, fs.ErrNotExist) {
+		// fallback no no UI build
+		return dummy("missing UI build"), nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -74,4 +80,46 @@ func (sf spaFS) Open(name string) (fs.File, error) {
 // ServeHTTP serves static assets for itself
 func (sf spaFS) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.FS(sf)).ServeHTTP(rw, r)
+}
+
+type dummy string
+
+var _ fs.File = dummy("")
+var _ fs.FileInfo = dummy("")
+
+func (d dummy) Name() string {
+	return "index.html"
+}
+
+func (d dummy) Size() int64 {
+	return int64(len(d))
+}
+
+func (d dummy) Mode() fs.FileMode {
+	return 0o600
+}
+
+func (d dummy) ModTime() time.Time {
+	return time.Now()
+}
+
+func (d dummy) IsDir() bool {
+	return false
+}
+
+func (d dummy) Sys() any {
+	return 0
+}
+
+func (d dummy) Stat() (fs.FileInfo, error) {
+	return d, nil
+}
+
+func (d dummy) Read(b []byte) (int, error) {
+	copy(b, []byte(d))
+	return len(d), nil
+}
+
+func (d dummy) Close() error {
+	return nil
 }

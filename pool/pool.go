@@ -20,23 +20,24 @@ import (
 )
 
 type Pool struct {
-	ipLookup      ipinfo.IpInfoGetter
-	work          chan work
-	serial        chan int
-	pressure      chan int
-	halt          chan time.Duration
-	client        httpClient
-	shards        []shard
-	workerCancels []context.CancelFunc
+	ipLookup        ipinfo.IpInfoGetter
+	work            chan work
+	serial          chan int
+	pressure        chan int
+	halt            chan time.Duration
+	client          httpClient
+	shards          []shard
+	workerCancels   []context.CancelFunc
+	workerProgress  chan int
+	pendingEviction []pmux.Proxy // TODO: keep in state
+	eviction        chan chan []pmux.Proxy
+	minute          *time.Ticker
+	config          *monitorConfig
 }
 
 type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
-
-// TODO: make these values configurable
-var poolWorkSize = 128
-var poolShards = 32
 
 type dialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
@@ -44,12 +45,13 @@ type dialer interface {
 
 func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter, dialer dialer) *Pool {
 	return &Pool{
-		ipLookup: ipLookup,
-		serial:   make(chan int),
-		work:     make(chan work, poolWorkSize),
-		pressure: make(chan int),
-		halt:     make(chan time.Duration),
-		shards:   make([]shard, poolShards),
+		ipLookup:       ipLookup,
+		serial:         make(chan int),
+		pressure:       make(chan int),
+		halt:           make(chan time.Duration),
+		minute:         time.NewTicker(1 * time.Minute),
+		eviction:       make(chan chan []pmux.Proxy),
+		workerProgress: make(chan int),
 		client: &http.Client{
 			Transport: history.Wrap(&http.Transport{
 				DialContext:     dialer.DialContext,
@@ -60,20 +62,131 @@ func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter, dialer dial
 	}
 }
 
+type monitorConfig struct {
+	shards                     int           // 31
+	offerLimit                 int           // 25
+	evictSpanMinutes           int           // 5
+	shortTimeoutSleep          time.Duration // 1m
+	longTimeoutSleep           time.Duration // 1h
+	evictThresholdTimeouts     int           // 3
+	evictThresholdFailures     int           // 3
+	evictThresholdReanimations int           // 10
+}
+
+func (pool *Pool) Configure(c app.Config) error {
+	poolWorkSize := c.IntOr("request_workers", 512)
+	pool.work = make(chan work, poolWorkSize)
+
+	if hc, ok := pool.client.(*http.Client); ok {
+		requestTimeout := c.DurOr("request_timeout", 10*time.Second)
+		hc.Timeout = requestTimeout
+	}
+
+	// see https://github.com/nfx/slrp/issues/130
+	poolShards := c.IntOr("shards", 1) // 31
+	pool.shards = make([]shard, poolShards)
+
+	// evict_span_minutes is a config, that is not compatible with previous state snapshot:
+	// count circular buffers will become of a different size and would cause comparison
+	// errors in certain edge cases. to prevent this, we can store the config as data
+	// and alert early.
+	pool.config = &monitorConfig{
+		shards:                     poolShards,
+		offerLimit:                 c.IntOr("offer_limit", 25),
+		evictSpanMinutes:           c.IntOr("evict_span_minutes", 5),
+		shortTimeoutSleep:          c.DurOr("short_timeout_sleep", 1*time.Minute),
+		longTimeoutSleep:           c.DurOr("long_timeout_sleep", 1*time.Hour),
+		evictThresholdTimeouts:     c.IntOr("evict_threshold_timeouts", 3),
+		evictThresholdFailures:     c.IntOr("evict_threshold_failures", 3),
+		evictThresholdReanimations: c.IntOr("evict_threshold_reanimations", 10),
+	}
+
+	return nil
+}
+
 func (pool *Pool) Start(ctx app.Context) {
+	if pool.config == nil {
+		panic("pool is not configured")
+	}
 	go pool.counter(ctx)
 	go pool.halter(ctx)
+	go pool.gatherEvictions(ctx)
 	for i := range pool.shards {
 		shard := &pool.shards[i]
-		shard.init(pool.work)
+		shard.init(pool.config, pool.work)
 		go shard.main(ctx)
 		shard.reanimate <- true
 	}
 	parallelRequests := cap(pool.work)
+	go pool.workerMonitor(ctx.Ctx())
 	for i := 0; i < parallelRequests; i++ {
 		ctx, cancel := context.WithCancel(ctx.Ctx())
 		pool.workerCancels = append(pool.workerCancels, cancel)
 		go pool.worker(ctx)
+	}
+}
+
+func (pool *Pool) PendingEviction() []pmux.Proxy {
+	req := make(chan []pmux.Proxy, 1)
+	defer close(req)
+	pool.eviction <- req
+	return <-req
+}
+
+func (pool *Pool) gatherEvictions(ctx app.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-pool.minute.C:
+			var wg sync.WaitGroup
+			gather := make(chan []pmux.Proxy)
+			for i := range pool.shards {
+				shardChannel := pool.shards[i].eviction
+				wg.Add(1)
+				go func() { // todo: add context.Done
+					reply := make(chan []pmux.Proxy)
+					defer close(reply)
+					shardChannel <- reply
+					gather <- <-reply
+					wg.Done()
+				}()
+			}
+			go func() {
+				wg.Wait()
+				close(gather)
+			}()
+			log := app.Log.From(ctx.Ctx())
+			for batch := range gather {
+				for _, proxy := range batch {
+					log.Info().Stringer("proxy", proxy).Msg("scheduling from pool eviction")
+					pool.pendingEviction = append(pool.pendingEviction, proxy)
+				}
+			}
+			pendingCount := len(pool.pendingEviction)
+			if pendingCount > 0 {
+				log.Info().Int("count", pendingCount).Msg("pending pool eviction")
+			}
+		case r := <-pool.eviction:
+			r <- pool.pendingEviction
+			pool.pendingEviction = []pmux.Proxy{}
+		}
+	}
+}
+
+func (pool *Pool) workerMonitor(ctx context.Context) {
+	var requests int
+	ticker := time.NewTicker(15 * time.Second)
+	log := app.Log.From(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case i := <-pool.workerProgress:
+			requests += i
+		case <-ticker.C:
+			log.Info().Int("requests", requests).Msg("active requests")
+		}
 	}
 }
 
@@ -84,7 +197,9 @@ func (pool *Pool) worker(ctx context.Context) {
 			return
 		case w := <-pool.work:
 			start := time.Now()
+			pool.workerProgress <- 1
 			res, err := pool.client.Do(w.r.in)
+			pool.workerProgress <- -1
 			w.reply <- reply{
 				start:    start,
 				response: res,
@@ -161,13 +276,13 @@ func (pool *Pool) counter(ctx app.Context) {
 	}
 }
 
-func (pool *Pool) snapshot() (entries []entry) {
+func (pool *Pool) snapshot() (entries []*entry) {
 	// https://github.com/orcaman/concurrent-map/blob/893feb299719d9cbb2cfbe08b6dd4eb567d8039d/concurrent_map.go#L161-L240
 	var wg sync.WaitGroup
-	bc := make(chan []entry)
+	bc := make(chan []*entry)
 	for i := range pool.shards {
 		sc := pool.shards[i].snapshot
-		ch := make(chan []entry, 1)
+		ch := make(chan []*entry, 1)
 		wg.Add(1)
 		go func() { // todo: add context.Done
 			sc <- ch
@@ -208,7 +323,6 @@ type ApiEntry struct {
 	ReanimateAfter time.Time
 	Ok             bool
 	Speed          time.Duration
-	Seen           int
 	Timeouts       int
 	Offered        int
 	Reanimated     int
@@ -227,7 +341,7 @@ func (d ApiEntryDataset) getProxyProtocol(record int) string {
 func (pool *Pool) HttpGet(r *http.Request) (any, error) {
 	filter := r.FormValue("filter")
 	if filter == "" {
-		filter = "Offered > 1 ORDER BY LastSeen DESC"
+		filter = "Ok ORDER BY LastSeen DESC"
 	}
 	var tmp ApiEntryDataset
 	for _, v := range pool.snapshot() {
@@ -239,11 +353,10 @@ func (pool *Pool) HttpGet(r *http.Request) (any, error) {
 			ReanimateAfter: v.ReanimateAfter,
 			Ok:             v.Ok,
 			Speed:          v.Speed,
-			Seen:           v.Seen,
-			Timeouts:       v.Timeouts,
-			Offered:        v.Offered,
+			Timeouts:       v.TimeoutShort.Sum(),
+			Offered:        v.RequestsShort(), // TODO: make sure the same time interval
 			Reanimated:     v.Reanimated,
-			Succeed:        v.Succeed,
+			Succeed:        v.SuccessShort.Sum(),
 			HourOffered:    v.HourOffered,
 			HourSucceed:    v.HourSucceed,
 			Country:        info.Country,
@@ -272,7 +385,7 @@ func (pool *Pool) Remove(proxy pmux.Proxy) bool {
 }
 
 func (pool *Pool) RandomFast(ctx context.Context) context.Context {
-	snapshot := []entry{}
+	snapshot := []*entry{}
 	for _, e := range pool.snapshot() {
 		if e.Speed > 1*time.Second {
 			continue
@@ -285,7 +398,7 @@ func (pool *Pool) RandomFast(ctx context.Context) context.Context {
 
 // Session rotates a random proxy per entire fn(ctx, client) call
 func (pool *Pool) Session(ctx context.Context, fn func(context.Context, httpClient) error) error {
-	snapshot := []entry{}
+	snapshot := []*entry{}
 	// make a copy from very fast ones, otherwise too complicated for now...
 	for _, e := range pool.snapshot() {
 		if e.Speed > 1*time.Second {
@@ -390,14 +503,15 @@ func (pool *Pool) MarshalBinary() ([]byte, error) {
 
 func (pool *Pool) UnmarshalBinary(data []byte) error {
 	b := bytes.NewReader(data)
-	var snapshot []entry
+	var snapshot []*entry
 	err := gob.NewDecoder(b).Decode(&snapshot)
 	if err != nil {
 		return err
 	}
 	for _, v := range snapshot {
-		shard := v.Proxy.Bucket(len(pool.shards))
-		pool.shards[shard].Entries = append(pool.shards[shard].Entries, v)
+		local := v
+		shard := local.Proxy.Bucket(len(pool.shards))
+		pool.shards[shard].Entries = append(pool.shards[shard].Entries, local)
 	}
 	return nil
 }

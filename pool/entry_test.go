@@ -8,16 +8,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestEntryMarkSeen(t *testing.T) {
-	e := &entry{Seen: 3}
-
-	now = func() time.Time {
-		return ti(0, 2, 0)
-	}
-	e.MarkSeen()
-
-	assert.Equal(t, 4, e.Seen)
-	assert.Equal(t, now().Unix(), e.LastSeen)
+var testPoolCfg = &monitorConfig{
+	shards:                     1,
+	offerLimit:                 25,
+	evictSpanMinutes:           5,
+	shortTimeoutSleep:          1 * time.Minute,
+	longTimeoutSleep:           1 * time.Hour,
+	evictThresholdTimeouts:     3,
+	evictThresholdFailures:     3,
+	evictThresholdReanimations: 10,
 }
 
 func TestEntryMarkFailure(t *testing.T) {
@@ -26,7 +25,7 @@ func TestEntryMarkFailure(t *testing.T) {
 		return ti(0, 2, 0)
 	}
 
-	e.MarkFailure(context.DeadlineExceeded)
+	e.MarkFailure(context.DeadlineExceeded, 1*time.Minute)
 
 	assert.Equal(t, false, e.Ok)
 	assert.Equal(t, 1, e.Timeouts)
@@ -86,7 +85,7 @@ func TestFailuresDelayReanimation(t *testing.T) {
 		Offered: 10,
 	}
 
-	e.ConsiderSkip(context.Background())
+	e.ConsiderSkip(context.Background(), 1000)
 }
 
 func ti(h, m, s int) time.Time {
@@ -101,7 +100,7 @@ func TestConsiderSkip_Dead(t *testing.T) {
 	now = func() time.Time {
 		return ti(0, 0, 0)
 	}
-	assert.True(t, e.ConsiderSkip(context.Background()))
+	assert.True(t, e.ConsiderSkip(context.Background(), 100))
 	assert.False(t, e.Ok)
 	assert.Equal(t, 10, e.Offered)
 }
@@ -123,7 +122,7 @@ func TestConsiderSkip_Reanimate(t *testing.T) {
 		return ti(0, 2, 0)
 	}
 	assert.True(t, e.Ok)
-	assert.False(t, e.ConsiderSkip(context.Background()))
+	assert.False(t, e.ConsiderSkip(context.Background(), 100))
 	assert.Equal(t, 11, e.Offered)
 	assert.Equal(t, 11, e.HourOffered[0])
 	assert.Equal(t, 1, e.Reanimated)

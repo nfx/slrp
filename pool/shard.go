@@ -48,26 +48,31 @@ type removal struct {
 }
 
 type shard struct {
-	Entries   []entry
+	Entries   []*entry
 	incoming  chan incoming
 	remove    chan removal
 	requests  chan request
-	snapshot  chan chan []entry
+	snapshot  chan chan []*entry
 	reanimate chan bool
 	reply     chan reply
 	work      chan work //todo channel in pool
 	minute    *time.Ticker
+	evictions []pmux.Proxy
+	eviction  chan chan []pmux.Proxy
+	config    *monitorConfig
 }
 
-func (pool *shard) init(work chan work) {
+func (pool *shard) init(config *monitorConfig, work chan work) {
 	pool.work = work
 	pool.incoming = make(chan incoming)
 	pool.remove = make(chan removal)
 	pool.requests = make(chan request)
 	pool.reanimate = make(chan bool)
-	pool.snapshot = make(chan chan []entry)
+	pool.snapshot = make(chan chan []*entry)
 	pool.reply = make(chan reply)
+	pool.eviction = make(chan chan []pmux.Proxy)
 	pool.minute = time.NewTicker(1 * time.Minute)
+	pool.config = config
 }
 
 func (pool *shard) main(ctx app.Context) {
@@ -76,13 +81,12 @@ func (pool *shard) main(ctx app.Context) {
 		case <-ctx.Done():
 			return
 		case res := <-pool.snapshot:
-			snapshot := make([]entry, len(pool.Entries))
-			for i := range pool.Entries {
-				snapshot[i] = pool.Entries[i]
-			}
-			res <- snapshot
+			res <- pool.Entries
 		case <-pool.minute.C:
 			if pool.handleReanimate() {
+				ctx.Heartbeat()
+			}
+			if pool.checkEviction(ctx.Ctx()) {
 				ctx.Heartbeat()
 			}
 		case <-pool.reanimate:
@@ -97,8 +101,40 @@ func (pool *shard) main(ctx app.Context) {
 			pool.handleRequest(r)
 		case r := <-pool.reply:
 			pool.handleReply(r)
+		case r := <-pool.eviction:
+			r <- pool.evictions
+			pool.evictions = []pmux.Proxy{}
 		}
 	}
+}
+
+func (pool *shard) checkEviction(ctx context.Context) bool {
+	log := app.Log.From(ctx)
+	replace := []*entry{}
+	evict := []pmux.Proxy{}
+	thresholdTimeouts := pool.config.evictThresholdTimeouts
+	thresholdFailures := pool.config.evictThresholdFailures
+	thresholdReanimations := pool.config.evictThresholdReanimations
+	longerSleep := pool.config.longTimeoutSleep
+	for i := range pool.Entries {
+		e := pool.Entries[i]
+		if e.Eviction(thresholdTimeouts, thresholdFailures, thresholdReanimations, longerSleep) {
+			proxy := e.Proxy
+			log.Info().
+				Stringer("proxy", proxy).
+				Int("shard", proxy.Bucket(pool.config.shards)).
+				Msg("evicting from shard")
+			evict = append(evict, proxy)
+		} else {
+			replace = append(replace, e)
+		}
+	}
+	if len(evict) > 0 {
+		pool.Entries = replace
+		pool.evictions = append(pool.evictions, evict...)
+		return true
+	}
+	return false
 }
 
 func (pool *shard) handleReanimate() bool {
@@ -118,14 +154,15 @@ func (pool *shard) forceReanimate() {
 }
 
 func (pool *shard) removeProxy(r removal) {
-	newEntries := []entry{}
+	newEntries := []*entry{}
 	found := false
 	for _, v := range pool.Entries {
 		if v.Proxy == r.proxy {
 			found = true
 			continue
 		}
-		newEntries = append(newEntries, v)
+		local := v
+		newEntries = append(newEntries, local)
 	}
 	pool.Entries = newEntries
 	if found {
@@ -136,16 +173,7 @@ func (pool *shard) removeProxy(r removal) {
 }
 
 func (pool *shard) add(v incoming) {
-	now := time.Now()
-	pool.Entries = append(pool.Entries, entry{
-		Proxy:     v.Proxy,
-		FirstSeen: now.Unix(),
-		LastSeen:  now.Unix(),
-		Speed:     v.Speed,
-		Seen:      1,
-		Offered:   1,
-		Ok:        true,
-	})
+	pool.Entries = append(pool.Entries, newEntry(v.Proxy, v.Speed, int16(pool.config.evictSpanMinutes)))
 	sort.Slice(pool.Entries, func(i, j int) bool {
 		return pool.Entries[i].Speed < pool.Entries[j].Speed
 	})
@@ -158,6 +186,9 @@ func (pool *shard) firstAvailableProxy(r request) *entry {
 	if size == 0 {
 		return nil
 	}
+	if size == 1 {
+		return pool.Entries[0]
+	}
 	// offset := 0
 	// defaultSorting(pool.Entries)
 
@@ -168,9 +199,10 @@ func (pool *shard) firstAvailableProxy(r request) *entry {
 	// scrapes are encouraged to refresh the old or
 	// the least offered proxies, but relays need fresher pool
 	available := pool.Entries[offset:size]
+	ctx := r.in.Context()
 	for idx := range available {
-		e := &pool.Entries[offset+idx]
-		if e.ConsiderSkip(r.in.Context()) {
+		e := pool.Entries[offset+idx]
+		if e.ConsiderSkip(ctx, pool.config.offerLimit) {
 			continue
 		}
 		return e
@@ -228,8 +260,10 @@ func (pool *shard) handleReply(r reply) {
 	if err == nil && res.StatusCode >= 400 {
 		err = fmt.Errorf(res.Status)
 	}
+	// TODO: special error codes for timeouts
 	if err == nil {
 		entry.MarkSuccess()
+		// TODO: Bytes1D & Bytes5M
 		res.Header.Set("X-Proxy-Through", entry.Proxy.String())
 		res.Header.Set("X-Proxy-Attempt", fmt.Sprint(request.attempt))
 		res.Header.Set("X-Proxy-Offered", fmt.Sprint(entry.Offered))
@@ -243,7 +277,7 @@ func (pool *shard) handleReply(r reply) {
 		return
 	}
 	// TODO: if more than 10 failed offers in this hour, mark dead till beginning of next hour
-	entry.MarkFailure(err)
+	entry.MarkFailure(err, pool.config.shortTimeoutSleep)
 	log.Debug().
 		Err(app.ShErr(err)).
 		Int("timeouts", entry.Timeouts).

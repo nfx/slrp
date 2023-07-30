@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/checker"
@@ -36,6 +37,7 @@ type Probe struct {
 	checker checker.Checker
 	probing chan verify
 	state   internal
+	minute  *time.Ticker
 }
 
 func NewProbe(stats *stats.Stats, p *pool.Pool, c checker.Checker) *Probe {
@@ -46,6 +48,7 @@ func NewProbe(stats *stats.Stats, p *pool.Pool, c checker.Checker) *Probe {
 		checker: c,
 		probing: probing,
 		stats:   stats,
+		minute:  time.NewTicker(1 * time.Minute),
 		state:   newInternal(stats, probing, buffer),
 	}
 }
@@ -59,11 +62,51 @@ func (p *Probe) Schedule(ctx context.Context, proxy pmux.Proxy, source int) bool
 	return true
 }
 
+func (p *Probe) Forget(ctx context.Context, proxy pmux.Proxy, err error) bool {
+	if proxy == 0 {
+		return false
+	}
+	p.pool.Remove(proxy) // TODO: check error?..
+	p.state.forget <- failure{
+		v: verify{
+			ctx:    ctx,
+			Proxy:  proxy,
+			Source: Reverify,
+		},
+		err: err,
+	}
+	return true
+}
+
 func (p *Probe) Start(ctx app.Context) {
 	go p.state.main(ctx)
+	go p.gatherEvictions(ctx)
 	workers := 128 // TODO: make configurable
 	for w := 0; w < workers; w++ {
 		go p.worker(ctx.Ctx())
+	}
+}
+
+func (p *Probe) gatherEvictions(ctx app.Context) {
+	log := app.Log.From(ctx.Ctx())
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-p.minute.C:
+			for _, proxy := range p.pool.PendingEviction() {
+				log.Info().
+					Stringer("proxy", proxy).
+					Msg("evicting from state")
+				p.state.forget <- failure{
+					err: fmt.Errorf("evicted"),
+					v: verify{
+						ctx:   ctx.Ctx(),
+						Proxy: proxy,
+					},
+				}
+			}
+		}
 	}
 }
 

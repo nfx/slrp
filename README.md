@@ -64,6 +64,7 @@ Download service, start it up, wait couple of minutes for the pool to pick up. N
 * [`Proxy ~ socks AND Succeed > 0`](http://localhost:8089/proxies?filter=Proxy+%7E+socks+AND+Succeed+%3E+0) - all SOCKS proxies that have ever succeeded
 * [`Proxy ~ socks AND Succeed > 0 ORDER BY Offered DESC`](http://localhost:8089/proxies?filter=Proxy+%7E+socks+AND+Succeed+%3E+0+ORDER+BY+Offered+DESC) - all SOCKS proxies that have ever succeeded ordered by the number of times attempted
 * [`Country:DE OR Country:UK`](http://localhost:8089/proxies?filter=Country%3ADE+OR+Country%3AUK) - proxies from Germany or the United Kingdom
+* [`Offered > 0 AND Succeed:0 ORDER BY ReanimateAfter DESC`](http://localhost:8089/proxies?filter=Offered+%3E+0+AND+Succeed%3A0+ORDER+BY+ReanimateAfter+DESC) - candidates for eviction
 
 ## History
 
@@ -165,6 +166,20 @@ API and UI serving component.
 * `addr` - address of listening HTTP server. Default is [http://127.0.0.1:8089](http://127.0.0.1:8089).
 * `read_timeout` - default is `15s`.
 * `enable_profiler` - either or not enabling profiler endpoints. Default is `false`. Developer use only.
+
+## pool
+
+Proxy pool maintenance.
+
+* `request_workers` - number of workers to perform outgoing HTTP requests. Defaults to `512`.
+* `request_timeout` - outgoing HTTP request timeout. defaults to `10s`.
+* `shards` - number of shards. Defaults to `1`. This property may go away.
+* `evict_span_minutes` - number of minutes to identify the latest span of time for rolling counters. Defaults to `5`.
+* `short_timeout_sleep` - time to remove a proxy from routing after the first timeout or error.
+* `long_timeout_sleep` - time to remove a proxy from routing after `evict_threshold_timeouts` within the last `evict_span_minutes`.
+* `evict_threshold_timeouts` - used with `long_timeout_sleep`. Defaults to `3`.
+* `evict_threshold_failures` - number of failures within the last `evict_span_minutes` to evict proxy from the pool.
+* `evict_threshold_reanimations` - number of any proxy sleeps ever to evict proxy from the pool.
 
 ## mitm
 

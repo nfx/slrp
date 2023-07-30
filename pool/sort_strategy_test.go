@@ -6,7 +6,7 @@ import (
 )
 
 func TestSortStrategyPicks(t *testing.T) {
-	entries := []entry{
+	entries := []*entry{
 		{
 			ReanimateAfter: now(),
 			LastSeen:       now().Unix(),

@@ -1,5 +1,8 @@
 default: build
 
+clean:
+	rm -fr dist ui/build ui/node_modules slrp main
+
 build-ui:
 	npm --prefix ui run build
 

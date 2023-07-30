@@ -129,6 +129,27 @@ Fabric that holds application components together.
 * `state` - where data persists on disk through restarts of the application. Default is `.slrp/data` of your home directory.
 * `sync` - how often data is synchronised to disk, pending availability of any updates of component state. Default is every minute.
 
+## dialer
+
+[WireGuard](https://www.wireguard.com/) userspace VPN dialer configuration. Embeds the official [Go implementation](https://git.zx2c4.com/wireguard-go). Disabled by default.
+
+* `wireguard_config_file` - [configuration file](https://www.wireguard.com/#cryptokey-routing) from WireGuard. IPv6 address parsing is ignored at the moment.
+* `wireguard_verbose` - verbose logging mode for WireGuard tunnel.
+
+Sample WireGuard configuration file:
+
+```ini
+[Interface]
+PrivateKey = gI6EdUSYvn8ugXOt8QQD6Yc+JyiZxIhp3GInSWRfWGE=
+Address = 1.2.3.4/24
+DNS =  1.2.3.4
+
+[Peer]
+PublicKey = HIgo9xNzJMWLKASShiTqIybxZ0U3wGLiUeJ1PKf8ykw=
+Endpoint = 1.2.3.4:51820
+AllowedIPs = 0.0.0.0/0
+```
+
 ## log
 
 Structured logging meta-components.

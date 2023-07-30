@@ -12,6 +12,10 @@ tr.probe-running {
   background-repeat: no-repeat;
 }
 
+.sr-only {
+  display: none;
+}
+
 .col-provider a {
   width: 150px;
   display: block;

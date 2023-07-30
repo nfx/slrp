@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/nfx/slrp/app"
 	"github.com/nfx/slrp/pmux"
+	"github.com/rs/zerolog/log"
 
 	"github.com/corpix/uarand"
 	"github.com/microcosm-cc/bluemonday"
@@ -20,6 +22,14 @@ import (
 
 type Checker interface {
 	Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, error)
+}
+
+type dialer interface {
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+type httpClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 var (
@@ -44,57 +54,81 @@ var (
 	ErrNotAnonymous    = fmt.Errorf("this IP address found")
 )
 
-var defaultClient httpClient = pmux.DefaultHttpClient
-
-func init() {
-	defaultClient = &http.Client{
-		Transport: pmux.ContextualHttpTransport(),
-		Timeout:   5 * time.Second,
-	}
-}
-
-func NewChecker() Checker {
-	ip, err := thisIP()
-	if err != nil {
-		panic(fmt.Errorf("cannot get this IP: %w", err))
-	}
+func NewChecker(dialer dialer) Checker {
 	return &configurableChecker{
-		ip:     ip,
-		client: defaultClient,
-		strategies: map[string]Checker{
-			"twopass": newTwoPass(ip, defaultClient),
-			"simple":  newFederated(firstPass, defaultClient, ip),
-			"headers": newFederated([]string{
-				"https://ifconfig.me/all",
-				"https://ifconfig.io/all.json",
-			}, defaultClient, ip),
+		client: &http.Client{
+			Timeout: 5 * time.Second,
+			Transport: &http.Transport{
+				DialContext:     dialer.DialContext,
+				TLSClientConfig: pmux.DefaultTlsConfig,
+				Proxy:           pmux.ProxyFromContext,
+			},
 		},
-		strategy: "simple",
 	}
 }
 
 type configurableChecker struct {
-	ip         string
-	client     httpClient
-	strategies map[string]Checker
-	strategy   string
+	ip       string
+	client   httpClient
+	strategy Checker
 }
 
 func (cc *configurableChecker) Configure(conf app.Config) error {
-	cc.strategy = conf.StrOr("strategy", "simple")
-	_, invalidStrategy := cc.strategies[cc.strategy]
-	if !invalidStrategy {
-		return fmt.Errorf("invalid strategy: %s", cc.strategy)
+	ip, err := cc.thisIP()
+	if ip == "" {
+		return fmt.Errorf("IP is empty")
 	}
+	if err != nil {
+		return fmt.Errorf("cannot get this IP: %w", err)
+	}
+	cc.ip = ip
+	strategies := map[string]Checker{
+		"twopass": newTwoPass(ip, cc.client),
+		"simple":  newFederated(firstPass, cc.client, ip),
+		"headers": newFederated([]string{
+			"https://ifconfig.me/all",
+			"https://ifconfig.io/all.json",
+		}, cc.client, ip),
+	}
+	strategyName := conf.StrOr("strategy", "simple")
+	strategy, ok := strategies[strategyName]
+	if !ok {
+		return fmt.Errorf("invalid strategy: %s", strategyName)
+	}
+	cc.strategy = strategy
+	timeout := conf.DurOr("timeout", 5*time.Second)
 	original, ok := cc.client.(*http.Client)
 	if ok {
-		original.Timeout = conf.DurOr("timeout", 5*time.Second)
+		original.Timeout = timeout
 	}
+	log.Info().
+		Str("ip", ip).
+		Str("strategy", strategyName).
+		Dur("timeout", timeout).
+		Msg("configured proxy checker")
 	return nil
 }
 
+func (cc *configurableChecker) thisIP() (string, error) {
+	req, err := http.NewRequest("GET", "https://ifconfig.me/ip", nil)
+	if err != nil {
+		return "", err
+	}
+	r, err := cc.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer r.Body.Close()
+	s := bufio.NewScanner(r.Body)
+	s.Scan()
+	return s.Text(), nil
+}
+
 func (cc *configurableChecker) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, error) {
-	return cc.strategies[cc.strategy].Check(ctx, proxy)
+	if cc.strategy == nil {
+		return 0, fmt.Errorf("no strategy")
+	}
+	return cc.strategy.Check(ctx, proxy)
 }
 
 func newTwoPass(ip string, client httpClient) twoPass {
@@ -156,10 +190,6 @@ func newFederated(sites []string, client httpClient, ip string) (out federated) 
 func (f federated) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, error) {
 	choice := rand.Intn(len(f))
 	return f[choice].Check(ctx, proxy)
-}
-
-type httpClient interface {
-	Do(req *http.Request) (*http.Response, error)
 }
 
 type simple struct {
@@ -231,17 +261,6 @@ func truncatedBody(body string) string {
 		return body[:cutoff] + fmt.Sprintf(" (%db more)", len(body)-cutoff)
 	}
 	return body
-}
-
-func thisIP() (string, error) {
-	r, err := http.Get("https://ifconfig.me/ip")
-	if err != nil {
-		return "", err
-	}
-	defer r.Body.Close()
-	s := bufio.NewScanner(r.Body)
-	s.Scan()
-	return s.Text(), nil
 }
 
 type temporary string

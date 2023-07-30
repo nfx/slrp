@@ -196,31 +196,42 @@ func dialProxiedConnection(ctx context.Context, network, addr string) (net.Conn,
 	}
 }
 
-func pickHttpProxyFromContext(r *http.Request) (*url.URL, error) {
+func ProxyFromContext(r *http.Request) (*url.URL, error) {
 	p := GetProxyFromContext(r.Context())
 	if p == 0 {
 		return nil, nil
 	}
-	if p.IsTunnel() {
-		// handled in DialContext
-		return nil, nil
-	}
+	// if p.IsTunnel() {
+	// 	// handled in DialContext
+	// 	return nil, nil
+	// }
+	// TODO: free-proxy.cz is not liking HTTPS dialer, so it needs only HTTP forwarder
 	return p.URL(), nil
 }
 
+var contextualTransport = &http.Transport{
+	// If DialTLSContext is set, the Dial and DialContext hooks are not used for HTTPS
+	// requests and the TLSClientConfig and TLSHandshakeTimeout
+	// are ignored. The returned net.Conn is assumed to already be
+	// past the TLS handshake.
+	// DialTLSContext:      dialProxiedConnection,
+	TLSClientConfig: DefaultTlsConfig,
+	// TLSHandshakeTimeout: DefaultDialer.Timeout,
+	Proxy: ProxyFromContext,
+	// DisableKeepAlives:   true,
+	// MaxIdleConns:        0,
+}
+
 func ContextualHttpTransport() *http.Transport {
-	return &http.Transport{
-		// If DialTLSContext is set, the Dial and DialContext hooks are not used for HTTPS
-		// requests and the TLSClientConfig and TLSHandshakeTimeout
-		// are ignored. The returned net.Conn is assumed to already be
-		// past the TLS handshake.
-		DialTLSContext:      dialProxiedConnection,
-		TLSClientConfig:     DefaultTlsConfig,
-		TLSHandshakeTimeout: DefaultDialer.Timeout,
-		Proxy:               pickHttpProxyFromContext,
-		DisableKeepAlives:   true,
-		MaxIdleConns:        0,
+	return contextualTransport
+}
+
+func NewProxyFromURL(url string) Proxy {
+	split := strings.Split(url, "://")
+	if len(split) != 2 {
+		return 0
 	}
+	return NewProxy(split[1], split[0])
 }
 
 func NewProxy(addr string, t string) Proxy {

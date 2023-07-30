@@ -3,6 +3,7 @@ package serve
 import (
 	"context"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -46,7 +47,7 @@ func TestDashboardRenders(t *testing.T) {
 	history := history.NewHistory()
 	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
 		Country: "Zimbabwe",
-	})
+	}, &net.Dialer{})
 	probe := probe.NewProbe(stats, pool, checker)
 	refresher := refresher.NewRefresher(stats, pool, probe)
 	dashboard := NewDashboard(refresher, probe, stats)

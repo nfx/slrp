@@ -3,6 +3,7 @@ package probe
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"testing"
@@ -42,7 +43,7 @@ func TestBasicProbe(t *testing.T) {
 	history := history.NewHistory()
 	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
 		Country: "Zimbabwe",
-	})
+	}, &net.Dialer{})
 	probe := NewProbe(stats, pool, checker)
 
 	runtime := app.Singletons{
@@ -86,7 +87,7 @@ func TestProbeMarshaling(t *testing.T) {
 	history := history.NewHistory()
 	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
 		Country: "Zimbabwe",
-	})
+	}, &net.Dialer{})
 	probe := NewProbe(stats, pool, checker)
 
 	runtime := app.Singletons{
@@ -125,7 +126,7 @@ func TestProbeDeleting(t *testing.T) {
 	history := history.NewHistory()
 	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
 		Country: "Zimbabwe",
-	})
+	}, &net.Dialer{})
 	probe := NewProbe(stats, pool, checker)
 
 	runtime := app.Singletons{

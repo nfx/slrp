@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -37,7 +38,11 @@ type httpClient interface {
 var poolWorkSize = 128
 var poolShards = 32
 
-func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter) *Pool {
+type dialer interface {
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter, dialer dialer) *Pool {
 	return &Pool{
 		ipLookup: ipLookup,
 		serial:   make(chan int),
@@ -46,8 +51,11 @@ func NewPool(history *history.History, ipLookup ipinfo.IpInfoGetter) *Pool {
 		halt:     make(chan time.Duration),
 		shards:   make([]shard, poolShards),
 		client: &http.Client{
-			Transport: history.Wrap(pmux.ContextualHttpTransport()),
-			Timeout:   10 * time.Second, // TODO: make timeouts configurable
+			Transport: history.Wrap(&http.Transport{
+				DialContext:     dialer.DialContext,
+				Proxy:           pmux.ProxyFromContext,
+				TLSClientConfig: pmux.DefaultTlsConfig,
+			}),
 		},
 	}
 }

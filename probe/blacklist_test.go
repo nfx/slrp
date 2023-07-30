@@ -2,6 +2,7 @@ package probe
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"testing"
 
@@ -26,7 +27,7 @@ func TestBlacklist(t *testing.T) {
 	history := history.NewHistory()
 	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
 		Country: "Zimbabwe",
-	})
+	}, &net.Dialer{})
 	probe := NewProbe(stats, pool, checker)
 
 	runtime := app.Singletons{

@@ -20,15 +20,14 @@ func TestFailure(t *testing.T) {
 	c := NewChecker(&checkerShim{
 		err: fmt.Errorf("fails"),
 	})
-
 	ctx := context.Background()
 	_, err := c.Check(ctx, pmux.HttpProxy("127.0.0.1:1"))
-	assert.EqualError(t, err, "fails")
+	assert.EqualError(t, err, "no strategy")
 }
 
 func TestConfigurableChecker(t *testing.T) {
 	client := http.DefaultClient
-	c := configurableChecker{
+	c := &configurableChecker{
 		client: client,
 	}
 	err := c.Configure(app.Config{})

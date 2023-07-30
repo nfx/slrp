@@ -125,6 +125,9 @@ func (cc *configurableChecker) thisIP() (string, error) {
 }
 
 func (cc *configurableChecker) Check(ctx context.Context, proxy pmux.Proxy) (time.Duration, error) {
+	if cc.strategy == nil {
+		return 0, fmt.Errorf("no strategy")
+	}
 	return cc.strategy.Check(ctx, proxy)
 }
 

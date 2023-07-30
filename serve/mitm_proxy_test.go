@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -63,7 +64,7 @@ func TestFlows(t *testing.T) {
 			history := history.NewHistory()
 			pool := pool.NewPool(history, ipinfo.NoopIpInfo{
 				Country: "Zimbabwe",
-			})
+			}, &net.Dialer{})
 			mitm, runtime := app.MockStartSpin(
 				NewMitmProxyServer(pool, *defaultCA),
 				history, pool, tt.Via)
@@ -97,7 +98,7 @@ func TestMitm_HTTP_viaHTTP_toHTTP(t *testing.T) { // TODO: rename
 	history := history.NewHistory()
 	pool := pool.NewPool(history, ipinfo.NoopIpInfo{
 		Country: "Zimbabwe",
-	})
+	}, &net.Dialer{})
 	mitm, runtime := app.MockStartSpin(
 		NewMitmProxyServer(pool, *defaultCA),
 		history, pool, transparentHttp)

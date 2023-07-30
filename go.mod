@@ -1,6 +1,6 @@
 module github.com/nfx/slrp
 
-go 1.18
+go 1.20
 
 require (
 	github.com/bdandy/go-socks4 v1.2.3

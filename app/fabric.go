@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,6 +29,7 @@ type Fabric struct {
 	Factories Factories
 
 	singletons    Singletons
+	initOrder     []string
 	services      map[string]Service
 	contexts      map[string]*serviceContext
 	updated       map[string]time.Time
@@ -72,7 +74,12 @@ func (f *Fabric) Start(ctx context.Context) {
 		return f
 	}
 	// and every dependency would just recursively resolve
-	f.singletons = f.Factories.Init()
+	singletons, initOrder, err := f.Factories.Init()
+	if err != nil {
+		panic(err)
+	}
+	f.singletons = singletons
+	f.initOrder = initOrder
 	syncTrigger := f.configuration["app"].DurOr("sync", 1*time.Minute)
 	f.syncTrigger = time.NewTicker(syncTrigger)
 	f.State = f.configuration["app"].StrOr("state", "$HOME/.$APP/data")
@@ -92,6 +99,9 @@ func (f *Fabric) Start(ctx context.Context) {
 
 	// treat all ListenAndServe exposing singletons as another service
 	f.services["monitor"] = monitor
+
+	// monitor has to be initialized last, as we assume all services started
+	f.initOrder = append(f.initOrder, "monitor")
 
 	f.initServices()
 	f.configureServices()
@@ -115,14 +125,14 @@ func (f *Fabric) initLogging() {
 		"warn":  zerolog.WarnLevel,
 	}
 	logLevel := f.configuration["log"].StrOr("level", "info")
-	level, ok := levels[logLevel]
+	level, ok := levels[strings.ToLower(logLevel)]
 	if !ok {
 		level = zerolog.InfoLevel
 	}
 	zerolog.SetGlobalLevel(level)
 
 	logFormat := f.configuration["log"].StrOr("format", "pretty")
-	switch logFormat {
+	switch strings.ToLower(logFormat) {
 	case "pretty":
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	case "json":
@@ -175,8 +185,12 @@ func (m *monitorServers) listenAndServe(service string, server aServer) {
 }
 
 func (f *Fabric) startAll(ctx context.Context) {
-	for service := range f.services {
+	for _, service := range f.initOrder {
 		log.Debug().Str("service", service).Msg("starting")
+		_, ok := f.services[service]
+		if !ok {
+			continue
+		}
 		f.contexts[service] = &serviceContext{
 			ctx:  ctx,
 			sync: f.syncService,
@@ -202,8 +216,8 @@ func (f *Fabric) loadState() {
 }
 
 func (f *Fabric) configureServices() {
-	for service, s := range f.singletons {
-		c, ok := s.(configurable)
+	for _, service := range f.initOrder {
+		c, ok := f.singletons[service].(configurable)
 		if !ok {
 			continue
 		}

@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type Factories map[string]interface{}
@@ -28,21 +29,22 @@ func (i instances) Singletons() Singletons {
 	return singletons
 }
 
-func (c Factories) Init() Singletons {
+func (c Factories) Init() (Singletons, []string, error) {
 	deps, err := c.dependencies()
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
+	order := deps.ordered()
 	inst := instances{}
 	// resolve reflections on all dependencies
 	for k := range deps {
 		dep, err := deps.resolve(k, inst)
 		if err != nil {
-			panic(err)
+			return nil, nil, err
 		}
 		inst[k] = dep
 	}
-	return inst.Singletons()
+	return inst.Singletons(), order, nil
 }
 
 func (c Factories) dependencies() (dependencies, error) {
@@ -67,6 +69,54 @@ func (c Factories) dependencies() (dependencies, error) {
 	return deps, nil
 }
 
+func (d *dependency) matches(in reflect.Type) bool {
+	isInIface := in.Kind() == reflect.Interface
+	inImplsType := isInIface && d.Out.Implements(in)
+	inEqualsType := d.Out == in
+	return inImplsType || inEqualsType
+}
+
+// sort dependencies topologically according to Kahn's algorithm (1962)
+// see https://doi.org/10.1145%2F368996.369025
+func (deps dependencies) ordered() (order []string) {
+	edges := map[string][]string{}
+	indegree := map[string]int{}
+	// materialize interface dependencies into neighbour adjacency graph
+	for k := range deps {
+		for _, in := range deps[k].In {
+			for otherKey, otherType := range deps {
+				if !otherType.matches(in) {
+					continue
+				}
+				edges[k] = append(edges[k], otherKey)
+				edges[otherKey] = append(edges[otherKey], k)
+				indegree[k]++
+			}
+		}
+	}
+	q := []string{}
+	// First we add items with no upstream dependencies
+	for k := range deps {
+		if indegree[k] == 0 {
+			q = append(q, k)
+		}
+	}
+	for len(q) > 0 {
+		k := q[0]
+		q = q[1:]
+		order = append(order, k)
+		for _, j := range edges[k] {
+			// Reduce the indegree of adjacent nodes and add them to
+			// the queue if their indegree becomes 0
+			indegree[j]--
+			if indegree[j] == 0 {
+				q = append(q, j)
+			}
+		}
+	}
+	return order
+}
+
 func (deps dependencies) resolve(k string, inst instances) (reflect.Value, error) {
 	ex, ok := inst[k]
 	if ok {
@@ -78,23 +128,23 @@ func (deps dependencies) resolve(k string, inst instances) (reflect.Value, error
 	}
 	args := []reflect.Value{}
 	for _, in := range t.In {
-		found := false
-		isInIface := in.Kind() == reflect.Interface
-		for other_key, other_type := range deps {
-			inImplsType := isInIface && other_type.Out.Implements(in)
-			inEqualsType := other_type.Out == in
-			if !inImplsType && !inEqualsType {
+		found := []string{}
+		for otherKey, otherType := range deps {
+			if !otherType.matches(in) {
 				continue
 			}
-			dep, err := deps.resolve(other_key, inst)
+			dep, err := deps.resolve(otherKey, inst)
 			if err != nil {
 				return reflect.Value{}, fmt.Errorf(
-					"cannot resolve %s because of %s: %s", k, other_key, err)
+					"cannot resolve %s because of %s: %s", k, otherKey, err)
 			}
+			found = append(found, otherKey)
 			args = append(args, dep)
-			found = true
 		}
-		if !found {
+		if len(found) > 1 {
+			return reflect.Value{}, fmt.Errorf("multiple matches for %s: %s", in, strings.Join(found, ", "))
+		}
+		if len(found) == 0 {
 			return reflect.Value{}, fmt.Errorf("cannot find %s for %s", in, k)
 		}
 	}

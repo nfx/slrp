@@ -12,7 +12,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.25
 	github.com/nfx/go-htmltable v0.4.0
 	github.com/oschwald/maxminddb-golang v1.11.0
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.30.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tj/go-update v2.2.4+incompatible
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4

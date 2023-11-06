@@ -7,7 +7,7 @@ require (
 	github.com/corpix/uarand v0.2.0
 	github.com/dop251/goja v0.0.0-20230605162241-28ee0ee714f3
 	github.com/ghodss/yaml v1.0.0
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/maxmind/mmdbwriter v1.0.0
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/nfx/go-htmltable v0.4.0

@@ -19,7 +19,7 @@ SLRP - rotating open proxy multiplexer
 
 # Usage
 
-Download service, start it up, wait couple of minutes for the pool to pick up. Now run `curl -D - -x http://127.0.0.1:8090 -k http://httpbin.org/get` couple of times and see different origins and user agent headers.
+Download service, start it up, wait couple of minutes for the pool to pick up. Now run `curl --proxy-insecure -D - -x http://127.0.0.1:8090 -k http://httpbin.org/get` couple of times and see different origins and user agent headers.
 
 # Concepts
 

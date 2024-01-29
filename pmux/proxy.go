@@ -247,7 +247,7 @@ func NewProxyFromURL(url string) Proxy {
 }
 
 func NewProxy(addr string, t string) Proxy {
-	// Check if the address is valid or contains "[::]:"; This happens when running inside a docker container
+	// Check if the address is valid or contains "[::]"; This happens when running inside a docker container
 	// It means that the address is listening on all interfaces but via IPv6, which is not supported by the
 	// proxy package(or so). Hence we replace it with 0.0.0.0
 	if strings.Contains(addr, "[::]") {

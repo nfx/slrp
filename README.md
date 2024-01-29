@@ -18,8 +18,17 @@ SLRP - rotating open proxy multiplexer
 * Packaged as a single executable binary, that also includes Web UI
 
 # Usage
+For all methods, wait couple of minutes for the pool to pick up. Check the dashboard at [http://localhost:8089/](http://localhost:8089/) for progress.
 
-Download service, start it up, wait couple of minutes for the pool to pick up. Now run `curl --proxy-insecure -D - -x http://127.0.0.1:8090 -k http://httpbin.org/get` couple of times and see different origins and user agent headers.
+## Via binary
+Download the binary from the releases, which can be found [here](https://github.com/nfx/slrp/releases)
+
+## Via Docker
+> Assuming you have docker and make present
+Run `make docker`. Once done, invoke with `docker run -p 8089:8089 -p 8090:8090 -v $HOME/.slrp/data:/data nfx/slrp:latest`
+
+Once running, you can access the UI at [http://localhost:8089/](http://localhost:8089/) and the proxy at [http://localhost:8090/](http://localhost:8090/)
+Test using a simple curl command `curl --proxy-insecure -D - -x http:// http://127.0.0.1:8090 -k http://httpbin.org/get` couple of times and see different origins and user agent headers.
 
 # Concepts
 

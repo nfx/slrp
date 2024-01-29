@@ -247,8 +247,18 @@ func NewProxyFromURL(url string) Proxy {
 }
 
 func NewProxy(addr string, t string) Proxy {
+	// Check if the address is valid or contains "[::]:"; This happens when running inside a docker container
+	// It means that the address is listening on all interfaces but via IPv6, which is not supported by the
+	// proxy package(or so). Hence we replace it with 0.0.0.0
+	if strings.Contains(addr, "[::]") {
+		// Set it to 0.0.0.0 but maintain the port
+		fmt.Println("Encountered [::]: in address, replacing with 0.0.0.0")
+		addr = strings.Replace(addr, "[::]", "0.0.0.0", 1)
+	}
+
 	addrPort, err := netip.ParseAddrPort(addr)
 	if err != nil {
+		fmt.Println("Error parsing address:", err)
 		return 0
 	}
 	p, ok := protoMap[t]

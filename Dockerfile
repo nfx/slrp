@@ -12,7 +12,7 @@ WORKDIR /ui
 
 COPY ./ui .
 
-RUN pwd && ls -lah && npm install
+RUN npm install
 
 # Final image
 FROM alpine:latest
@@ -42,5 +42,12 @@ RUN mkdir ./.slrp
 
 EXPOSE 8089 8090
 
-# Run the binary
-CMD ["/opt/slrp"]
+# The new script requires iproute2 via apk
+RUN apk add --no-cache iproute2
+# Copy the script
+COPY ./docker-entrypoint.sh $PWD/docker-entrypoint.sh
+# Make the script executable
+RUN chmod +x $PWD/docker-entrypoint.sh
+
+# Run the script
+ENTRYPOINT ["/opt/docker-entrypoint.sh"]

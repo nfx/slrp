@@ -25,7 +25,8 @@
 				"foxundermoon.shell-format",
 				"GitHub.copilot",
 				"eamodio.gitlens",
-				"ms-vscode.makefile-tools"
+				"ms-vscode.makefile-tools",
+				"ms-azuretools.vscode-docker"
 			]
 		}
 	}

@@ -20,6 +20,13 @@ build: build-ui
 	go mod vendor
 	go build -ldflags "-s -w" main.go
 
+build-go-for-docker:
+	go mod vendor
+	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "-s -w" -o main main.go
+
+docker:
+	docker build -t slrp:latest .
+
 quick:
 	go build
 

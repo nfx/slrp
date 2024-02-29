@@ -28,7 +28,7 @@ Download the binary from the releases, which can be found [here](https://github.
 Run `make docker`. Once done, invoke with `docker run -p 8089:8089 -p 8090:8090 -v $HOME/.slrp/data:/data nfx/slrp:latest`
 
 Once running, you can access the UI at [http://localhost:8089/](http://localhost:8089/) and the proxy at [http://localhost:8090/](http://localhost:8090/)
-Test using a simple curl command `curl --proxy-insecure -D - -x http:// http://127.0.0.1:8090 -k http://httpbin.org/get` couple of times and see different origins and user agent headers.
+Test using a simple curl command `curl --proxy-insecure -D - -x "https://127.0.0.1:8090" "https://httpbin.org/get"` couple of times and see different origins and user agent headers.
 
 # Concepts
 

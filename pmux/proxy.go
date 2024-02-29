@@ -252,13 +252,13 @@ func NewProxy(addr string, t string) Proxy {
 	// proxy package(or so). Hence we replace it with 0.0.0.0
 	if strings.Contains(addr, "[::]") {
 		// Set it to 0.0.0.0 but maintain the port
-		fmt.Println("Encountered [::]: in address, replacing with 0.0.0.0")
+		log.Info().Str("ip address", addr).Msg("encountered [::]: in address, replacing with 0.0.0.0")
 		addr = strings.Replace(addr, "[::]", "0.0.0.0", 1)
 	}
 
 	addrPort, err := netip.ParseAddrPort(addr)
 	if err != nil {
-		fmt.Println("Error parsing address:", err)
+		log.Err(fmt.Errorf("error parsing address")).Str("ip address", addr).Msg("")
 		return 0
 	}
 	p, ok := protoMap[t]

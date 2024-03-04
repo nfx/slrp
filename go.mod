@@ -13,7 +13,7 @@ require (
 	github.com/nfx/go-htmltable v0.4.0
 	github.com/oschwald/maxminddb-golang v1.12.0
 	github.com/rs/zerolog v1.32.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/tj/go-update v2.2.4+incompatible
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1

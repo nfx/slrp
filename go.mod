@@ -11,7 +11,7 @@ require (
 	github.com/maxmind/mmdbwriter v1.0.0
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/nfx/go-htmltable v0.4.0
-	github.com/oschwald/maxminddb-golang v1.12.0
+	github.com/oschwald/maxminddb-golang v1.13.0
 	github.com/rs/zerolog v1.32.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tj/go-update v2.2.4+incompatible
@@ -47,7 +47,7 @@ require (
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect

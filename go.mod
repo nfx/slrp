@@ -1,6 +1,7 @@
 module github.com/nfx/slrp
 
 go 1.20
+toolchain go1.24.1
 
 require (
 	github.com/bdandy/go-socks4 v1.2.3
@@ -12,7 +13,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.26
 	github.com/nfx/go-htmltable v0.4.0
 	github.com/oschwald/maxminddb-golang v1.12.0
-	github.com/rs/zerolog v1.32.0
+	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tj/go-update v2.2.4+incompatible
 	github.com/yosssi/gohtml v0.0.0-20201013000340-ee4748c638f4

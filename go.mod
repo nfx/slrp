@@ -1,6 +1,6 @@
 module github.com/nfx/slrp
 
-go 1.20
+go 1.21
 
 require (
 	github.com/bdandy/go-socks4 v1.2.3
@@ -44,7 +44,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/ulikunitz/xz v0.5.11 // indirect
+	github.com/ulikunitz/xz v0.5.14 // indirect
 	go4.org/netipx v0.0.0-20230303233057-f1b76eb4bb35 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect

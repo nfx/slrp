@@ -113,7 +113,7 @@ func Test_mergeSrc_Len(t *testing.T) {
 			case pmux.HttpProxy("127.0.0.1:2048"):
 				canAssertB <- true
 			}
-			t.Logf("received: %s", v)
+			t.Logf("received: %v", v)
 		}
 	}()
 
